@@ -1,0 +1,123 @@
+@import "tailwindcss";
+
+/*
+ * Tokens de Awareness_AI_Manual_de_Marca.md §3.
+ * App dark-only: el manual es dark-first y no define paleta clara, así que no
+ * se inventa una. No agregar colores acá sin que estén en el manual.
+ */
+@theme {
+  /* Fondos — 70% de la pieza */
+  --color-base: #070b17;
+  --color-elevated: #0c1730;
+  --color-surface: #12213e;
+  --color-line: #2b416d;
+
+  /* Texto — 20% */
+  --color-ink: #f4f7ff;
+  --color-muted: #aab8d4;
+
+  /* Acentos — 10%. cyan = acción/resultado · violeta = proceso/innovación */
+  --color-cyan: #18d6e8;
+  --color-cyan-soft: #72f4f1;
+  --color-violet: #7c3aed;
+  --color-purple: #4c1d95;
+
+  /* Estados: derivados de la paleta, no colores nuevos */
+  --color-positive: #18d6e8;
+  --color-warning: #f2b53c;
+  --color-danger: #f2557a;
+
+  --font-display: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+
+  /* §6: radios 16–24px en contenedores */
+  --radius-card: 20px;
+  --radius-control: 12px;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    /* §3 gradiente ambiental: dos radiales muy tenues sobre la base */
+    background:
+      radial-gradient(
+        circle at 78% 12%,
+        rgb(24 214 232 / 0.1),
+        transparent 40%
+      ),
+      radial-gradient(
+        circle at 12% 88%,
+        rgb(124 58 237 / 0.12),
+        transparent 42%
+      ),
+      var(--color-base);
+    background-attachment: fixed;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    /* §4: interlineado 1.35–1.5 en titulares */
+    line-height: 1.35;
+    letter-spacing: -0.015em;
+  }
+
+  ::selection {
+    background: rgb(24 214 232 / 0.3);
+  }
+}
+
+@layer utilities {
+  /* §3 gradiente principal: CTAs, highlights y trazos luminosos */
+  .bg-brand-gradient {
+    background-image: linear-gradient(
+      135deg,
+      #18d6e8 0%,
+      #4c7dff 45%,
+      #7c3aed 100%
+    );
+  }
+
+  .text-brand-gradient {
+    background-image: linear-gradient(
+      135deg,
+      #18d6e8 0%,
+      #4c7dff 45%,
+      #7c3aed 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /*
+   * §5: glow al 10–30% de opacidad, reservado para el foco principal.
+   * Un solo elemento con glow por pantalla.
+   */
+  .glow-cyan {
+    box-shadow:
+      0 0 22px rgb(24 214 232 / 0.28),
+      0 0 58px rgb(24 214 232 / 0.12);
+  }
+
+  .glow-violet {
+    box-shadow:
+      0 0 22px rgb(124 58 237 / 0.28),
+      0 0 58px rgb(124 58 237 / 0.12);
+  }
+
+  /* Números y métricas: tabulares para que no bailen al actualizarse */
+  .tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
