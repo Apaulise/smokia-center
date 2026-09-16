@@ -112,15 +112,48 @@ export async function listUpcomingAppointmentsForLead(leadId: string) {
   return data ?? [];
 }
 
-/** Listas de origen del usuario, para el filtro "lista de origen" de /leads/lista. */
-export async function listLeadListsLite() {
+/** Leads del usuario en formato liviano, para el selector de lead del formulario de turnos. */
+export async function listLeadsLite(limit = 300) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("leads").select("id, name").order("name").limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export type LeadListOverviewRow = Database["public"]["Tables"]["lead_lists"]["Row"] & {
+  industries: Pick<Database["public"]["Tables"]["industries"]["Row"], "id" | "name" | "color"> | null;
+  leads: { count: number }[];
+};
+
+/**
+ * Previsualización de listas de /leads/lista: una por lista, con el conteo
+ * real de leads (no `lead_lists.lead_count`, que es un contador de import que
+ * no se ajusta cuando se borran leads sueltos).
+ */
+export async function listLeadListsOverview() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("lead_lists")
-    .select("id, name, source")
+    .select("*, industries(id, name, color), leads(count)")
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as LeadListOverviewRow[];
+}
+
+export type LeadListRow = Database["public"]["Tables"]["lead_lists"]["Row"] & {
+  industries: Pick<Database["public"]["Tables"]["industries"]["Row"], "id" | "name" | "color"> | null;
+};
+
+/** Una lista puntual, para el encabezado de /leads/lista/[id]. */
+export async function getLeadList(id: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("lead_lists")
+    .select("*, industries(id, name, color)")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data as LeadListRow | null;
 }
 
 /** Ciudades distintas entre los leads del usuario, para el filtro "ciudad". */
@@ -274,6 +307,54 @@ export async function listStaleLeads(days = 7, limit = 5) {
     .or(`last_contacted_at.lt.${threshold},and(last_contacted_at.is.null,created_at.lt.${threshold})`)
     .order("last_contacted_at", { ascending: true, nullsFirst: true })
     .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+// ── Agenda (Plan §1.5) ───────────────────────────────────────────────────────
+
+const SELECT_APPOINTMENT_ROW = "*, leads(id, name, status)";
+
+export type AppointmentWithLead = Database["public"]["Tables"]["appointments"]["Row"] & {
+  leads: Pick<Database["public"]["Tables"]["leads"]["Row"], "id" | "name" | "status"> | null;
+};
+
+/** Turnos cuyo `starts_at` cae en `[startIso, endIso)` (instantes UTC ya resueltos) — vistas mes y semana. */
+export async function listAppointmentsInRange(startIso: string, endIso: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("appointments")
+    .select(SELECT_APPOINTMENT_ROW)
+    .gte("starts_at", startIso)
+    .lt("starts_at", endIso)
+    .order("starts_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as AppointmentWithLead[];
+}
+
+/** Próximos turnos sin recorte por rango — vista lista de /leads/agenda. */
+export async function listUpcomingAppointmentsList(limit = 100) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("appointments")
+    .select(SELECT_APPOINTMENT_ROW)
+    .gte("starts_at", new Date().toISOString())
+    .order("starts_at", { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as AppointmentWithLead[];
+}
+
+/** Turnos futuros no cancelados, para la exportación .ics. */
+export async function listAppointmentsForIcs() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("appointments")
+    .select("id, title, notes, starts_at, ends_at, meeting_url, status, leads(name)")
+    .neq("status", "CANCELADA")
+    .gte("starts_at", new Date().toISOString())
+    .order("starts_at", { ascending: true })
+    .limit(500);
   if (error) throw error;
   return data ?? [];
 }

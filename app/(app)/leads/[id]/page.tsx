@@ -41,7 +41,11 @@ export default async function LeadFichaPage({ params }: PageProps<"/leads/[id]">
         action={
           <div className="flex items-center gap-3">
             <Badge tone={STATUS_TONE[lead.status]}>{STATUS_LABEL[lead.status]}</Badge>
-            <ButtonLink href="/leads/lista" variant="ghost" size="sm">
+            <ButtonLink
+              href={lead.lead_lists ? `/leads/lista/${lead.lead_lists.id}` : "/leads/lista"}
+              variant="ghost"
+              size="sm"
+            >
               <ArrowLeft className="size-3.5" />
               Volver a la lista
             </ButtonLink>
@@ -111,10 +115,7 @@ export default async function LeadFichaPage({ params }: PageProps<"/leads/[id]">
               <div>
                 <p className="mb-1 text-xs text-muted">Lista de origen</p>
                 {lead.lead_lists ? (
-                  <Link
-                    href={`/leads/lista?leadListId=${lead.lead_lists.id}`}
-                    className="text-cyan hover:underline"
-                  >
+                  <Link href={`/leads/lista/${lead.lead_lists.id}`} className="text-cyan hover:underline">
                     {lead.lead_lists.name}
                   </Link>
                 ) : (

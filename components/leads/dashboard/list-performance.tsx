@@ -41,7 +41,7 @@ export function ListPerformanceTable({ lists }: { lists: ListPerformance[] }) {
             return (
               <tr key={list.list_id} className="border-b border-line/40 last:border-0 hover:bg-surface/30">
                 <td className="px-2 py-3">
-                  <Link href={`/leads/lista?leadListId=${list.list_id}`} className="text-ink hover:text-cyan">
+                  <Link href={`/leads/lista/${list.list_id}`} className="text-ink hover:text-cyan">
                     {list.name}
                   </Link>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5">

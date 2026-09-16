@@ -8,40 +8,37 @@ import { LEAD_STATUSES, STATUS_LABEL } from "@/lib/leads/status";
 import type { Database } from "@/lib/supabase/database.types";
 
 type Industry = Database["public"]["Tables"]["industries"]["Row"];
-type LeadListLite = Pick<Database["public"]["Tables"]["lead_lists"]["Row"], "id" | "name" | "source">;
 
 /**
  * Formulario GET sin JS: cada filtro se lee de los searchParams en el Server
- * Component de /leads/lista, así la paginación con `.range()` queda del lado
- * del servidor (Plan §1.3).
+ * Component de /leads/lista/[id], así la paginación con `.range()` queda del
+ * lado del servidor (Plan §1.3). La lista de origen ya no se filtra acá: se
+ * elige antes, en la previsualización de /leads/lista.
  */
 export function LeadsFilters({
   industries,
-  leadLists,
   cities,
   view,
   current,
+  basePath,
 }: {
   industries: Industry[];
-  leadLists: LeadListLite[];
   cities: string[];
   view: string;
   current: {
     industryId?: string;
     status?: string;
-    leadListId?: string;
     city?: string;
     q?: string;
   };
+  basePath: string;
 }) {
-  const hasFilters = Boolean(
-    current.industryId || current.status || current.leadListId || current.city || current.q,
-  );
+  const hasFilters = Boolean(current.industryId || current.status || current.city || current.q);
 
   return (
     <form
       method="get"
-      action="/leads/lista"
+      action={basePath}
       className="flex flex-wrap items-end gap-3 rounded-[20px] border border-line bg-elevated/70 p-4"
     >
       <input type="hidden" name="view" value={view} />
@@ -90,20 +87,6 @@ export function LeadsFilters({
         </Select>
       </div>
 
-      <div className="w-44">
-        <label className="mb-1.5 block text-xs text-muted" htmlFor="leadListId">
-          Lista de origen
-        </label>
-        <Select id="leadListId" name="leadListId" defaultValue={current.leadListId ?? ""}>
-          <option value="">Todas</option>
-          {leadLists.map((list) => (
-            <option key={list.id} value={list.id}>
-              {list.name}
-            </option>
-          ))}
-        </Select>
-      </div>
-
       <div className="w-40">
         <label className="mb-1.5 block text-xs text-muted" htmlFor="city">
           Ciudad
@@ -123,7 +106,7 @@ export function LeadsFilters({
           Filtrar
         </Button>
         {hasFilters ? (
-          <Link href={`/leads/lista?view=${view}`} className="text-xs text-muted hover:text-ink">
+          <Link href={`${basePath}?view=${view}`} className="text-xs text-muted hover:text-ink">
             Limpiar filtros
           </Link>
         ) : null}

@@ -8,7 +8,10 @@ import { z } from "zod";
 import { reconcileScrapeJob } from "@/lib/apify/reconcile";
 import { startApifyRun } from "@/lib/apify/client";
 import { decrypt } from "@/lib/crypto";
+import type { AppointmentStatus } from "@/lib/leads/appointments";
 import { computeDedupeKey } from "@/lib/leads/dedupe";
+import { buildIcsCalendar } from "@/lib/leads/ics";
+import { listAppointmentsForIcs } from "@/lib/leads/queries";
 import { STATUS_LABEL, type LeadStatus } from "@/lib/leads/status";
 import { mapCsvRow, parseCsv } from "@/lib/providers/csv";
 import { getProvider } from "@/lib/providers/registry";
@@ -38,6 +41,18 @@ function buildWebhookUrl(jobId: string, secret: string): string | undefined {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   if (!appUrl || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(appUrl)) return undefined;
   return `${appUrl}/api/apify/webhook?jobId=${jobId}&secret=${secret}`;
+}
+
+/**
+ * No puede haber dos listas con el mismo nombre (ignorando mayúsculas/espacios).
+ * Se compara en memoria en vez de con `ilike` porque el nombre puede traer
+ * `%` o `_`, que `ilike` interpreta como comodines.
+ */
+async function isDuplicateListName(name: string, excludeId?: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("lead_lists").select("id, name");
+  const target = name.trim().toLowerCase();
+  return (data ?? []).some((row) => row.id !== excludeId && row.name.trim().toLowerCase() === target);
 }
 
 /**
@@ -97,6 +112,10 @@ export async function generateLeadList(
   const actorId = actorRow ? decrypt(actorRow.value_encrypted) : provider.defaultActorId;
   if (!actorId) {
     return { ok: false, message: `Configurá el actor de Apify para ${provider.label} en Configuración.` };
+  }
+
+  if (await isDuplicateListName(base.data.name)) {
+    return { ok: false, message: "Ya existe una lista con ese nombre." };
   }
 
   const input = provider.buildInput(criteria.data);
@@ -236,6 +255,10 @@ export async function importCsvLeads(
     return { ok: false, message: "No se encontró ninguna fila con al menos un nombre." };
   }
 
+  if (await isDuplicateListName(parsed.data.name)) {
+    return { ok: false, message: "Ya existe una lista con ese nombre." };
+  }
+
   const supabase = await createClient();
 
   // Igual que en la reconciliación de Apify: cuántos de estos dedupe_key ya
@@ -278,6 +301,75 @@ export async function importCsvLeads(
   const existingCount = leads.size - newCount;
   const suffix = existingCount > 0 ? ` (${existingCount} ya existían y se actualizaron)` : "";
   return { ok: true, message: `Se importaron ${newCount} leads nuevos${suffix}.` };
+}
+
+// ── Previsualización de listas (Plan §1.3) ──────────────────────────────────
+
+const renameListSchema = z.object({
+  id: z.string().trim().uuid(),
+  name: z.string().trim().min(2, "Ponele un nombre a la lista.").max(80, "Nombre muy largo."),
+});
+
+/** Renombrar desde la previsualización de /leads/lista. */
+export async function renameLeadList(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  await requireUser();
+
+  const parsed = renameListSchema.safeParse({
+    id: formData.get("id"),
+    name: formData.get("name"),
+  });
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+  }
+
+  if (await isDuplicateListName(parsed.data.name, parsed.data.id)) {
+    return { ok: false, message: "Ya existe una lista con ese nombre." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("lead_lists").update({ name: parsed.data.name }).eq("id", parsed.data.id);
+  if (error) {
+    return { ok: false, message: "No se pudo renombrar la lista." };
+  }
+
+  revalidatePath("/leads/lista");
+  return { ok: true, message: "Lista renombrada." };
+}
+
+const deleteListSchema = z.object({ id: z.string().trim().uuid() });
+
+/**
+ * Borra la lista y, con ella, sus leads (pedido explícito: una lista vacía no
+ * deja huérfanos). `lead_activities` cae en cascada por FK; los turnos
+ * agendados sólo pierden la referencia al lead (`on delete set null`), no se
+ * borran — la reunión ya sucedió o está agendada independientemente de la lista.
+ */
+export async function deleteLeadList(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  await requireUser();
+
+  const parsed = deleteListSchema.safeParse({ id: formData.get("id") });
+  if (!parsed.success) {
+    return { ok: false, message: "Lista inválida." };
+  }
+
+  const supabase = await createClient();
+  const { data: list } = await supabase.from("lead_lists").select("id").eq("id", parsed.data.id).maybeSingle();
+  if (!list) {
+    return { ok: false, message: "La lista no existe." };
+  }
+
+  const { error: leadsError } = await supabase.from("leads").delete().eq("lead_list_id", parsed.data.id);
+  if (leadsError) {
+    return { ok: false, message: "No se pudieron borrar los leads de la lista." };
+  }
+
+  const { error: listError } = await supabase.from("lead_lists").delete().eq("id", parsed.data.id);
+  if (listError) {
+    return { ok: false, message: "No se pudo borrar la lista." };
+  }
+
+  revalidatePath("/leads/lista");
+  return { ok: true, message: "Lista eliminada." };
 }
 
 // ── Lista de leads y seguimiento (Plan §1.3) ────────────────────────────────
@@ -540,6 +632,54 @@ const appointmentSchema = z.object({
   meetingUrl: z.union([z.string().trim().url("URL inválida."), z.literal("")]).optional(),
 });
 
+/**
+ * Inserta el turno y, si cuelga de un lead, avanza su estado a AGENDADO (si
+ * no lo estaba ya) y deja constancia en el timeline. Usado tanto por el botón
+ * "Agendar" de la ficha del lead como por "Nuevo turno" en /leads/agenda.
+ */
+async function insertAppointmentAndAdvanceLead(params: {
+  userId: string;
+  leadId: string | null;
+  title: string;
+  notes: string | null;
+  meetingUrl: string | null;
+  startsAt: Date;
+  endsAt: Date;
+}): Promise<ActionState> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("appointments").insert({
+    owner_id: params.userId,
+    lead_id: params.leadId,
+    title: params.title,
+    notes: params.notes,
+    meeting_url: params.meetingUrl,
+    starts_at: params.startsAt.toISOString(),
+    ends_at: params.endsAt.toISOString(),
+  });
+  if (error) return { ok: false, message: "No se pudo agendar." };
+
+  if (params.leadId) {
+    const { data: lead } = await supabase.from("leads").select("status").eq("id", params.leadId).maybeSingle();
+    const advancesStatus = lead && lead.status !== "AGENDADO";
+    if (advancesStatus) {
+      await supabase.from("leads").update({ status: "AGENDADO" }).eq("id", params.leadId);
+    }
+    await supabase.from("lead_activities").insert({
+      owner_id: params.userId,
+      lead_id: params.leadId,
+      type: "REUNION",
+      content: `Reunión agendada: ${params.title}`,
+      from_status: advancesStatus ? lead.status : null,
+      to_status: advancesStatus ? "AGENDADO" : null,
+    });
+    revalidatePath(`/leads/${params.leadId}`);
+  }
+
+  revalidatePath("/leads/lista");
+  revalidatePath("/leads/agenda");
+  return { ok: true, message: "Reunión agendada." };
+}
+
 /** Botón "Agendar" de la ficha (Plan §1.3): crea un turno ligado al lead y avanza el estado. */
 export async function createAppointmentForLead(
   _prevState: ActionState,
@@ -562,38 +702,217 @@ export async function createAppointmentForLead(
   if (Number.isNaN(startsAt.getTime())) return { ok: false, message: "Fecha inválida." };
   const endsAt = new Date(startsAt.getTime() + parsed.data.durationMinutes * 60_000);
 
-  const supabase = await createClient();
-  const { error } = await supabase.from("appointments").insert({
-    owner_id: user.id,
-    lead_id: parsed.data.leadId,
+  return insertAppointmentAndAdvanceLead({
+    userId: user.id,
+    leadId: parsed.data.leadId,
     title: parsed.data.title,
     notes: parsed.data.notes || null,
-    meeting_url: parsed.data.meetingUrl || null,
-    starts_at: startsAt.toISOString(),
-    ends_at: endsAt.toISOString(),
+    meetingUrl: parsed.data.meetingUrl || null,
+    startsAt,
+    endsAt,
   });
-  if (error) return { ok: false, message: "No se pudo agendar." };
+}
 
-  const { data: lead } = await supabase
-    .from("leads")
-    .select("status")
-    .eq("id", parsed.data.leadId)
-    .maybeSingle();
+// ── Agenda (Plan §1.5) ───────────────────────────────────────────────────────
 
-  const advancesStatus = lead && lead.status !== "AGENDADO";
-  if (advancesStatus) {
-    await supabase.from("leads").update({ status: "AGENDADO" }).eq("id", parsed.data.leadId);
+const agendaAppointmentSchema = z.object({
+  leadId: z.string().trim().uuid().optional().or(z.literal("")),
+  title: z.string().trim().min(2, "Ponele un título.").max(120, "Título muy largo."),
+  startsAt: z.string().trim().min(1, "Elegí fecha y hora."),
+  durationMinutes: z.coerce.number().int().min(15).max(480).default(30),
+  notes: z.string().trim().max(2000).optional(),
+  meetingUrl: z.union([z.string().trim().url("URL inválida."), z.literal("")]).optional(),
+});
+
+/** "Nuevo turno" en /leads/agenda: igual que agendar desde la ficha, pero el lead es opcional. */
+export async function createAppointment(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const user = await requireUser();
+  const parsed = agendaAppointmentSchema.safeParse({
+    leadId: formData.get("leadId") || undefined,
+    title: formData.get("title"),
+    startsAt: formData.get("startsAt"),
+    durationMinutes: formData.get("durationMinutes") || undefined,
+    notes: formData.get("notes") || undefined,
+    meetingUrl: formData.get("meetingUrl") || undefined,
+  });
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Datos inválidos." };
   }
-  await supabase.from("lead_activities").insert({
-    owner_id: user.id,
-    lead_id: parsed.data.leadId,
-    type: "REUNION",
-    content: `Reunión agendada: ${parsed.data.title}`,
-    from_status: advancesStatus ? lead.status : null,
-    to_status: advancesStatus ? "AGENDADO" : null,
-  });
 
-  revalidatePath(`/leads/${parsed.data.leadId}`);
-  revalidatePath("/leads/lista");
-  return { ok: true, message: "Reunión agendada." };
+  const startsAt = new Date(parsed.data.startsAt);
+  if (Number.isNaN(startsAt.getTime())) return { ok: false, message: "Fecha inválida." };
+  const endsAt = new Date(startsAt.getTime() + parsed.data.durationMinutes * 60_000);
+
+  return insertAppointmentAndAdvanceLead({
+    userId: user.id,
+    leadId: parsed.data.leadId || null,
+    title: parsed.data.title,
+    notes: parsed.data.notes || null,
+    meetingUrl: parsed.data.meetingUrl || null,
+    startsAt,
+    endsAt,
+  });
+}
+
+const appointmentUpdateSchema = z.object({
+  id: z.string().uuid(),
+  leadId: z.string().trim().uuid().optional().or(z.literal("")),
+  title: z.string().trim().min(2, "Ponele un título.").max(120, "Título muy largo."),
+  startsAt: z.string().trim().min(1, "Elegí fecha y hora."),
+  durationMinutes: z.coerce.number().int().min(15).max(480).default(30),
+  notes: z.string().trim().max(2000).optional(),
+  meetingUrl: z.union([z.string().trim().url("URL inválida."), z.literal("")]).optional(),
+  status: z.enum(["AGENDADA", "CONFIRMADA", "REALIZADA", "NO_ASISTIO", "CANCELADA"]),
+  newLeadStatus: z.string().trim().optional(),
+});
+
+/** Editar un turno existente (Plan §1.5). Si cambia a REALIZADA con lead asociado, puede avanzar su estado. */
+export async function updateAppointment(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const user = await requireUser();
+  const parsed = appointmentUpdateSchema.safeParse({
+    id: formData.get("id"),
+    leadId: formData.get("leadId") || undefined,
+    title: formData.get("title"),
+    startsAt: formData.get("startsAt"),
+    durationMinutes: formData.get("durationMinutes") || undefined,
+    notes: formData.get("notes") || undefined,
+    meetingUrl: formData.get("meetingUrl") || undefined,
+    status: formData.get("status"),
+    newLeadStatus: formData.get("newLeadStatus") || undefined,
+  });
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+  }
+
+  const startsAt = new Date(parsed.data.startsAt);
+  if (Number.isNaN(startsAt.getTime())) return { ok: false, message: "Fecha inválida." };
+  const endsAt = new Date(startsAt.getTime() + parsed.data.durationMinutes * 60_000);
+  const leadId = parsed.data.leadId || null;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("appointments")
+    .update({
+      lead_id: leadId,
+      title: parsed.data.title,
+      notes: parsed.data.notes || null,
+      meeting_url: parsed.data.meetingUrl || null,
+      starts_at: startsAt.toISOString(),
+      ends_at: endsAt.toISOString(),
+      status: parsed.data.status,
+    })
+    .eq("id", parsed.data.id)
+    .select("id")
+    .single();
+  if (error || !data) return { ok: false, message: "No se pudo guardar." };
+
+  if (leadId && parsed.data.newLeadStatus) {
+    const { data: lead } = await supabase.from("leads").select("status").eq("id", leadId).maybeSingle();
+    if (lead && lead.status !== parsed.data.newLeadStatus) {
+      const newStatus = parsed.data.newLeadStatus as LeadStatus;
+      await supabase.from("leads").update({ status: newStatus }).eq("id", leadId);
+      await supabase.from("lead_activities").insert({
+        owner_id: user.id,
+        lead_id: leadId,
+        type: "CAMBIO_ESTADO",
+        from_status: lead.status,
+        to_status: newStatus,
+      });
+    }
+    revalidatePath(`/leads/${leadId}`);
+  }
+
+  revalidatePath("/leads/agenda");
+  return { ok: true, message: "Turno actualizado." };
+}
+
+/** Cambio de estado rápido (chips de mes/semana, fila de la lista) — sin tocar el lead. */
+export async function updateAppointmentStatus(id: string, status: AppointmentStatus) {
+  await requireUser();
+  const supabase = await createClient();
+  await supabase.from("appointments").update({ status }).eq("id", id);
+  revalidatePath("/leads/agenda");
+}
+
+/**
+ * Marcar "realizada" desde el control rápido: ofrece avanzar el estado del
+ * lead en el mismo paso (Plan §1.5) sin abrir el formulario completo de edición.
+ */
+export async function markAppointmentDone(id: string, newLeadStatus?: LeadStatus) {
+  const user = await requireUser();
+  const supabase = await createClient();
+
+  const { data: appt } = await supabase.from("appointments").select("lead_id").eq("id", id).maybeSingle();
+  if (!appt) return;
+
+  await supabase.from("appointments").update({ status: "REALIZADA" }).eq("id", id);
+
+  if (appt.lead_id && newLeadStatus) {
+    const { data: lead } = await supabase.from("leads").select("status").eq("id", appt.lead_id).maybeSingle();
+    if (lead && lead.status !== newLeadStatus) {
+      await supabase.from("leads").update({ status: newLeadStatus }).eq("id", appt.lead_id);
+      await supabase.from("lead_activities").insert({
+        owner_id: user.id,
+        lead_id: appt.lead_id,
+        type: "CAMBIO_ESTADO",
+        from_status: lead.status,
+        to_status: newLeadStatus,
+      });
+    }
+    revalidatePath(`/leads/${appt.lead_id}`);
+  }
+
+  revalidatePath("/leads/agenda");
+}
+
+/** Arrastrar y soltar en la grilla de mes/semana: mueve el turno preservando su duración. */
+export async function moveAppointment(id: string, startsAtIso: string) {
+  await requireUser();
+  const supabase = await createClient();
+
+  const { data: current } = await supabase
+    .from("appointments")
+    .select("starts_at, ends_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (!current) return;
+
+  const durationMs = new Date(current.ends_at).getTime() - new Date(current.starts_at).getTime();
+  const newStart = new Date(startsAtIso);
+  const newEnd = new Date(newStart.getTime() + durationMs);
+
+  await supabase
+    .from("appointments")
+    .update({ starts_at: newStart.toISOString(), ends_at: newEnd.toISOString() })
+    .eq("id", id);
+  revalidatePath("/leads/agenda");
+}
+
+export async function deleteAppointment(id: string) {
+  await requireUser();
+  const supabase = await createClient();
+  await supabase.from("appointments").delete().eq("id", id);
+  revalidatePath("/leads/agenda");
+}
+
+export type IcsExportState = { ok: true; ics: string; filename: string } | { ok: false; message: string };
+
+/** Genera el .ics en el servidor (RLS de por medio) — el cliente arma el Blob y dispara la descarga. */
+export async function exportAgendaIcs(): Promise<IcsExportState> {
+  await requireUser();
+  const rows = await listAppointmentsForIcs();
+  const ics = buildIcsCalendar(
+    rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      notes: row.notes,
+      starts_at: row.starts_at,
+      ends_at: row.ends_at,
+      meeting_url: row.meeting_url,
+      status: row.status,
+      leadName: row.leads?.name ?? null,
+    })),
+  );
+
+  return { ok: true, ics, filename: `agenda-${new Date().toISOString().slice(0, 10)}.ics` };
 }
