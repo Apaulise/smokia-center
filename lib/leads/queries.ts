@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { LeadStatus } from "@/lib/leads/status";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database, Json } from "@/lib/supabase/database.types";
 
 const PAGE_SIZE = 25;
 
@@ -156,4 +156,124 @@ export async function listRecentJobs(limit = 10) {
     .limit(limit);
   if (error) throw error;
   return data;
+}
+
+// ── Dashboard del gestor (Plan §1.4) ────────────────────────────────────────
+// Los agregados pesados salen de funciones Postgres (supabase/migrations
+// /20260914120000_leads_dashboard_functions.sql) llamadas por `.rpc()`, en vez
+// de traer filas acá para contarlas. Corren SECURITY INVOKER, así que RLS
+// filtra igual que en cualquier otra query.
+
+export interface DashboardSummary {
+  total_leads: number;
+  contacted: number;
+  scheduled: number;
+  won: number;
+  conversion_rate: number | null;
+}
+
+const EMPTY_SUMMARY: DashboardSummary = {
+  total_leads: 0,
+  contacted: 0,
+  scheduled: 0,
+  won: 0,
+  conversion_rate: null,
+};
+
+export async function getDashboardSummary(): Promise<DashboardSummary> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("leads_dashboard_summary").maybeSingle();
+  if (error) throw error;
+  return data ?? EMPTY_SUMMARY;
+}
+
+export interface FunnelStage {
+  status: LeadStatus;
+  lead_count: number;
+}
+
+export async function getLeadsFunnel(): Promise<FunnelStage[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("leads_funnel_by_status");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export interface ActivityTimelinePoint {
+  day: string;
+  contacted: number;
+  won: number;
+}
+
+export async function getActivityTimeline(days = 30): Promise<ActivityTimelinePoint[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("leads_activity_timeline", { days });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export interface IndustryDistribution {
+  industry_id: string | null;
+  name: string;
+  color: string;
+  lead_count: number;
+}
+
+export async function getLeadsByIndustry(): Promise<IndustryDistribution[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("leads_by_industry");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export interface ListPerformance {
+  list_id: string;
+  name: string;
+  source: Database["public"]["Enums"]["lead_source"];
+  criteria: Json | null;
+  industry_name: string | null;
+  industry_color: string | null;
+  lead_count: number;
+  won_count: number;
+  win_rate: number | null;
+}
+
+export async function getListPerformance(): Promise<ListPerformance[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("leads_performance_by_list");
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Próximas reuniones agendadas, para el widget de atención del dashboard. */
+export async function listUpcomingAppointments(limit = 5) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("appointments")
+    .select("id, title, starts_at, leads(id, name)")
+    .in("status", ["AGENDADA", "CONFIRMADA"])
+    .gte("starts_at", new Date().toISOString())
+    .order("starts_at", { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+/**
+ * Leads sin tocar hace más de `days` días: nunca contactados desde que se
+ * crearon, o sin contacto desde la última actividad — lo que sea más
+ * reciente. Se excluyen los estados terminales, que ya no necesitan seguimiento.
+ */
+export async function listStaleLeads(days = 7, limit = 5) {
+  const supabase = await createClient();
+  const threshold = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from("leads")
+    .select("id, name, status, last_contacted_at, created_at")
+    .not("status", "in", "(CERRADO_GANADO,CERRADO_PERDIDO,DESCARTADO)")
+    .or(`last_contacted_at.lt.${threshold},and(last_contacted_at.is.null,created_at.lt.${threshold})`)
+    .order("last_contacted_at", { ascending: true, nullsFirst: true })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
 }

@@ -448,7 +448,54 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      leads_activity_timeline: {
+        Args: { days?: number }
+        Returns: {
+          contacted: number
+          day: string
+          won: number
+        }[]
+      }
+      leads_by_industry: {
+        Args: never
+        Returns: {
+          color: string
+          industry_id: string
+          lead_count: number
+          name: string
+        }[]
+      }
+      leads_dashboard_summary: {
+        Args: never
+        Returns: {
+          contacted: number
+          conversion_rate: number
+          scheduled: number
+          total_leads: number
+          won: number
+        }[]
+      }
+      leads_funnel_by_status: {
+        Args: never
+        Returns: {
+          lead_count: number
+          status: Database["public"]["Enums"]["lead_status"]
+        }[]
+      }
+      leads_performance_by_list: {
+        Args: never
+        Returns: {
+          criteria: Json
+          industry_color: string
+          industry_name: string
+          lead_count: number
+          list_id: string
+          name: string
+          source: Database["public"]["Enums"]["lead_source"]
+          win_rate: number
+          won_count: number
+        }[]
+      }
     }
     Enums: {
       appointment_status:

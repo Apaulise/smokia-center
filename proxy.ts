@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 /** Rutas accesibles sin sesión. Todo lo demás exige login. */
 const PUBLIC_PATHS = ["/login", "/auth/callback"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -59,10 +59,12 @@ export const config = {
   matcher: [
     /*
      * Todo excepto:
-     *  - assets de Next y archivos estáticos
+     *  - toda la rama /_next/ (estáticos, imágenes, y el socket de HMR de
+     *    Turbopack en /_next/hmr). Dejar pasar el proxy por el socket de HMR
+     *    rompe el handshake y el navegador entra en loop de reconexión.
      *  - /api/*, que se autentica con su propio secreto. El webhook de Apify
      *    llega sin sesión y tiene que poder entrar.
      */
-    "/((?!_next/static|_next/image|favicon.ico|api/|.*\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/|favicon.ico|api/|.*\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
