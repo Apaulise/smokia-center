@@ -74,6 +74,12 @@
   ::selection {
     background: rgb(24 214 232 / 0.3);
   }
+
+  /* El popup nativo de <select> lo pinta el navegador/SO, fuera del CSS normal. */
+  select option {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+  }
 }
 
 @layer utilities {

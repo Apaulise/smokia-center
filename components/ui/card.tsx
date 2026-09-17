@@ -36,7 +36,7 @@ export function CardHeader({
   return (
     <div className="flex items-start justify-between gap-4 border-b border-line/60 px-6 py-4">
       <div className="min-w-0">
-        <h3 className="truncate text-base">{title}</h3>
+        <h3 className="truncate text-base text-ink">{title}</h3>
         {description ? (
           <p className="mt-1 text-sm text-muted">{description}</p>
         ) : null}
