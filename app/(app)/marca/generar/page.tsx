@@ -4,7 +4,7 @@ import { BrandChatPanel } from "@/components/brand/chat/chat-panel";
 import { PageHeader } from "@/components/shell/page-header";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { getBrandChatMessages, getLatestBrandChatThread } from "@/lib/brand/queries";
+import { getBrandChatMessages, getBrandChatThreads } from "@/lib/brand/queries";
 import { getAnthropicKeyStatus } from "@/lib/settings/queries";
 import { requireUser } from "@/lib/supabase/server";
 
@@ -15,7 +15,7 @@ export const maxDuration = 60;
 
 const PLATFORM = "INSTAGRAM" as const;
 
-export default async function GenerarPage() {
+export default async function GenerarPage({ searchParams }: { searchParams: Promise<{ hilo?: string }> }) {
   const user = await requireUser();
   const anthropicKey = await getAnthropicKeyStatus();
 
@@ -39,14 +39,23 @@ export default async function GenerarPage() {
     );
   }
 
-  const thread = await getLatestBrandChatThread(PLATFORM);
+  const { hilo } = await searchParams;
+  const threads = await getBrandChatThreads(PLATFORM);
+  // `?hilo=` abre esa conversación (así F5 no salta a otra); sin él, o con un id que no es de este usuario, la última.
+  const thread = (hilo ? threads.find((t) => t.id === hilo) : null) ?? threads[0] ?? null;
   const messages = thread ? await getBrandChatMessages(thread.id) : [];
 
   return (
     <>
       <PageHeader eyebrow="Gestor de Marca Personal" title="Generar contenido" description="Ideas, guiones, captions y hashtags." />
       <div className="px-6 py-8 lg:px-10">
-        <BrandChatPanel platform={PLATFORM} ownerId={user.id} initialThread={thread} initialMessages={messages} />
+        <BrandChatPanel
+          platform={PLATFORM}
+          ownerId={user.id}
+          initialThreads={threads}
+          initialThread={thread}
+          initialMessages={messages}
+        />
       </div>
     </>
   );

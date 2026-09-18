@@ -1,5 +1,7 @@
 import { Bot, Search, User } from "lucide-react";
+import Link from "next/link";
 
+import { Markdown } from "@/components/brand/markdown";
 import { Badge } from "@/components/ui/badge";
 import type { BrandChatWireTurn } from "@/lib/brand/ai/chat-types";
 import type { Database } from "@/lib/supabase/database.types";
@@ -62,9 +64,12 @@ function extractParts(row: ChatMessageRow): { text: string; tools: string[] } {
 export function ChatMessage({
   row,
   onSaveIdea,
+  saved = false,
 }: {
   row: ChatMessageRow;
-  onSaveIdea?: (text: string) => void;
+  onSaveIdea?: (messageId: string, text: string) => void;
+  /** Ya se guardó una idea desde esta respuesta (en esta sesión). */
+  saved?: boolean;
 }) {
   const isUser = row.role === "USUARIO";
   const { text, tools } = extractParts(row);
@@ -80,7 +85,7 @@ export function ChatMessage({
       >
         {isUser ? <User className="size-4" /> : <Bot className="size-4" />}
       </div>
-      <div className={cn("max-w-[80%] space-y-2", isUser && "flex flex-col items-end")}>
+      <div className={cn("min-w-0 max-w-[80%] space-y-2", isUser && "flex flex-col items-end")}>
         {tools.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
             {tools.map((label, index) => (
@@ -94,19 +99,29 @@ export function ChatMessage({
         {text || streaming ? (
           <div
             className={cn(
-              "whitespace-pre-wrap rounded-[16px] border px-4 py-3 text-sm text-ink",
-              isUser ? "border-line bg-surface/60" : "border-line bg-elevated/80",
+              "rounded-[16px] border px-4 py-3 text-sm text-ink",
+              isUser ? "border-line bg-surface/60 whitespace-pre-wrap" : "border-line bg-elevated/80",
             )}
           >
-            {text}
+            {/* Lo que escribe la persona es texto plano; lo que devuelve el modelo es markdown. */}
+            {isUser ? text : <Markdown>{text}</Markdown>}
             {streaming ? <span className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse bg-cyan align-middle" /> : null}
           </div>
         ) : null}
         {row.status === "FALLIDO" ? <p className="text-xs text-danger">{row.error ?? "Algo falló generando la respuesta."}</p> : null}
         {!isUser && !streaming && text ? (
-          <button type="button" onClick={() => onSaveIdea?.(text)} className="text-xs text-cyan hover:underline">
-            Guardar como idea
-          </button>
+          saved ? (
+            <p className="text-xs text-positive">
+              ✓ Idea guardada ·{" "}
+              <Link href="/marca/ideas" className="text-cyan hover:underline">
+                Ver ideas guardadas
+              </Link>
+            </p>
+          ) : (
+            <button type="button" onClick={() => onSaveIdea?.(row.id, text)} className="text-xs text-cyan hover:underline">
+              Guardar como idea
+            </button>
+          )
         ) : null}
       </div>
     </div>

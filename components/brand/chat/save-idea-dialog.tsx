@@ -35,12 +35,15 @@ export function SaveIdeaDialog({
   platform,
   threadId,
   onClose,
+  onSaved,
 }: {
   open: boolean;
   initialText: string;
   platform: BrandPlatform;
   threadId: string | null;
   onClose: () => void;
+  /** Se llama sólo si la idea se guardó de verdad, justo antes de cerrar. */
+  onSaved?: () => void;
 }) {
   const [title, setTitle] = useState("");
   const [idea, setIdea] = useState(initialText);
@@ -65,6 +68,7 @@ export function SaveIdeaDialog({
       setError(result.message);
       return;
     }
+    onSaved?.();
     onClose();
   }
 

@@ -146,18 +146,31 @@ export async function getBrandRecommendations(platform: BrandPlatform) {
   return data ?? [];
 }
 
-/** El hilo de chat más reciente para la plataforma, o null si todavía no se escribió nada (§3.6). */
-export async function getLatestBrandChatThread(platform: BrandPlatform) {
+const CHAT_THREADS_MAX = 50;
+
+/** Las conversaciones de la plataforma, la más nueva primero — el historial del chat (§3.6). */
+export async function getBrandChatThreads(platform: BrandPlatform) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("brand_chat_threads")
     .select("*")
     .eq("platform", platform)
     .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(CHAT_THREADS_MAX);
   if (error) throw error;
-  return data;
+  return data ?? [];
+}
+
+/** Las ideas guardadas desde el chat, la más nueva primero (§3.6). El planificador (§3.7) las va a tomar de esta misma tabla. */
+export async function getBrandContentItems(platform: BrandPlatform) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("brand_content_items")
+    .select("*")
+    .eq("platform", platform)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
 }
 
 export async function getBrandChatMessages(threadId: string) {
