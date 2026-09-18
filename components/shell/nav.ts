@@ -49,6 +49,12 @@ export const MODULES: NavModule[] = [
     href: "/marca",
     label: "Gestor de Marca Personal",
     icon: "marca",
-    available: false,
+    available: true,
+    children: [
+      { href: "/marca", label: "Dashboard", exact: true },
+      { href: "/marca/contenido", label: "Contenido" },
+      { href: "/marca/analisis", label: "Análisis" },
+      { href: "/marca/generar", label: "Generar contenido" },
+    ],
   },
 ];

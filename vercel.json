@@ -3,6 +3,10 @@
     {
       "path": "/api/jobs/reconcile",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/jobs/sync-marca",
+      "schedule": "0 7 * * *"
     }
   ]
 }

@@ -1,18 +1,29 @@
-import { Bot, KeyRound, MessageSquareText, Tags } from "lucide-react";
+import { Bot, KeyRound, MessageSquareText, Sparkles, Tags } from "lucide-react";
 
 import { PageHeader } from "@/components/shell/page-header";
 import { ActorOverridesForm } from "@/components/settings/actor-overrides-form";
+import { AnthropicKeyForm } from "@/components/settings/anthropic-key-form";
 import { ApifyKeyForm } from "@/components/settings/apify-key-form";
 import { IndustriesManager } from "@/components/settings/industries-manager";
 import { TemplatesManager } from "@/components/settings/templates-manager";
+import { WindsorKeyForm } from "@/components/settings/windsor-key-form";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { getActorOverrides, getApifyKeyStatus, listIndustries, listMessageTemplates } from "@/lib/settings/queries";
+import {
+  getActorOverrides,
+  getAnthropicKeyStatus,
+  getApifyKeyStatus,
+  getWindsorKeyStatus,
+  listIndustries,
+  listMessageTemplates,
+} from "@/lib/settings/queries";
 
 export const metadata = { title: "Configuración · Awareness AI" };
 
 export default async function ConfiguracionPage() {
-  const [apifyStatus, industries, templates, actorOverrides] = await Promise.all([
+  const [apifyStatus, windsorStatus, anthropicStatus, industries, templates, actorOverrides] = await Promise.all([
     getApifyKeyStatus(),
+    getWindsorKeyStatus(),
+    getAnthropicKeyStatus(),
     listIndustries(),
     listMessageTemplates(),
     getActorOverrides(),
@@ -23,7 +34,7 @@ export default async function ConfiguracionPage() {
       <PageHeader
         eyebrow="Configuración"
         title="Conexiones y preferencias"
-        description="API key de Apify, rubros y plantillas de mensajes."
+        description="API keys de Apify, Windsor.ai y Anthropic, rubros y plantillas de mensajes."
       />
       <div className="space-y-6 px-6 py-8 lg:px-10">
         <Card>
@@ -38,6 +49,36 @@ export default async function ConfiguracionPage() {
           />
           <CardBody>
             <ApifyKeyForm configured={apifyStatus.configured} masked={apifyStatus.masked} />
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title={
+              <span className="flex items-center gap-2">
+                <KeyRound className="size-4 text-cyan" />
+                Windsor.ai
+              </span>
+            }
+            description="Métricas y publicación del Gestor de Marca Personal (Instagram por ahora)."
+          />
+          <CardBody>
+            <WindsorKeyForm configured={windsorStatus.configured} masked={windsorStatus.masked} />
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title={
+              <span className="flex items-center gap-2">
+                <Sparkles className="size-4 text-violet" />
+                Anthropic
+              </span>
+            }
+            description="Análisis y generación de contenido del Gestor de Marca Personal."
+          />
+          <CardBody>
+            <AnthropicKeyForm configured={anthropicStatus.configured} masked={anthropicStatus.masked} />
           </CardBody>
         </Card>
 

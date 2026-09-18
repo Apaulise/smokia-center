@@ -2,7 +2,7 @@ import { decrypt, maskSecret } from "@/lib/crypto";
 import type { LeadSource } from "@/lib/providers/types";
 import { createClient } from "@/lib/supabase/server";
 
-import { APIFY_KEY_SETTING } from "./constants";
+import { ANTHROPIC_KEY_SETTING, APIFY_KEY_SETTING, WINDSOR_KEY_SETTING } from "./constants";
 
 const ACTOR_KEY_PREFIX = "apify_actor_";
 
@@ -10,12 +10,12 @@ const ACTOR_KEY_PREFIX = "apify_actor_";
  * No hace falta filtrar por owner_id acá: RLS ya garantiza que sólo vuelven
  * las filas del usuario logueado (CLAUDE.md §4).
  */
-export async function getApifyKeyStatus() {
+async function getKeyStatus(key: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("settings")
     .select("value_encrypted")
-    .eq("key", APIFY_KEY_SETTING)
+    .eq("key", key)
     .maybeSingle();
 
   if (!data) return { configured: false as const, masked: null };
@@ -27,6 +27,18 @@ export async function getApifyKeyStatus() {
     // no configurada en vez de romper la pantalla.
     return { configured: false as const, masked: null };
   }
+}
+
+export async function getApifyKeyStatus() {
+  return getKeyStatus(APIFY_KEY_SETTING);
+}
+
+export async function getWindsorKeyStatus() {
+  return getKeyStatus(WINDSOR_KEY_SETTING);
+}
+
+export async function getAnthropicKeyStatus() {
+  return getKeyStatus(ANTHROPIC_KEY_SETTING);
 }
 
 export async function listIndustries() {

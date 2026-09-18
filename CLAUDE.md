@@ -15,7 +15,7 @@ Panel central del negocio de Awareness AI, una agencia de IA y automatización. 
 | **Gestor de Facturación** | Ingresos, clientes, cobros | Fase 2 — no empezado |
 | **Gestor de Marca Personal** | Contenido y presencia | Fase 3 — no empezado |
 
-El plan completo vive en [Plans/01-gestor-de-leads.md](Plans/01-gestor-de-leads.md). El manual de identidad visual, en [Awareness_AI_Manual_de_Marca.md](Awareness_AI_Manual_de_Marca.md).
+Los planes viven en `Plans/`, numerados por fase: [01 — Gestor de Leads](Plans/01-gestor-de-leads.md) y [03 — Gestor de Marca Personal](Plans/03-gestor-de-marca-personal.md), este último escrito por adelantado y **sin empezar** (ver §2). El manual de identidad visual, en [Awareness_AI_Manual_de_Marca.md](Awareness_AI_Manual_de_Marca.md).
 
 ---
 

@@ -1,14 +1,17 @@
 ﻿"use server";
 
+import Anthropic from "@anthropic-ai/sdk";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { decrypt, encrypt } from "@/lib/crypto";
+import { instagramProvider } from "@/lib/brand/sources/instagram";
+import { queryWindsorConnector } from "@/lib/windsor/client";
 import type { LeadSource } from "@/lib/providers/types";
 import { createClient, requireUser } from "@/lib/supabase/server";
 import { slugify } from "@/lib/utils";
 
-import { APIFY_KEY_SETTING, DEFAULT_INDUSTRIES, actorOverrideKey } from "./constants";
+import { ANTHROPIC_KEY_SETTING, APIFY_KEY_SETTING, DEFAULT_INDUSTRIES, WINDSOR_KEY_SETTING, actorOverrideKey } from "./constants";
 
 export type ActionState = { ok: boolean; message: string } | null;
 
@@ -97,6 +100,159 @@ export async function testApifyConnection(
     };
   } catch {
     return { ok: false, message: "No se pudo contactar a Apify." };
+  }
+}
+
+// ── Windsor.ai API key ───────────────────────────────────────────────────
+
+const windsorKeySchema = z.object({
+  apiKey: z.string().trim().min(10, "La API key parece incompleta."),
+});
+
+export async function saveWindsorKey(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const user = await requireUser();
+  const parsed = windsorKeySchema.safeParse({ apiKey: formData.get("apiKey") });
+  if (!parsed.success) {
+    return { ok: false, message: firstIssue(parsed.error, "API key inválida.") };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("settings").upsert(
+    {
+      owner_id: user.id,
+      key: WINDSOR_KEY_SETTING,
+      value_encrypted: encrypt(parsed.data.apiKey),
+    },
+    { onConflict: "owner_id,key" },
+  );
+
+  if (error) return { ok: false, message: "No se pudo guardar la key." };
+
+  revalidatePath("/configuracion");
+  return { ok: true, message: "API key guardada." };
+}
+
+export async function deleteWindsorKey() {
+  const supabase = await createClient();
+  await supabase.from("settings").delete().eq("key", WINDSOR_KEY_SETTING);
+  revalidatePath("/configuracion");
+}
+
+export async function testWindsorConnection(
+  _prevState: ActionState,
+  _formData: FormData,
+): Promise<ActionState> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("settings")
+    .select("value_encrypted")
+    .eq("key", WINDSOR_KEY_SETTING)
+    .maybeSingle();
+
+  if (!data) return { ok: false, message: "Todavía no cargaste una API key." };
+
+  let apiKey: string;
+  try {
+    apiKey = decrypt(data.value_encrypted);
+  } catch {
+    return { ok: false, message: "La key guardada no se pudo leer. Volvé a cargarla." };
+  }
+
+  try {
+    // Windsor no tiene un endpoint genérico de "quién soy": se prueba contra
+    // el conector de Instagram, que es el único conectado en esta fase.
+    const rows = await queryWindsorConnector({
+      apiKey,
+      connector: instagramProvider.connector,
+      fields: ["account_id"],
+      maxRows: 1,
+    });
+
+    return {
+      ok: true,
+      message:
+        rows.length > 0
+          ? "Conexión exitosa."
+          : "La key es válida, pero Windsor todavía no tiene ninguna cuenta de Instagram conectada.",
+    };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "No se pudo contactar a Windsor." };
+  }
+}
+
+// ── Anthropic API key ────────────────────────────────────────────────────
+
+const anthropicKeySchema = z.object({
+  apiKey: z.string().trim().min(10, "La API key parece incompleta."),
+});
+
+export async function saveAnthropicKey(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const user = await requireUser();
+  const parsed = anthropicKeySchema.safeParse({ apiKey: formData.get("apiKey") });
+  if (!parsed.success) {
+    return { ok: false, message: firstIssue(parsed.error, "API key inválida.") };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("settings").upsert(
+    {
+      owner_id: user.id,
+      key: ANTHROPIC_KEY_SETTING,
+      value_encrypted: encrypt(parsed.data.apiKey),
+    },
+    { onConflict: "owner_id,key" },
+  );
+
+  if (error) return { ok: false, message: "No se pudo guardar la key." };
+
+  revalidatePath("/configuracion");
+  return { ok: true, message: "API key guardada." };
+}
+
+export async function deleteAnthropicKey() {
+  const supabase = await createClient();
+  await supabase.from("settings").delete().eq("key", ANTHROPIC_KEY_SETTING);
+  revalidatePath("/configuracion");
+}
+
+export async function testAnthropicConnection(
+  _prevState: ActionState,
+  _formData: FormData,
+): Promise<ActionState> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("settings")
+    .select("value_encrypted")
+    .eq("key", ANTHROPIC_KEY_SETTING)
+    .maybeSingle();
+
+  if (!data) return { ok: false, message: "Todavía no cargaste una API key." };
+
+  let apiKey: string;
+  try {
+    apiKey = decrypt(data.value_encrypted);
+  } catch {
+    return { ok: false, message: "La key guardada no se pudo leer. Volvé a cargarla." };
+  }
+
+  try {
+    const client = new Anthropic({ apiKey });
+    await client.models.retrieve("claude-opus-5");
+    return { ok: true, message: "Conexión exitosa." };
+  } catch (error) {
+    if (error instanceof Anthropic.AuthenticationError) {
+      return { ok: false, message: "Anthropic rechazó la key. Revisala." };
+    }
+    if (error instanceof Anthropic.APIError) {
+      return { ok: false, message: `Anthropic respondió ${error.status}: ${error.message}` };
+    }
+    return { ok: false, message: "No se pudo contactar a Anthropic." };
   }
 }
 

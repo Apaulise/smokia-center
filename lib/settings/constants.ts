@@ -3,6 +3,12 @@ import type { LeadSource } from "@/lib/providers/types";
 /** Clave en `settings` para el token de Apify. Compartida por queries y actions. */
 export const APIFY_KEY_SETTING = "apify_api_key";
 
+/** Clave en `settings` para la API key de Windsor.ai (Plans/03 §3.1). */
+export const WINDSOR_KEY_SETTING = "windsor_api_key";
+
+/** Clave en `settings` para la API key de Anthropic (Plans/03 §3.1, usada por §3.5/§3.6). */
+export const ANTHROPIC_KEY_SETTING = "anthropic_api_key";
+
 /**
  * Clave en `settings` para el actor de Apify configurado por el usuario para
  * una fuente puntual. Sobreescribe el `defaultActorId` del proveedor
