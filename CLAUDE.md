@@ -13,9 +13,9 @@ Panel central del negocio de Awareness AI, una agencia de IA y automatización. 
 | **Panel principal** | Agrega métricas de las tres patas | Fase 4 — placeholder |
 | **Gestor de Leads** | Genera listas por rubro y zona, seguimiento hasta el cierre | **Fase 1 — en construcción** |
 | **Gestor de Facturación** | Ingresos, clientes, cobros | Fase 2 — no empezado |
-| **Gestor de Marca Personal** | Contenido y presencia | Fase 3 — no empezado |
+| **Gestor de Marca Personal** | Contenido y presencia | Fase 3 — en construcción |
 
-Los planes viven en `Plans/`, numerados por fase: [01 — Gestor de Leads](Plans/01-gestor-de-leads.md) y [03 — Gestor de Marca Personal](Plans/03-gestor-de-marca-personal.md), este último escrito por adelantado y **sin empezar** (ver §2). El manual de identidad visual, en [Awareness_AI_Manual_de_Marca.md](Awareness_AI_Manual_de_Marca.md).
+Los planes viven en `Plans/`, numerados por fase: [01 — Gestor de Leads](Plans/01-gestor-de-leads.md) y [03 — Gestor de Marca Personal](Plans/03-gestor-de-marca-personal.md), este último escrito por adelantado y hoy **en construcción** (ver §2). El manual de identidad visual, en [Awareness_AI_Manual_de_Marca.md](Awareness_AI_Manual_de_Marca.md).
 
 ---
 
@@ -111,6 +111,8 @@ Ver [Awareness_AI_Manual_de_Marca.md](Awareness_AI_Manual_de_Marca.md). La app e
 - **Proporción:** ~70% fondo oscuro, ~20% texto, ~10% acentos. Si una pantalla se ve neón, está mal
 - **Un solo efecto protagonista por vista.** Glow al 10–30% de opacidad, reservado para el foco principal
 - Espaciado 8/16/24/32/48/64; radios 16–24px en contenedores
+
+**El criterio editorial de la marca personal es otro documento y otra marca**: [Awareness_AI_Sistema_de_Contenido.md](Awareness_AI_Sistema_de_Contenido.md). Es el **system prompt literal** del agente de la Fase 3 ([Plans/03 §3.10](Plans/03-gestor-de-marca-personal.md)), no un documento sobre el prompt — todo lo que se escriba ahí se le manda al modelo en cada mensaje. El manual de arriba es identidad visual de la agencia; no sirve para deducir una voz de escritura.
 
 ---
 
