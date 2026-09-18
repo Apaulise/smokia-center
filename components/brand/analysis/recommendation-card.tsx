@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 
+import { parseEvidence, type EvidencePost } from "./evidence";
+import { PostThumb } from "@/components/brand/post-thumb";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -12,7 +14,6 @@ import { updateBrandRecommendationStatus } from "@/lib/brand/actions";
 import type { Database } from "@/lib/supabase/database.types";
 
 type Recommendation = Database["public"]["Tables"]["brand_recommendations"]["Row"];
-type Evidence = { summary: string; postIds: string[]; metrics: Record<string, number | string> };
 
 const KIND_LABEL: Record<Recommendation["kind"], string> = { REPETIR: "Repetir", CORTAR: "Cortar", PROBAR: "Probar" };
 // Repetir = seguir haciendo algo que ya funciona (positive), cortar = dejar
@@ -23,21 +24,23 @@ const KIND_TONE: Record<Recommendation["kind"], BadgeTone> = { REPETIR: "positiv
 const STATUS_LABEL: Record<Recommendation["status"], string> = { NUEVA: "Nueva", APLICADA: "Aplicada", DESCARTADA: "Descartada" };
 const STATUS_TONE: Record<Recommendation["status"], BadgeTone> = { NUEVA: "cyan", APLICADA: "positive", DESCARTADA: "neutral" };
 
-/** evidence llega como Json (jsonb genérico) — se valida en el borde, igual que cualquier dato de terceros (CLAUDE.md §5). */
-function parseEvidence(raw: Recommendation["evidence"]): Evidence {
-  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return { summary: "", postIds: [], metrics: {} };
-  const record = raw as Record<string, unknown>;
-  return {
-    summary: typeof record.summary === "string" ? record.summary : "",
-    postIds: Array.isArray(record.postIds) ? record.postIds.filter((id): id is string => typeof id === "string") : [],
-    metrics:
-      typeof record.metrics === "object" && record.metrics !== null && !Array.isArray(record.metrics)
-        ? (record.metrics as Record<string, number | string>)
-        : {},
-  };
-}
+const POST_KIND_LABEL: Record<EvidencePost["kind"], string> = {
+  REEL: "Reel",
+  POST: "Post",
+  CARRUSEL: "Carrusel",
+  HISTORIA: "Historia",
+  VIDEO: "Video",
+  SHORT: "Short",
+};
 
-export function RecommendationCard({ recommendation }: { recommendation: Recommendation }) {
+export function RecommendationCard({
+  recommendation,
+  evidencePosts,
+}: {
+  recommendation: Recommendation;
+  /** Las piezas citadas en `evidence.postIds`, ya resueltas por la página (miniatura y tipo). */
+  evidencePosts: EvidencePost[];
+}) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const evidence = parseEvidence(recommendation.evidence);
@@ -50,7 +53,7 @@ export function RecommendationCard({ recommendation }: { recommendation: Recomme
     });
   }
 
-  const hasEvidence = evidence.summary || Object.keys(evidence.metrics).length > 0 || evidence.postIds.length > 0;
+  const hasEvidence = evidence.summary || Object.keys(evidence.metrics).length > 0 || evidencePosts.length > 0;
 
   return (
     <Card>
@@ -67,7 +70,7 @@ export function RecommendationCard({ recommendation }: { recommendation: Recomme
         <p className="text-sm whitespace-pre-wrap text-ink">{recommendation.body}</p>
 
         {hasEvidence ? (
-          <div className="space-y-2 rounded-[12px] border border-line/60 bg-surface/40 p-3 text-xs text-muted">
+          <div className="space-y-3 rounded-[12px] border border-line/60 bg-surface/40 p-3 text-xs text-muted">
             {evidence.summary ? <p>{evidence.summary}</p> : null}
             {Object.keys(evidence.metrics).length > 0 ? (
               <dl className="grid grid-cols-2 gap-x-3 gap-y-1 sm:grid-cols-3">
@@ -79,11 +82,19 @@ export function RecommendationCard({ recommendation }: { recommendation: Recomme
                 ))}
               </dl>
             ) : null}
-            {evidence.postIds.length > 0 ? (
+            {evidencePosts.length > 0 ? (
               <div className="flex flex-wrap gap-3 pt-1">
-                {evidence.postIds.map((id, i) => (
-                  <Link key={id} href={`/marca/contenido/${id}`} className="text-cyan hover:underline">
-                    Ver post {i + 1}
+                {evidencePosts.map((post) => (
+                  <Link
+                    key={post.id}
+                    href={`/marca/contenido/${post.id}`}
+                    title={post.caption ?? POST_KIND_LABEL[post.kind]}
+                    className="group w-14 space-y-1"
+                  >
+                    <PostThumb url={post.thumbnailUrl} className="w-14 transition-colors group-hover:border-cyan/50" />
+                    <span className="block truncate text-center text-[11px] text-muted group-hover:text-cyan">
+                      {POST_KIND_LABEL[post.kind]}
+                    </span>
                   </Link>
                 ))}
               </div>

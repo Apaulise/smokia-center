@@ -18,6 +18,18 @@ const KIND_LABEL: Record<string, string> = {
   SHORT: "Short",
 };
 
+const numberFormat = new Intl.NumberFormat("es-AR");
+
+function formatCount(value: number | null) {
+  return value === null ? "—" : numberFormat.format(value);
+}
+
+/** `captured_on` es un `YYYY-MM-DD` sin hora: se reordena como texto, sin pasar por Date (que lo correría por zona horaria). */
+function formatCapturedOn(day: string) {
+  const [year, month, date] = day.split("-");
+  return `${date}/${month}/${year}`;
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const post = await getBrandPost(id);
@@ -39,6 +51,25 @@ export default async function ContenidoDetallePage({ params }: { params: Promise
     views: m.views,
     reach: m.reach,
   }));
+
+  // Los snapshots vienen ordenados por día: el último es el número de hoy.
+  const latest = metrics.at(-1) ?? null;
+  const metricItems = latest
+    ? [
+        { label: "Views", value: formatCount(latest.views) },
+        { label: "Alcance", value: formatCount(latest.reach) },
+        { label: "Likes", value: formatCount(latest.likes) },
+        { label: "Comentarios", value: formatCount(latest.comments) },
+        { label: "Guardados", value: formatCount(latest.saved) },
+        { label: "Compartidos", value: formatCount(latest.shares) },
+        { label: "Seguidores ganados", value: formatCount(latest.new_followers) },
+        // Sólo los reels traen retención: en un post o carrusel estos dos no existen.
+        ...(latest.reel_avg_watch_time_ms !== null
+          ? [{ label: "Watch time prom.", value: `${(latest.reel_avg_watch_time_ms / 1000).toFixed(1)} s` }]
+          : []),
+        ...(latest.reel_skip_rate !== null ? [{ label: "Skip rate", value: `${latest.reel_skip_rate.toFixed(1)}%` }] : []),
+      ]
+    : [];
 
   return (
     <>
@@ -90,6 +121,27 @@ export default async function ContenidoDetallePage({ params }: { params: Promise
         </div>
 
         <div className="space-y-6 lg:col-span-2">
+          <Card>
+            <CardHeader
+              title="Métricas"
+              description={latest ? `Última sincronización: ${formatCapturedOn(latest.captured_on)}` : undefined}
+            />
+            <CardBody>
+              {latest ? (
+                <dl className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3">
+                  {metricItems.map((item) => (
+                    <div key={item.label}>
+                      <dt className="text-xs font-medium tracking-wide text-muted uppercase">{item.label}</dt>
+                      <dd className="tabular mt-1 text-2xl text-ink">{item.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : (
+                <p className="text-sm text-muted">Todavía no hay métricas sincronizadas para esta pieza.</p>
+              )}
+            </CardBody>
+          </Card>
+
           <Card>
             <CardHeader title="Evolución desde que se publicó" description="Views y alcance por día sincronizado." />
             <CardBody>

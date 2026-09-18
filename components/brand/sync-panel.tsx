@@ -53,6 +53,12 @@ export function BrandSyncPanel({
   initialJob: BrandSyncJob | null;
 }) {
   const [job, setJob] = useState(initialJob);
+  const [prevInitialJob, setPrevInitialJob] = useState(initialJob);
+  // useState ignora las props nuevas: sin esto el estado queda viejo tras router.refresh().
+  if (initialJob !== prevInitialJob) {
+    setPrevInitialJob(initialJob);
+    setJob(initialJob);
+  }
   const [pending, startSync] = useTransition();
   const supabaseRef = useRef(createClient());
   const router = useRouter();

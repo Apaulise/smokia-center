@@ -1,8 +1,10 @@
-import { KeyRound, TrendingUp } from "lucide-react";
+import { ChevronDown, KeyRound, TrendingUp } from "lucide-react";
 
+import { parseEvidence, type EvidencePost } from "@/components/brand/analysis/evidence";
 import { GenerateAnalysisPanel } from "@/components/brand/analysis/generate-panel";
 import { RankedBars } from "@/components/brand/analysis/ranked-bars";
 import { RecommendationCard } from "@/components/brand/analysis/recommendation-card";
+import { RetentionList } from "@/components/brand/analysis/retention-list";
 import { PageHeader } from "@/components/shell/page-header";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -19,7 +21,10 @@ export const maxDuration = 60;
 const PLATFORM = "INSTAGRAM" as const;
 
 type RecommendationRow = Database["public"]["Tables"]["brand_recommendations"]["Row"];
-const STATUS_ORDER: Record<RecommendationRow["status"], number> = { NUEVA: 0, APLICADA: 1, DESCARTADA: 2 };
+
+function countLabel(count: number, singular: string, plural: string) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
 
 export default async function AnalisisPage() {
   const account = await getBrandAccountSummary(PLATFORM);
@@ -68,7 +73,23 @@ export default async function AnalisisPage() {
   }
 
   const recommendations = await getBrandRecommendations(PLATFORM);
-  const sortedRecommendations = [...recommendations].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
+  // Las nuevas son lo que hay que mirar; lo que ya se resolvió (aplicada o
+  // descartada) queda aparte, plegado, para que no se mezcle con ellas.
+  const newRecommendations = recommendations.filter((r) => r.status === "NUEVA");
+  const historyRecommendations = recommendations
+    .filter((r) => r.status !== "NUEVA")
+    .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  const appliedCount = historyRecommendations.filter((r) => r.status === "APLICADA").length;
+  const discardedCount = historyRecommendations.length - appliedCount;
+
+  const postsById = new Map(posts.map((post) => [post.postId, post]));
+
+  function evidencePostsFor(recommendation: RecommendationRow): EvidencePost[] {
+    return parseEvidence(recommendation.evidence).postIds.flatMap((id) => {
+      const post = postsById.get(id);
+      return post ? [{ id, kind: post.kind, thumbnailUrl: post.thumbnailUrl, caption: post.caption }] : [];
+    });
+  }
 
   const bestReels = insights.retention.rows.filter((r) => r.key.startsWith("mejor-"));
   const worstReels = insights.retention.rows.filter((r) => r.key.startsWith("peor-"));
@@ -83,7 +104,7 @@ export default async function AnalisisPage() {
             ? ` · ${new Date(insights.periodFrom).toLocaleDateString("es-AR")} a ${new Date(insights.periodTo).toLocaleDateString("es-AR")}`
             : ""
         }`}
-        action={<GenerateAnalysisPanel platform={PLATFORM} />}
+        action={<GenerateAnalysisPanel platform={PLATFORM} pendingCount={newRecommendations.length} />}
       />
 
       <div className="space-y-6 px-6 py-8 lg:px-10">
@@ -134,33 +155,76 @@ export default async function AnalisisPage() {
           <CardBody className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div>
               <h4 className="mb-3 text-xs font-medium tracking-wide text-muted uppercase">Mejores hooks</h4>
-              <RankedBars rows={bestReels} emptyMessage="Todavía no hay reels con skip rate sincronizado." />
+              <RetentionList
+                rows={bestReels}
+                postsById={postsById}
+                emptyMessage="Todavía no hay reels con skip rate sincronizado."
+              />
             </div>
             <div>
               <h4 className="mb-3 text-xs font-medium tracking-wide text-muted uppercase">Para revisar</h4>
-              <RankedBars rows={worstReels} emptyMessage="Todavía no hay reels con skip rate sincronizado." />
+              <RetentionList
+                rows={worstReels}
+                postsById={postsById}
+                emptyMessage="Todavía no hay reels con skip rate sincronizado."
+              />
             </div>
           </CardBody>
         </Card>
 
         <div className="space-y-4">
           <h2 className="text-lg text-ink">Recomendaciones</h2>
-          {sortedRecommendations.length === 0 ? (
+
+          {newRecommendations.length === 0 ? (
             <Card>
               <CardBody>
                 <p className="text-sm text-muted">
-                  Todavía no generaste un análisis. Apretá &quot;Generar análisis&quot; para que Claude lea estos patrones y proponga qué
-                  repetir, qué cortar y qué probar.
+                  {recommendations.length === 0
+                    ? "Todavía no generaste un análisis. Apretá “Generar análisis” para que Claude lea estos patrones y proponga qué repetir, qué cortar y qué probar."
+                    : "No hay recomendaciones nuevas. Apretá “Generar análisis” para obtener unas actualizadas; las que ya resolviste están en el historial."}
                 </p>
               </CardBody>
             </Card>
           ) : (
             <div className="space-y-4">
-              {sortedRecommendations.map((recommendation) => (
-                <RecommendationCard key={recommendation.id} recommendation={recommendation} />
+              {newRecommendations.map((recommendation) => (
+                <RecommendationCard
+                  key={recommendation.id}
+                  recommendation={recommendation}
+                  evidencePosts={evidencePostsFor(recommendation)}
+                />
               ))}
             </div>
           )}
+
+          {historyRecommendations.length > 0 ? (
+            <details className="group rounded-[20px] border border-line bg-elevated/50">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-6 py-4 text-sm text-ink [&::-webkit-details-marker]:hidden">
+                <span>
+                  Historial
+                  <span className="text-muted">
+                    {" · "}
+                    {[
+                      appliedCount > 0 ? countLabel(appliedCount, "aplicada", "aplicadas") : null,
+                      discardedCount > 0 ? countLabel(discardedCount, "descartada", "descartadas") : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </span>
+                <ChevronDown className="size-4 text-muted transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="space-y-4 border-t border-line/60 p-4">
+                {historyRecommendations.map((recommendation) => (
+                  <RecommendationCard
+                    key={recommendation.id}
+                    recommendation={recommendation}
+                    evidencePosts={evidencePostsFor(recommendation)}
+                  />
+                ))}
+              </div>
+            </details>
+          ) : null}
         </div>
       </div>
     </>

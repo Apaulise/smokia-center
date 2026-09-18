@@ -70,6 +70,15 @@ export async function generateBrandAnalysis(platform: BrandPlatform): Promise<Ge
     };
   }
 
+  // Las NUEVAS de análisis anteriores son las que este análisis reemplaza (las
+  // aplicadas y descartadas quedan de historial). Se anotan ahora, antes de
+  // generar, para no borrar por error las que se van a insertar más abajo.
+  const { data: previousNew } = await supabase
+    .from("brand_recommendations")
+    .select("id")
+    .eq("platform", platform)
+    .eq("status", "NUEVA");
+
   let recommendations;
   try {
     recommendations = await generateBrandRecommendations({ apiKey, platform, insights });
@@ -97,6 +106,19 @@ export async function generateBrandAnalysis(platform: BrandPlatform): Promise<Ge
   );
 
   if (error) return { ok: false, message: "El análisis se generó pero no se pudo guardar." };
+
+  // Recién con el lote nuevo guardado se borra el viejo: si algo falla antes,
+  // nadie se queda sin recomendaciones. El `.eq("status", "NUEVA")` repetido
+  // protege a las que se marcaron como aplicadas mientras el modelo pensaba.
+  const staleIds = (previousNew ?? []).map((row) => row.id);
+  if (staleIds.length > 0) {
+    const { error: deleteError } = await supabase
+      .from("brand_recommendations")
+      .delete()
+      .in("id", staleIds)
+      .eq("status", "NUEVA");
+    if (deleteError) console.error("brand_recommendations: no se pudieron reemplazar las anteriores", deleteError.code);
+  }
 
   revalidatePath("/marca/analisis");
   return { ok: true, count: recommendations.length };
