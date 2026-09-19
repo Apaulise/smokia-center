@@ -3,21 +3,6 @@ import type { BrandPlatform } from "@/lib/brand/sources/types";
 
 const PLATFORM_LABEL: Record<BrandPlatform, string> = { INSTAGRAM: "Instagram", YOUTUBE: "YouTube" };
 
-export function buildRecommendationsSystemPrompt(): string {
-  return `Sos el analista de contenido del Gestor de Marca Personal de Awareness AI.
-
-Tu trabajo es leer patrones YA CALCULADOS sobre el contenido de una cuenta y traducirlos en recomendaciones concretas — nunca recalcules ni inventes aritmética, los números que te pasan ya están bien.
-
-Reglas no negociables:
-- Cada recomendación cita evidencia real: en "postIds" sólo pueden ir ids que aparecen en los datos que te paso. Si no tenés un post concreto para citar, dejá el array vacío.
-- Si una fila tiene sampleSize bajo (2-3 posts), decilo en el texto ("con pocos datos todavía", "a confirmar con más contenido") en vez de sonar más seguro de lo que la muestra permite.
-- Los ids van únicamente en "postIds". Nunca escribas un id, ni completo ni abreviado (por ejemplo "Reel 11a441dc"), en "title", "body" ni "evidenceSummary": quien lee no sabe qué pieza es. Para nombrar una pieza en el texto usá las primeras palabras de su caption entre comillas, o describila por su formato ("el reel más reciente") si no tiene caption.
-- No repitas el mismo hallazgo en dos recomendaciones distintas.
-- Escribí en español rioplatense, tono profesional y directo, sin relleno motivacional.
-- Cada recomendación es "REPETIR" (algo que ya funciona y conviene sostener), "CORTAR" (algo que está rindiendo mal y conviene dejar de hacer) o "PROBAR" (una idea nueva fundada en un hueco o patrón que los datos muestran).
-- Producí entre 3 y 8 recomendaciones, priorizando las que tengan evidencia más fuerte (mayor sampleSize o diferencia más marcada).`;
-}
-
 function formatRows(rows: PatternRow[]): string {
   if (rows.length === 0) return "  (sin datos suficientes todavía)";
   return rows
@@ -39,6 +24,13 @@ export function formatPost(post: AnalysisPost): string {
   return `  - ${parts.join(", ")}`;
 }
 
+/**
+ * Datos + instrucciones de tarea para §3.5 (Plans/03 §3.10, "Ampliación del
+ * SOC"). El criterio editorial —qué es un ganador, cómo leerlo, qué hacer con
+ * un cluster— vive en el SOC (system prompt, lib/brand/ai/content-os.ts).
+ * Esto es sólo lo que el SOC no puede saber: la forma de los datos que le
+ * mandamos y el esquema de salida que espera nuestra base.
+ */
 export function buildRecommendationsUserPrompt(platform: BrandPlatform, insights: BrandInsightsSummary): string {
   return `Cuenta: ${PLATFORM_LABEL[platform]}
 Período analizado: ${insights.periodFrom ?? "?"} a ${insights.periodTo ?? "?"} (${insights.totalPosts} posts con métricas)
@@ -68,45 +60,38 @@ ${insights.topPosts.map(formatPost).join("\n") || "  (sin datos suficientes)"}
 ## Peor contenido del período
 ${insights.bottomPosts.map(formatPost).join("\n") || "  (sin datos suficientes)"}
 
-Con esto, generá las recomendaciones.`;
+Analizá esto siguiendo el §29 del SOC: qué sabemos, qué sospechamos, qué no sabemos todavía — y de ahí, qué duplicarías (REPETIR), qué reducirías (CORTAR) y qué testearías ahora (PROBAR). Nunca recalcules ni inventes aritmética: los números de arriba ya están bien, tu trabajo es la lectura.
+
+Reglas de esquema, no de criterio editorial:
+- "knowns", "hypotheses" y "unknowns" van en markdown: una lista de viñetas (3 a 6 cada una), cada viñeta una sola oración. Esto se muestra en una card compacta, no en un informe — nada de párrafos largos ni de repetir el mismo punto con otras palabras.
+- Cada recomendación lleva un "objective" (§16 del SOC): ALCANCE, AUTORIDAD o CONVERSION — para qué objetivo sirve, no todo se optimiza para lo mismo.
+- Un REPETIR sobre un ganador no es "hacé más de esto": traé el cluster de variaciones concretas (hook, ángulo, ejemplo distintos — §13–14 del SOC) en el cuerpo de la recomendación.
+- En "postIds" sólo pueden ir ids que aparecen en los datos de arriba. Si no tenés un post concreto para citar, dejá el array vacío.
+- Los ids van únicamente en "postIds". Nunca escribas un id, ni completo ni abreviado, en "title", "body" ni "evidenceSummary": quien lee no sabe qué pieza es. Para nombrar una pieza usá las primeras palabras de su caption entre comillas, o describila por su formato ("el reel más reciente").
+- Si una fila tiene sampleSize bajo (2-3 posts), decilo en el texto ("con pocos datos todavía") en vez de sonar más seguro de lo que la muestra permite.
+- No repitas el mismo hallazgo en dos recomendaciones distintas.
+- Producí entre 3 y 8 recomendaciones, priorizando las que tengan evidencia más fuerte.`;
 }
 
 /**
- * No hay una sección de "voz" en el manual de marca (Awareness_AI_Manual_de_Marca.md
- * es un manual visual) — esto adapta su §1 "Personalidad visual" a un registro
- * de escritura, que es lo que pide Plans/03 §3.6 ("la voz del manual de marca").
+ * El "bloque de estado" de §3.10: baseline, ganadores vigentes y mejores
+ * piezas recientes. Viaja como mensaje `{ role: "system" }` DESPUÉS del turno
+ * del usuario (no en el `system` de arriba, que se cachea) porque cambia en
+ * cada turno — meterlo en el prefijo cacheado invalidaría el caché siempre.
+ * Mientras §3.11 no exista, se arma con lo que ya hay: totales del período y
+ * mejores piezas.
  */
-function buildBrandVoicePrompt(): string {
-  return `Voz de marca (Awareness AI, adaptada del manual de identidad visual §1):
-- Clara: explica sin sonar inaccesible ni abusar de jerga técnica.
-- Dinámica: transmite impulso y ganas de actuar, sin gritar ni forzar signos de exclamación.
-- Minimalista: cada palabra cumple una función. Nada de relleno motivacional genérico.
-- Premium y confiable: seguridad tranquila, nunca vende humo ni promete de más.
-- Humana: la tecnología acompaña a las personas, nunca suena robótica ni impersonal.
-Español rioplatense, tono profesional y cercano.`;
-}
+export function buildContentOSStateBlock(platform: BrandPlatform, insights: BrandInsightsSummary | null): string {
+  if (!insights) {
+    return "Estado del sistema: todavía no hay suficiente contenido propio sincronizado con métricas. Si hace falta, usá buscar_mis_posts para ver qué hay disponible.";
+  }
 
-/**
- * System prompt del chat de generación (§3.6). Va como prefijo con
- * cache_control en lib/brand/ai/chat.ts: la voz y el mejor contenido no
- * cambian mensaje a mensaje, así que se cachean y la pregunta variable del
- * usuario queda después del último breakpoint.
- */
-export function buildChatSystemPrompt(topPosts: AnalysisPost[]): string {
-  const bestContent =
-    topPosts.length > 0
-      ? `Contenido propio que mejor funcionó últimamente (para inspirarte en qué repetir — nunca copiar literal):\n${topPosts.map(formatPost).join("\n")}`
-      : "Todavía no hay suficiente contenido sincronizado con métricas como para citar qué funcionó mejor. Si hace falta, usá buscar_mis_posts para revisar qué hay disponible.";
+  const bestContent = insights.topPosts.slice(0, 5).map(formatPost).join("\n") || "  (sin datos suficientes)";
 
-  return `Sos el asistente de generación de contenido del Gestor de Marca Personal de Awareness AI. Ayudás a preparar el próximo contenido para Instagram: ideas, guiones (hook / desarrollo / CTA), captions y hashtags.
+  return `Estado del sistema (se recalcula en cada turno, no forma parte del prompt cacheado):
+Cuenta: ${PLATFORM_LABEL[platform]}
+Período con métricas: ${insights.periodFrom ?? "?"} a ${insights.periodTo ?? "?"} (${insights.totalPosts} posts)
 
-${buildBrandVoicePrompt()}
-
-${bestContent}
-
-Reglas:
-- Fundamentá una idea en un post o reel concreto cuando puedas: usá buscar_mis_posts para encontrarlo y metricas_de_post para ver cómo evolucionó, en vez de inventar.
-- Usá la búsqueda web sólo para tendencias actuales del nicho — nunca para inventar datos de la propia cuenta.
-- Cuando el usuario pida un guion, estructuralo con encabezados claros: Hook, Desarrollo, CTA.
-- Sé conciso: la entrega es el contenido en sí, no un ensayo sobre por qué la idea es buena.`;
+Contenido propio que mejor funcionó últimamente (para fundar una idea o inspirarte en qué repetir — nunca copiar literal):
+${bestContent}`;
 }

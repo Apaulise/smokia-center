@@ -2,7 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 
 import type { BrandChatWireTurn } from "./chat-types";
 import { createAnthropicClient } from "./client";
-import { buildChatSystemPrompt } from "./prompts";
+import { getContentOS } from "./content-os";
+import { buildContentOSStateBlock } from "./prompts";
 import { BRAND_CHAT_TOOLS, runBrandChatTool } from "./tools";
 import { computeBrandInsights } from "@/lib/brand/insights";
 import { getBrandPostsForAnalysis } from "@/lib/brand/queries";
@@ -61,7 +62,13 @@ export async function runBrandChatTurn(params: {
 
   const posts = await getBrandPostsForAnalysis(params.platform);
   const insights = computeBrandInsights(posts);
-  const system = buildChatSystemPrompt(insights?.topPosts.slice(0, 5) ?? []);
+  const system = getContentOS();
+  // Estado variable (§3.10): no se cachea, así que no entra al `system` de
+  // arriba — viaja como mensaje de sistema a mitad de conversación, después
+  // del último turno del usuario, y se arma de nuevo en cada vuelta del loop
+  // sin persistirse en `messages` (si se guardara, el próximo turno lo vería
+  // desactualizado, y el objetivo es que sea la lectura del momento).
+  const stateBlock = buildContentOSStateBlock(params.platform, insights);
 
   const client = createAnthropicClient(params.apiKey);
   const tools = [...BRAND_CHAT_TOOLS, { type: "web_search_20260209", name: "web_search", max_uses: 5 } as const];
@@ -85,7 +92,7 @@ export async function runBrandChatTurn(params: {
         output_config: { effort: "high" },
         system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
         tools,
-        messages,
+        messages: [...messages, { role: "system", content: stateBlock }],
       });
 
       let liveText = "";
@@ -104,6 +111,12 @@ export async function runBrandChatTurn(params: {
       });
 
       const message = await stream.finalMessage();
+      // El SOC son ~5.500 tokens cacheados (§3.10): si cache_read da 0 a
+      // partir del segundo mensaje del hilo, algo variable se coló en el
+      // prefijo y cada mensaje está costando diez veces más.
+      console.log(
+        `[brand-chat] cache_read=${message.usage.cache_read_input_tokens ?? 0} cache_write=${message.usage.cache_creation_input_tokens ?? 0} input=${message.usage.input_tokens}`,
+      );
       wireTurns.push({ role: "assistant", content: message.content });
       messages.push({ role: "assistant", content: message.content });
 

@@ -184,6 +184,42 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_analysis_notes: {
+        Row: {
+          created_at: string
+          hypotheses: string
+          id: string
+          knowns: string
+          owner_id: string
+          period_from: string | null
+          period_to: string | null
+          platform: Database["public"]["Enums"]["brand_platform"]
+          unknowns: string
+        }
+        Insert: {
+          created_at?: string
+          hypotheses: string
+          id?: string
+          knowns: string
+          owner_id: string
+          period_from?: string | null
+          period_to?: string | null
+          platform: Database["public"]["Enums"]["brand_platform"]
+          unknowns: string
+        }
+        Update: {
+          created_at?: string
+          hypotheses?: string
+          id?: string
+          knowns?: string
+          owner_id?: string
+          period_from?: string | null
+          period_to?: string | null
+          platform?: Database["public"]["Enums"]["brand_platform"]
+          unknowns?: string
+        }
+        Relationships: []
+      }
       brand_audience: {
         Row: {
           account_id: string
@@ -524,6 +560,9 @@ export type Database = {
           evidence: Json
           id: string
           kind: Database["public"]["Enums"]["brand_recommendation_kind"]
+          objective:
+            | Database["public"]["Enums"]["brand_recommendation_objective"]
+            | null
           owner_id: string
           period_from: string | null
           period_to: string | null
@@ -538,6 +577,9 @@ export type Database = {
           evidence?: Json
           id?: string
           kind: Database["public"]["Enums"]["brand_recommendation_kind"]
+          objective?:
+            | Database["public"]["Enums"]["brand_recommendation_objective"]
+            | null
           owner_id: string
           period_from?: string | null
           period_to?: string | null
@@ -552,6 +594,9 @@ export type Database = {
           evidence?: Json
           id?: string
           kind?: Database["public"]["Enums"]["brand_recommendation_kind"]
+          objective?:
+            | Database["public"]["Enums"]["brand_recommendation_objective"]
+            | null
           owner_id?: string
           period_from?: string | null
           period_to?: string | null
@@ -1103,6 +1148,7 @@ export type Database = {
         | "VIDEO"
         | "SHORT"
       brand_recommendation_kind: "REPETIR" | "CORTAR" | "PROBAR"
+      brand_recommendation_objective: "ALCANCE" | "AUTORIDAD" | "CONVERSION"
       brand_recommendation_status: "NUEVA" | "APLICADA" | "DESCARTADA"
       job_status: "PENDIENTE" | "EN_CURSO" | "COMPLETADO" | "FALLIDO"
       lead_activity_type:
@@ -1280,6 +1326,7 @@ export const Constants = {
         "SHORT",
       ],
       brand_recommendation_kind: ["REPETIR", "CORTAR", "PROBAR"],
+      brand_recommendation_objective: ["ALCANCE", "AUTORIDAD", "CONVERSION"],
       brand_recommendation_status: ["NUEVA", "APLICADA", "DESCARTADA"],
       job_status: ["PENDIENTE", "EN_CURSO", "COMPLETADO", "FALLIDO"],
       lead_activity_type: [

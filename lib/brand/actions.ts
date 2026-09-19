@@ -79,9 +79,9 @@ export async function generateBrandAnalysis(platform: BrandPlatform): Promise<Ge
     .eq("platform", platform)
     .eq("status", "NUEVA");
 
-  let recommendations;
+  let analysis;
   try {
-    recommendations = await generateBrandRecommendations({ apiKey, platform, insights });
+    analysis = await generateBrandRecommendations({ apiKey, platform, insights });
   } catch (error) {
     if (error instanceof Anthropic.AuthenticationError) {
       return { ok: false, message: "Anthropic rechazó la key. Revisala en Configuración." };
@@ -93,10 +93,11 @@ export async function generateBrandAnalysis(platform: BrandPlatform): Promise<Ge
   }
 
   const { error } = await supabase.from("brand_recommendations").insert(
-    recommendations.map((r) => ({
+    analysis.recommendations.map((r) => ({
       owner_id: user.id,
       platform,
       kind: r.kind,
+      objective: r.objective,
       title: r.title,
       body: r.body,
       evidence: r.evidence as Database["public"]["Tables"]["brand_recommendations"]["Insert"]["evidence"],
@@ -106,6 +107,21 @@ export async function generateBrandAnalysis(platform: BrandPlatform): Promise<Ge
   );
 
   if (error) return { ok: false, message: "El análisis se generó pero no se pudo guardar." };
+
+  // SOC §29: la lectura del período (qué sabemos/sospechamos/no sabemos
+  // todavía) es narrativa del análisis completo, no de una recomendación
+  // puntual — se guarda aparte. Si falla, no vale la pena tirar abajo las
+  // recomendaciones que sí se guardaron: se loguea y sigue.
+  const { error: notesError } = await supabase.from("brand_analysis_notes").insert({
+    owner_id: user.id,
+    platform,
+    knowns: analysis.knowns,
+    hypotheses: analysis.hypotheses,
+    unknowns: analysis.unknowns,
+    period_from: insights.periodFrom,
+    period_to: insights.periodTo,
+  });
+  if (notesError) console.error("brand_analysis_notes: no se pudo guardar la lectura del análisis", notesError.code);
 
   // Recién con el lote nuevo guardado se borra el viejo: si algo falla antes,
   // nadie se queda sin recomendaciones. El `.eq("status", "NUEVA")` repetido
@@ -121,7 +137,7 @@ export async function generateBrandAnalysis(platform: BrandPlatform): Promise<Ge
   }
 
   revalidatePath("/marca/analisis");
-  return { ok: true, count: recommendations.length };
+  return { ok: true, count: analysis.recommendations.length };
 }
 
 export async function updateBrandRecommendationStatus(

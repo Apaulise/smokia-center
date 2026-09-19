@@ -146,6 +146,20 @@ export async function getBrandRecommendations(platform: BrandPlatform) {
   return data ?? [];
 }
 
+/** La lectura del análisis más reciente (SOC §29: qué sabemos/sospechamos/no sabemos todavía). */
+export async function getLatestBrandAnalysisNote(platform: BrandPlatform) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("brand_analysis_notes")
+    .select("*")
+    .eq("platform", platform)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 const CHAT_THREADS_MAX = 50;
 
 /** Las conversaciones de la plataforma, la más nueva primero — el historial del chat (§3.6). */

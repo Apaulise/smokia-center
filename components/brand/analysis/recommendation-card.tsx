@@ -24,6 +24,15 @@ const KIND_TONE: Record<Recommendation["kind"], BadgeTone> = { REPETIR: "positiv
 const STATUS_LABEL: Record<Recommendation["status"], string> = { NUEVA: "Nueva", APLICADA: "Aplicada", DESCARTADA: "Descartada" };
 const STATUS_TONE: Record<Recommendation["status"], BadgeTone> = { NUEVA: "cyan", APLICADA: "positive", DESCARTADA: "neutral" };
 
+// SOC §16: no se optimiza todo para lo mismo — el objetivo es de lectura
+// neutral (ni "buena" ni "mala" noticia como REPETIR/CORTAR), así que va
+// siempre en tono neutral.
+const OBJECTIVE_LABEL: Record<NonNullable<Recommendation["objective"]>, string> = {
+  ALCANCE: "Alcance",
+  AUTORIDAD: "Autoridad",
+  CONVERSION: "Conversión",
+};
+
 const POST_KIND_LABEL: Record<EvidencePost["kind"], string> = {
   REEL: "Reel",
   POST: "Post",
@@ -61,6 +70,7 @@ export function RecommendationCard({
         title={
           <span className="flex flex-wrap items-center gap-2">
             <Badge tone={KIND_TONE[recommendation.kind]}>{KIND_LABEL[recommendation.kind]}</Badge>
+            {recommendation.objective ? <Badge tone="neutral">{OBJECTIVE_LABEL[recommendation.objective]}</Badge> : null}
             {recommendation.title}
           </span>
         }

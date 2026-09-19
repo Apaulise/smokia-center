@@ -1,5 +1,6 @@
 import { ChevronDown, KeyRound, TrendingUp } from "lucide-react";
 
+import { AnalysisNoteCard } from "@/components/brand/analysis/analysis-note";
 import { parseEvidence, type EvidencePost } from "@/components/brand/analysis/evidence";
 import { GenerateAnalysisPanel } from "@/components/brand/analysis/generate-panel";
 import { RankedBars } from "@/components/brand/analysis/ranked-bars";
@@ -10,7 +11,12 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { computeBrandInsights, MIN_POSTS_FOR_ANALYSIS } from "@/lib/brand/insights";
-import { getBrandAccountSummary, getBrandPostsForAnalysis, getBrandRecommendations } from "@/lib/brand/queries";
+import {
+  getBrandAccountSummary,
+  getBrandPostsForAnalysis,
+  getBrandRecommendations,
+  getLatestBrandAnalysisNote,
+} from "@/lib/brand/queries";
 import type { Database } from "@/lib/supabase/database.types";
 
 export const metadata = { title: "Análisis · Awareness AI" };
@@ -73,6 +79,7 @@ export default async function AnalisisPage() {
   }
 
   const recommendations = await getBrandRecommendations(PLATFORM);
+  const analysisNote = await getLatestBrandAnalysisNote(PLATFORM);
   // Las nuevas son lo que hay que mirar; lo que ya se resolvió (aplicada o
   // descartada) queda aparte, plegado, para que no se mezcle con ellas.
   const newRecommendations = recommendations.filter((r) => r.status === "NUEVA");
@@ -171,6 +178,8 @@ export default async function AnalisisPage() {
             </div>
           </CardBody>
         </Card>
+
+        {analysisNote ? <AnalysisNoteCard note={analysisNote} /> : null}
 
         <div className="space-y-4">
           <h2 className="text-lg text-ink">Recomendaciones</h2>
