@@ -12,6 +12,9 @@ type ChatMessageRow = Database["public"]["Tables"]["brand_chat_messages"]["Row"]
 const TOOL_LABEL: Record<string, string> = {
   buscar_mis_posts: "Buscando en tus posts…",
   metricas_de_post: "Revisando métricas…",
+  buscar_conocimiento: "Consultando la base de conocimiento…",
+  guardar_conocimiento: "Guardando en la base de conocimiento…",
+  actualizar_conocimiento: "Actualizando la base de conocimiento…",
   web_search: "Buscando en la web…",
 };
 

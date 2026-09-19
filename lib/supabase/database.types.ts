@@ -388,6 +388,72 @@ export type Database = {
           },
         ]
       }
+      brand_knowledge: {
+        Row: {
+          body: string | null
+          collection: Database["public"]["Enums"]["brand_knowledge_collection"]
+          content_item_id: string | null
+          created_at: string
+          data: Json
+          id: string
+          origin: Database["public"]["Enums"]["brand_knowledge_origin"]
+          owner_id: string
+          post_id: string | null
+          search: unknown
+          status: Database["public"]["Enums"]["brand_knowledge_status"] | null
+          tags: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          collection: Database["public"]["Enums"]["brand_knowledge_collection"]
+          content_item_id?: string | null
+          created_at?: string
+          data?: Json
+          id?: string
+          origin: Database["public"]["Enums"]["brand_knowledge_origin"]
+          owner_id: string
+          post_id?: string | null
+          search?: unknown
+          status?: Database["public"]["Enums"]["brand_knowledge_status"] | null
+          tags?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          collection?: Database["public"]["Enums"]["brand_knowledge_collection"]
+          content_item_id?: string | null
+          created_at?: string
+          data?: Json
+          id?: string
+          origin?: Database["public"]["Enums"]["brand_knowledge_origin"]
+          owner_id?: string
+          post_id?: string | null
+          search?: unknown
+          status?: Database["public"]["Enums"]["brand_knowledge_status"] | null
+          tags?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_knowledge_content_item_id_fkey"
+            columns: ["content_item_id"]
+            isOneToOne: false
+            referencedRelation: "brand_content_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_knowledge_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "brand_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_post_comments: {
         Row: {
           body: string | null
@@ -1139,6 +1205,18 @@ export type Database = {
         | "EDITADO"
         | "LISTO"
         | "PUBLICADO"
+      brand_knowledge_collection:
+        | "WINNERS"
+        | "LOSERS"
+        | "HOOKS"
+        | "FORMATOS"
+        | "TEMAS"
+        | "AUDIENCIA"
+        | "RADAR"
+        | "EXPERIMENTOS"
+        | "APRENDIZAJES"
+      brand_knowledge_origin: "PROPIO" | "MERCADO" | "HIPOTESIS"
+      brand_knowledge_status: "PENDIENTE" | "ACTIVO" | "CONCLUIDO"
       brand_platform: "INSTAGRAM" | "YOUTUBE"
       brand_post_kind:
         | "REEL"
@@ -1316,6 +1394,19 @@ export const Constants = {
         "LISTO",
         "PUBLICADO",
       ],
+      brand_knowledge_collection: [
+        "WINNERS",
+        "LOSERS",
+        "HOOKS",
+        "FORMATOS",
+        "TEMAS",
+        "AUDIENCIA",
+        "RADAR",
+        "EXPERIMENTOS",
+        "APRENDIZAJES",
+      ],
+      brand_knowledge_origin: ["PROPIO", "MERCADO", "HIPOTESIS"],
+      brand_knowledge_status: ["PENDIENTE", "ACTIVO", "CONCLUIDO"],
       brand_platform: ["INSTAGRAM", "YOUTUBE"],
       brand_post_kind: [
         "REEL",

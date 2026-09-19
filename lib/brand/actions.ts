@@ -204,7 +204,13 @@ export async function sendBrandChatMessage(params: {
     .single();
   if (assistantError || !assistantRow) return { ok: false, message: "No se pudo iniciar la respuesta." };
 
-  const runParams = { threadId, platform: params.platform, apiKey: keyResult.apiKey, assistantMessageId: assistantRow.id };
+  const runParams = {
+    threadId,
+    platform: params.platform,
+    ownerId: user.id,
+    apiKey: keyResult.apiKey,
+    assistantMessageId: assistantRow.id,
+  };
   after(() => runBrandChatTurn(runParams));
 
   return { ok: true, threadId, assistantMessageId: assistantRow.id };

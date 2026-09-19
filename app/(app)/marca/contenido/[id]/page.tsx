@@ -1,13 +1,17 @@
 import { ArrowLeft, ExternalLink, Heart } from "lucide-react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ResultDetail } from "@/components/brand/content/result-detail";
 import { BrandLineChart, type LineChartPoint } from "@/components/brand/dashboard/line-chart";
+import { Markdown } from "@/components/brand/markdown";
 import { PageHeader } from "@/components/shell/page-header";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { extractHashtags } from "@/lib/brand/insights";
+import { getKnowledgeForPost } from "@/lib/brand/knowledge/queries";
+import { COLLECTION_LABEL, ORIGIN_LABEL } from "@/lib/brand/knowledge/schema";
 import {
   getBrandPost,
   getBrandPostClassifications,
@@ -49,10 +53,11 @@ export default async function ContenidoDetallePage({ params }: { params: Promise
   const post = await getBrandPost(id);
   if (!post) notFound();
 
-  const [metrics, comments, results] = await Promise.all([
+  const [metrics, comments, results, notes] = await Promise.all([
     getBrandPostMetricsHistory(id),
     getBrandPostComments(id),
     getBrandPostClassifications(PLATFORM),
+    getKnowledgeForPost(id),
   ]);
 
   const hashtags = extractHashtags(post.caption);
@@ -134,6 +139,32 @@ export default async function ContenidoDetallePage({ params }: { params: Promise
 
         <div className="space-y-6 lg:col-span-2">
           <ResultDetail result={results[id]} />
+
+          {notes.length > 0 ? (
+            <Card>
+              <CardHeader
+                title="Lo que se aprendió de esta pieza"
+                description="Notas de la base de conocimiento vinculadas a este contenido."
+              />
+              <CardBody className="space-y-4">
+                {notes.map((note) => (
+                  <div key={note.id} className="space-y-1.5 border-b border-line/60 pb-4 last:border-0 last:pb-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge tone="violet">{COLLECTION_LABEL[note.collection]}</Badge>
+                      <Badge tone={note.origin === "PROPIO" ? "cyan" : note.origin === "HIPOTESIS" ? "violet" : "neutral"}>
+                        {ORIGIN_LABEL[note.origin]}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-ink">{note.title}</p>
+                    {note.body ? <Markdown>{note.body}</Markdown> : null}
+                  </div>
+                ))}
+                <Link href={`/marca/conocimiento?c=${notes[0].collection}`} className="inline-block text-sm text-cyan hover:underline">
+                  Ver en la base de conocimiento
+                </Link>
+              </CardBody>
+            </Card>
+          ) : null}
 
           <Card>
             <CardHeader

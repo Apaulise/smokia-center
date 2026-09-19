@@ -6,6 +6,7 @@ import { getContentOS } from "./content-os";
 import { buildContentOSStateBlock } from "./prompts";
 import { BRAND_CHAT_TOOLS, runBrandChatTool } from "./tools";
 import { computeBrandInsights } from "@/lib/brand/insights";
+import { getKnowledgeCounts, getOpenExperiments } from "@/lib/brand/knowledge/queries";
 import { getBrandPostsForAnalysis } from "@/lib/brand/queries";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
 import { createClient } from "@/lib/supabase/server";
@@ -34,6 +35,8 @@ function toJson(turns: BrandChatWireTurn[]): Json {
 export async function runBrandChatTurn(params: {
   threadId: string;
   platform: BrandPlatform;
+  /** Dueño de las notas que las tools de memoria escriban (§3.12). */
+  ownerId: string;
   apiKey: string;
   assistantMessageId: string;
 }): Promise<void> {
@@ -60,7 +63,11 @@ export async function runBrandChatTurn(params: {
   const priorTurns = (historyRows ?? []).flatMap((row) => row.content as unknown as BrandChatWireTurn[]);
   const messages: Anthropic.MessageParam[] = priorTurns.map((turn) => ({ role: turn.role, content: turn.content }));
 
-  const posts = await getBrandPostsForAnalysis(params.platform);
+  const [posts, knowledgeCounts, openExperiments] = await Promise.all([
+    getBrandPostsForAnalysis(params.platform),
+    getKnowledgeCounts(),
+    getOpenExperiments(),
+  ]);
   const insights = computeBrandInsights(posts);
   const system = getContentOS();
   // Estado variable (§3.10): no se cachea, así que no entra al `system` de
@@ -68,7 +75,7 @@ export async function runBrandChatTurn(params: {
   // del último turno del usuario, y se arma de nuevo en cada vuelta del loop
   // sin persistirse en `messages` (si se guardara, el próximo turno lo vería
   // desactualizado, y el objetivo es que sea la lectura del momento).
-  const stateBlock = buildContentOSStateBlock(params.platform, insights, posts);
+  const stateBlock = buildContentOSStateBlock(params.platform, insights, posts, { counts: knowledgeCounts, openExperiments });
 
   const client = createAnthropicClient(params.apiKey);
   const tools = [...BRAND_CHAT_TOOLS, { type: "web_search_20260209", name: "web_search", max_uses: 5 } as const];
@@ -124,7 +131,7 @@ export async function runBrandChatTurn(params: {
         const toolUses = message.content.filter((block): block is Anthropic.ToolUseBlock => block.type === "tool_use");
         const results: Anthropic.ToolResultBlockParam[] = [];
         for (const toolUse of toolUses) {
-          const result = await runBrandChatTool(toolUse.name, toolUse.input, params.platform);
+          const result = await runBrandChatTool(toolUse.name, toolUse.input, { platform: params.platform, ownerId: params.ownerId });
           results.push({ type: "tool_result", tool_use_id: toolUse.id, content: result.content, is_error: result.isError });
         }
         wireTurns.push({ role: "user", content: results });

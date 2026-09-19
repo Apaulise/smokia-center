@@ -11,6 +11,8 @@ import {
   type PatternRow,
   type PostResult,
 } from "@/lib/brand/insights";
+import type { KnowledgeRow } from "@/lib/brand/knowledge/queries";
+import { KNOWLEDGE_COLLECTIONS, type KnowledgeCollection } from "@/lib/brand/knowledge/schema";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
 
 const PLATFORM_LABEL: Record<BrandPlatform, string> = { INSTAGRAM: "Instagram", YOUTUBE: "YouTube" };
@@ -114,6 +116,32 @@ Reglas de esquema, no de criterio editorial:
 - Producí entre 3 y 8 recomendaciones, priorizando las que tengan evidencia más fuerte.`;
 }
 
+export interface KnowledgeSnapshot {
+  counts: Record<KnowledgeCollection, number>;
+  openExperiments: KnowledgeRow[];
+}
+
+/**
+ * La base de conocimiento vista desde el turno (§3.12): cuánto hay, qué
+ * experimentos siguen abiertos, y la prioridad de evidencia del SOC §18 —
+ * una nota guardada no es un hecho, y quien la escribió fue el modelo.
+ * Va acá y no en el SOC porque son datos que cambian en cada turno.
+ */
+function formatKnowledge(knowledge: KnowledgeSnapshot): string {
+  const total = Object.values(knowledge.counts).reduce((sum, n) => sum + n, 0);
+  const perCollection = KNOWLEDGE_COLLECTIONS.filter((c) => knowledge.counts[c] > 0)
+    .map((c) => `${c} ${knowledge.counts[c]}`)
+    .join(", ");
+  const experiments =
+    knowledge.openExperiments
+      .map((e) => `  - ${e.title} (${e.status}${e.post_id ? `, postId=${e.post_id}` : ""}, id=${e.id})`)
+      .join("\n") || "  (ninguno abierto)";
+
+  return `Base de conocimiento: ${total === 0 ? "todavía vacía" : `${total} notas (${perCollection})`}. Antes de proponer ideas consultala con buscar_conocimiento (SOC §27); lo que valga la pena recordar guardalo con guardar_conocimiento. Cada nota trae su origen y no pesa igual (SOC §18): PROPIO sale de métricas de Agus; MERCADO y HIPOTESIS son evidencia más débil y no se presentan como hechos establecidos. Una nota guardada por vos en otra conversación es una lectura de ese momento, no una verdad.
+Experimentos abiertos (pendientes o activos) — si alguno ya tiene su pieza publicada y con métricas, cerralo con actualizar_conocimiento y comparalo con su hipótesis:
+${experiments}`;
+}
+
 /**
  * El "bloque de estado" de §3.10: baseline, ganadores vigentes y mejores
  * piezas recientes. Viaja como mensaje `{ role: "system" }` DESPUÉS del turno
@@ -126,9 +154,14 @@ export function buildContentOSStateBlock(
   platform: BrandPlatform,
   insights: BrandInsightsSummary | null,
   posts: AnalysisPost[],
+  knowledge: KnowledgeSnapshot,
 ): string {
+  const knowledgeBlock = formatKnowledge(knowledge);
+
   if (!insights) {
-    return "Estado del sistema: todavía no hay suficiente contenido propio sincronizado con métricas. Si hace falta, usá buscar_mis_posts para ver qué hay disponible.";
+    return `Estado del sistema: todavía no hay suficiente contenido propio sincronizado con métricas. Si hace falta, usá buscar_mis_posts para ver qué hay disponible.
+
+${knowledgeBlock}`;
   }
 
   const bestContent =
@@ -164,5 +197,7 @@ Experimentos fallidos más recientes (SOC §17: no son tiempo perdido, sirven pa
 ${lines(withClass("EXPERIMENTO_FALLIDO"), 3)}
 
 Contenido propio que mejor funcionó últimamente por interacción (para fundar una idea o inspirarte en qué repetir — nunca copiar literal):
-${bestContent}`;
+${bestContent}
+
+${knowledgeBlock}`;
 }

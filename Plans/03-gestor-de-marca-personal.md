@@ -358,6 +358,20 @@ Una tabla porque las nueve tienen la misma forma —una nota con campos flexible
 
 `/marca/conocimiento` — una pantalla por colección, con la grilla de la biblioteca. No es opcional: una memoria que sólo el modelo puede leer es una caja negra, y el SOC §24 pide poder auditar de dónde salió cada afirmación.
 
+**Decisiones de implementación** que el plan no fijaba:
+
+- **La búsqueda es una columna generada, no un índice sobre la expresión.** PostgREST filtra por columnas, así que un GIN sobre `to_tsvector(...)` suelto no lo puede usar nadie desde `supabase-js`. `search` es `tsvector generated always as (...) stored` con el GIN encima, y se consulta con `.textSearch()`
+- **Ignora acentos** (`spanish_unaccent`, migración `20260919130000`): la configuración `spanish` hace stemming pero no quita tildes, y buscar "automatizacion" no encontraba "automatización". Se probó contra la base antes de dar el paso por bueno
+- **Sólo se busca en `title` y `body`.** Lo que vive en `data` (la ficha de RADAR) no entra al índice: `to_tsvector` sobre `jsonb` no es inmutable, y una columna generada lo exige. Por eso la descripción de `guardar_conocimiento` le pide al modelo poner lo esencial en `body`
+- **`status` lo fuerza un check de la tabla**: obligatorio en `EXPERIMENTOS`, prohibido en el resto. Sin `status` un experimento no se puede saber si está abierto, y en otra colección sería un campo que miente
+- **`actualizar_conocimiento` mezcla `data`, no lo reemplaza**, y no cambia la colección: corregir un campo no puede borrar los demás sin querer
+- **Los ids se validan antes de escribir.** Un `post_id` inventado por el modelo rebota con un mensaje que le dice de dónde sacar uno real, no con una violación de foreign key
+- **`buscar_conocimiento` recorta el `body` a 1.500 caracteres** y devuelve como máximo 15 notas: quince notas largas serían ~30k tokens en un solo `tool_result`
+- **El bloque de estado de §3.10 ahora trae la base**: cuántas notas hay por colección, los experimentos abiertos con su id, y la prioridad de evidencia del SOC §18 repetida. Está en el turno y no en el prompt cacheado, por la regla de "si cambia, va en los datos"
+- **La pantalla sí permite borrar** (con confirmación); el agente no. Es la diferencia entre "corregir desde la UI" y "el modelo no puede perder un resultado negativo". El `data` de cada nota se muestra pero no se edita a mano: lo escribe el agente
+- **La ficha de una pieza muestra las notas vinculadas** (`post_id`): es el "por qué ganó" que §3.11 dejó para acá
+- **Diferido:** el análisis de §3.5 sigue sin leer la base. Es una llamada de salida estructurada sin tools, y darle memoria sería otra decisión (¿tools en una llamada que hoy es determinista?). Cuando §3.7 traiga el ciclo de hipótesis, se decide
+
 > **Escribir en la base desde una tool tiene un filo.** El modelo puede guardar una conclusión apresurada y leerla tres semanas después como si fuera un hecho establecido. Por eso `origin` es obligatorio y va en cada resultado de `buscar_conocimiento`, y el bloque de estado de §3.10 le repite la prioridad de evidencia del SOC §18 en cada turno: una nota de RADAR no pesa lo mismo que una métrica propia.
 
 ---
@@ -392,7 +406,7 @@ lib/brand/sources/{types,registry,instagram}.ts
 lib/brand/{actions,queries,sync}.ts
 lib/brand/insights/*                          ← patrones y baseline, sin modelo
 lib/brand/insights/baseline.ts               ← mediana móvil y clasificación (§3.11)
-lib/brand/knowledge/{queries,actions}.ts     ← la memoria (§3.12)
+lib/brand/knowledge/{schema,queries,mutations,actions}.ts  ← la memoria (§3.12)
 lib/brand/ai/content-os.ts                   ← carga el .md y arma el prefijo
 lib/brand/ai/{client,prompts,tools}.ts       ← claude-opus-5
 lib/settings/constants.ts                    ← windsor_api_key, anthropic_api_key

@@ -56,6 +56,7 @@ export const MODULES: NavModule[] = [
       { href: "/marca/analisis", label: "Análisis" },
       { href: "/marca/generar", label: "Generar contenido" },
       { href: "/marca/ideas", label: "Ideas guardadas" },
+      { href: "/marca/conocimiento", label: "Conocimiento" },
     ],
   },
 ];
