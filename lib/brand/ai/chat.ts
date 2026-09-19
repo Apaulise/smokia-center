@@ -68,7 +68,7 @@ export async function runBrandChatTurn(params: {
   // del último turno del usuario, y se arma de nuevo en cada vuelta del loop
   // sin persistirse en `messages` (si se guardara, el próximo turno lo vería
   // desactualizado, y el objetivo es que sea la lectura del momento).
-  const stateBlock = buildContentOSStateBlock(params.platform, insights);
+  const stateBlock = buildContentOSStateBlock(params.platform, insights, posts);
 
   const client = createAnthropicClient(params.apiKey);
   const tools = [...BRAND_CHAT_TOOLS, { type: "web_search_20260209", name: "web_search", max_uses: 5 } as const];

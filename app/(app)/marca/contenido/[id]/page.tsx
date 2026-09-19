@@ -1,13 +1,21 @@
 import { ArrowLeft, ExternalLink, Heart } from "lucide-react";
 import { notFound } from "next/navigation";
 
+import { ResultDetail } from "@/components/brand/content/result-detail";
 import { BrandLineChart, type LineChartPoint } from "@/components/brand/dashboard/line-chart";
 import { PageHeader } from "@/components/shell/page-header";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { extractHashtags } from "@/lib/brand/insights";
-import { getBrandPost, getBrandPostComments, getBrandPostMetricsHistory } from "@/lib/brand/queries";
+import {
+  getBrandPost,
+  getBrandPostClassifications,
+  getBrandPostComments,
+  getBrandPostMetricsHistory,
+} from "@/lib/brand/queries";
+
+const PLATFORM = "INSTAGRAM" as const;
 
 const KIND_LABEL: Record<string, string> = {
   REEL: "Reel",
@@ -41,7 +49,11 @@ export default async function ContenidoDetallePage({ params }: { params: Promise
   const post = await getBrandPost(id);
   if (!post) notFound();
 
-  const [metrics, comments] = await Promise.all([getBrandPostMetricsHistory(id), getBrandPostComments(id)]);
+  const [metrics, comments, results] = await Promise.all([
+    getBrandPostMetricsHistory(id),
+    getBrandPostComments(id),
+    getBrandPostClassifications(PLATFORM),
+  ]);
 
   const hashtags = extractHashtags(post.caption);
   const captionWithoutTags = post.caption?.replace(/#[\p{L}0-9_]+/gu, "").trim() || null;
@@ -121,6 +133,8 @@ export default async function ContenidoDetallePage({ params }: { params: Promise
         </div>
 
         <div className="space-y-6 lg:col-span-2">
+          <ResultDetail result={results[id]} />
+
           <Card>
             <CardHeader
               title="Métricas"

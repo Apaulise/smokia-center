@@ -5,12 +5,13 @@ import { parseEvidence, type EvidencePost } from "@/components/brand/analysis/ev
 import { GenerateAnalysisPanel } from "@/components/brand/analysis/generate-panel";
 import { RankedBars } from "@/components/brand/analysis/ranked-bars";
 import { RecommendationCard } from "@/components/brand/analysis/recommendation-card";
+import { ResultsList } from "@/components/brand/analysis/results-list";
 import { RetentionList } from "@/components/brand/analysis/retention-list";
 import { PageHeader } from "@/components/shell/page-header";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { computeBrandInsights, MIN_POSTS_FOR_ANALYSIS } from "@/lib/brand/insights";
+import { BASELINE_WINDOW, computeBrandInsights, MIN_POSTS_FOR_ANALYSIS } from "@/lib/brand/insights";
 import {
   getBrandAccountSummary,
   getBrandPostsForAnalysis,
@@ -176,6 +177,16 @@ export default async function AnalisisPage() {
                 emptyMessage="Todavía no hay reels con skip rate sincronizado."
               />
             </div>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Resultados contra tu baseline"
+            description={`Cada pieza contra la mediana de tus últimas ${BASELINE_WINDOW} del mismo formato — no contra otros creadores ni contra números absolutos.`}
+          />
+          <CardBody>
+            <ResultsList posts={posts} results={insights.results} baselines={insights.baselines} />
           </CardBody>
         </Card>
 

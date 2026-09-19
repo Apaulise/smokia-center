@@ -2,7 +2,7 @@ import { ContentFilters } from "@/components/brand/content/content-filters";
 import { ContentLibraryGrid } from "@/components/brand/content/content-library-grid";
 import { PageHeader } from "@/components/shell/page-header";
 import { ButtonLink } from "@/components/ui/button";
-import { getBrandContentLibrary, type ContentSortField } from "@/lib/brand/queries";
+import { getBrandContentLibrary, getBrandPostClassifications, type ContentSortField } from "@/lib/brand/queries";
 import type { Database } from "@/lib/supabase/database.types";
 
 export const metadata = { title: "Biblioteca de contenido · Awareness AI" };
@@ -40,7 +40,10 @@ export default async function ContenidoPage({ searchParams }: { searchParams: Pr
   const dateFrom = resolved.from && DATE_RE.test(resolved.from) ? resolved.from : undefined;
   const dateTo = resolved.to && DATE_RE.test(resolved.to) ? resolved.to : undefined;
 
-  const posts = await getBrandContentLibrary(PLATFORM, { sort, ascending, kind, dateFrom, dateTo });
+  const [posts, results] = await Promise.all([
+    getBrandContentLibrary(PLATFORM, { sort, ascending, kind, dateFrom, dateTo }),
+    getBrandPostClassifications(PLATFORM),
+  ]);
 
   return (
     <>
@@ -59,7 +62,7 @@ export default async function ContenidoPage({ searchParams }: { searchParams: Pr
           basePath="/marca/contenido"
           current={{ kind, sort, dir: ascending ? "asc" : "desc", from: dateFrom, to: dateTo }}
         />
-        <ContentLibraryGrid posts={posts} />
+        <ContentLibraryGrid posts={posts} results={results} />
       </div>
     </>
   );

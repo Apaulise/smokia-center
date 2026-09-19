@@ -1,4 +1,5 @@
-import type { AnalysisPost } from "@/lib/brand/insights/types";
+import { classifyPosts } from "@/lib/brand/insights/baseline";
+import type { AnalysisPost, PostResult } from "@/lib/brand/insights/types";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/database.types";
@@ -133,6 +134,16 @@ export async function getBrandPostsForAnalysis(platform: BrandPlatform): Promise
     reelAvgWatchTimeMs: row.reel_avg_watch_time_ms,
     reelSkipRate: row.reel_skip_rate,
   }));
+}
+
+/**
+ * La clasificación de todas las piezas (Plans/03 §3.11), por postId. Se pide
+ * sobre el catálogo completo y no sobre lo que la pantalla filtró: el baseline
+ * de un reel son los reels anteriores, se vean o no en la grilla.
+ */
+export async function getBrandPostClassifications(platform: BrandPlatform): Promise<Record<string, PostResult>> {
+  const posts = await getBrandPostsForAnalysis(platform);
+  return classifyPosts(posts, new Date());
 }
 
 export async function getBrandRecommendations(platform: BrandPlatform) {

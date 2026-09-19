@@ -320,6 +320,14 @@ Mientras §3.11 no exista, el bloque de estado se arma con lo que ya hay —tota
 
 Aparece en tres lugares: el badge de la grilla y la ficha (§3.4), una columna en el análisis (§3.5), y el bloque de estado que el chat recibe en cada turno (§3.10).
 
+**Decisiones de implementación** que el plan no fijaba (todas son constantes con nombre en `baseline.ts`):
+
+- **`MADURANDO`.** Una pieza publicada hace menos de `MATURATION_DAYS` (3) no se clasifica. Las métricas son las del último snapshot, no las de una edad fija, así que un reel de ayer contra reels ya asentados saldría "fallido" por estar joven y dejaría de serlo en tres días. Tampoco entra al baseline vigente. Con `MATURATION_DAYS = 0` se desactiva
+- **Ganador = cualquiera de los dos índices ≥ 1,5×** (el más alto decide cuál; empate → alcance). **Fallido = *todos* los índices disponibles ≤ 0,6×**: poco alcance con buena tasa de autoridad es un post que llegó a menos gente, no un experimento fallido
+- **La ventana se llena con piezas que tienen la señal.** Una pieza sin datos no encoge la muestra en silencio; y una mediana en 0 no sirve de denominador, así que ese objetivo queda sin baseline
+- **El sesgo que queda:** comparar el último snapshot de piezas de edades distintas favorece a las viejas. `MATURATION_DAYS` tapa lo peor; comparar a edad fija (views a los 7 días) requiere el historial de `brand_post_metrics` y queda como mejora si el badge se siente injusto
+- **`GANADOR_CONVERSION` a mano queda diferido.** Marcarlo desde la ficha exige guardar la marca en algún lado, y este paso dice "sin migración". Por ahora es el valor del tipo y el stub `conversion.ts`; si se quiere el botón, es una columna en `brand_posts`
+
 ### 3.12 La base de conocimiento
 
 SOC §26: nueve colecciones —`WINNERS`, `LOSERS`, `HOOKS`, `FORMATOS`, `TEMAS`, `AUDIENCIA`, `RADAR`, `EXPERIMENTOS`, `APRENDIZAJES`—. La decisión de diseño: **una tabla, no nueve.**

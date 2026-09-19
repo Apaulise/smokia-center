@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Eye, Heart, MessageCircle } from "lucide-react";
 
+import { ResultBadge } from "@/components/brand/result-badge";
 import { Badge } from "@/components/ui/badge";
+import type { PostResult } from "@/lib/brand/insights";
 import type { Database } from "@/lib/supabase/database.types";
 
 type LibraryPost = Database["public"]["Functions"]["brand_latest_posts"]["Returns"][number];
@@ -21,7 +23,14 @@ function formatCompact(value: number | null) {
 }
 
 /** Biblioteca de contenido (Plans/03 §3.4). Sin resultados de esta combinación de filtros incluido. */
-export function ContentLibraryGrid({ posts }: { posts: LibraryPost[] }) {
+export function ContentLibraryGrid({
+  posts,
+  results,
+}: {
+  posts: LibraryPost[];
+  /** Clasificación por postId (§3.11), calculada sobre el catálogo completo y no sobre lo filtrado. */
+  results: Record<string, PostResult>;
+}) {
   if (posts.length === 0) {
     return <p className="text-sm text-muted">Ningún post coincide con estos filtros.</p>;
   }
@@ -53,6 +62,7 @@ export function ContentLibraryGrid({ posts }: { posts: LibraryPost[] }) {
           </div>
 
           <div className="space-y-1.5 p-3 text-xs text-muted">
+            <ResultBadge result={results[post.post_id]} className="pb-1" />
             <p className="flex items-center justify-between">
               <span className="inline-flex items-center gap-1">
                 <Eye className="size-3.5" />

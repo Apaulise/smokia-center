@@ -1,3 +1,4 @@
+import { classifyPosts, computeCurrentBaselines } from "./baseline";
 import { computeTopHashtags } from "./hashtags";
 import { computeBestTimes, computeCaptionLength, computeFormatPerformance, computeRetention, splitTopAndBottom } from "./patterns";
 import type { AnalysisPost, BrandInsightsSummary } from "./types";
@@ -5,7 +6,7 @@ import type { AnalysisPost, BrandInsightsSummary } from "./types";
 /** Piso de contenido para que un patrón signifique algo — menos que esto es ruido, no una tendencia. */
 export const MIN_POSTS_FOR_ANALYSIS = 5;
 
-export function computeBrandInsights(posts: AnalysisPost[]): BrandInsightsSummary | null {
+export function computeBrandInsights(posts: AnalysisPost[], asOf: Date = new Date()): BrandInsightsSummary | null {
   if (posts.length < MIN_POSTS_FOR_ANALYSIS) return null;
 
   const dates = posts.map((p) => p.publishedAt).filter((d): d is string => d !== null);
@@ -22,8 +23,33 @@ export function computeBrandInsights(posts: AnalysisPost[]): BrandInsightsSummar
     retention: computeRetention(posts),
     topPosts: top,
     bottomPosts: bottom,
+    results: classifyPosts(posts, asOf),
+    baselines: computeCurrentBaselines(posts, asOf),
   };
 }
 
+export {
+  classifyPosts,
+  computeCurrentBaselines,
+  formatMultiple,
+  formatObjectiveValue,
+  headlineScore,
+  BASELINE_WINDOW,
+  FAILED_THRESHOLD,
+  MATURATION_DAYS,
+  MIN_BASELINE_SAMPLE,
+  RESULT_LABEL,
+  WINNER_THRESHOLD,
+} from "./baseline";
 export { extractHashtags } from "./hashtags";
-export type { AnalysisPost, BrandInsightsSummary, PatternRow } from "./types";
+export { KIND_LABEL } from "./patterns";
+export type {
+  AnalysisPost,
+  BrandInsightsSummary,
+  KindBaseline,
+  ObjectiveScore,
+  PatternRow,
+  PostResult,
+  ResultClass,
+  ResultObjective,
+} from "./types";

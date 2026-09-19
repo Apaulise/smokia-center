@@ -58,7 +58,7 @@ export function computeBestTimes(posts: AnalysisPost[]): PatternRow[] {
     .slice(0, VISIBLE_ROWS);
 }
 
-const KIND_LABEL: Record<AnalysisPost["kind"], string> = {
+export const KIND_LABEL: Record<AnalysisPost["kind"], string> = {
   REEL: "Reel",
   POST: "Post",
   CARRUSEL: "Carrusel",

@@ -1,4 +1,16 @@
-import type { AnalysisPost, BrandInsightsSummary, PatternRow } from "@/lib/brand/insights";
+import {
+  BASELINE_WINDOW,
+  FAILED_THRESHOLD,
+  formatMultiple,
+  formatObjectiveValue,
+  KIND_LABEL,
+  WINNER_THRESHOLD,
+  type AnalysisPost,
+  type BrandInsightsSummary,
+  type KindBaseline,
+  type PatternRow,
+  type PostResult,
+} from "@/lib/brand/insights";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
 
 const PLATFORM_LABEL: Record<BrandPlatform, string> = { INSTAGRAM: "Instagram", YOUTUBE: "YouTube" };
@@ -10,7 +22,30 @@ function formatRows(rows: PatternRow[]): string {
     .join("\n");
 }
 
-export function formatPost(post: AnalysisPost): string {
+/** La clasificación de §3.11, con los múltiplos que la sostienen — para que el modelo la cite sin recalcularla. */
+function formatResult(result: PostResult | undefined): string | null {
+  if (!result) return null;
+  const scores = [
+    result.reach ? `alcance ${formatMultiple(result.reach.index)} la mediana` : null,
+    result.authority ? `autoridad ${formatMultiple(result.authority.index)} la mediana` : null,
+  ].filter(Boolean);
+  return `clasificación=${result.classification}${scores.length > 0 ? ` (${scores.join(", ")})` : ""}`;
+}
+
+function formatBaselines(baselines: KindBaseline[]): string {
+  if (baselines.length === 0) return "  (todavía no hay baseline: faltan piezas maduras por formato — no hay nada que clasificar)";
+  return baselines
+    .map((b) => {
+      const parts = [
+        b.reach ? `alcance ${formatObjectiveValue("ALCANCE", b.reach.median)} (n=${b.reach.sample})` : null,
+        b.authority ? `autoridad ${formatObjectiveValue("AUTORIDAD", b.authority.median)} (n=${b.authority.sample})` : null,
+      ].filter(Boolean);
+      return `  - ${KIND_LABEL[b.kind]}: ${parts.join(" · ")}`;
+    })
+    .join("\n");
+}
+
+export function formatPost(post: AnalysisPost, result?: PostResult): string {
   const parts = [
     `postId=${post.postId}`,
     post.kind,
@@ -20,6 +55,7 @@ export function formatPost(post: AnalysisPost): string {
     post.likes !== null ? `likes=${post.likes}` : null,
     post.saved !== null ? `guardados=${post.saved}` : null,
     post.reelSkipRate !== null ? `skip_rate=${post.reelSkipRate}%` : null,
+    formatResult(result),
   ].filter(Boolean);
   return `  - ${parts.join(", ")}`;
 }
@@ -54,13 +90,18 @@ ${formatRows(insights.topHashtags)}
   })
 ${formatRows(insights.retention.rows)}
 
+## Baseline propio (mediana de las últimas ${BASELINE_WINDOW} piezas maduras del mismo formato; ganador desde ${formatMultiple(WINNER_THRESHOLD)}, experimento fallido hasta ${formatMultiple(FAILED_THRESHOLD)})
+${formatBaselines(insights.baselines)}
+
 ## Mejor contenido del período
-${insights.topPosts.map(formatPost).join("\n") || "  (sin datos suficientes)"}
+${insights.topPosts.map((p) => formatPost(p, insights.results[p.postId])).join("\n") || "  (sin datos suficientes)"}
 
 ## Peor contenido del período
-${insights.bottomPosts.map(formatPost).join("\n") || "  (sin datos suficientes)"}
+${insights.bottomPosts.map((p) => formatPost(p, insights.results[p.postId])).join("\n") || "  (sin datos suficientes)"}
 
 Analizá esto siguiendo el §29 del SOC: qué sabemos, qué sospechamos, qué no sabemos todavía — y de ahí, qué duplicarías (REPETIR), qué reducirías (CORTAR) y qué testearías ahora (PROBAR). Nunca recalcules ni inventes aritmética: los números de arriba ya están bien, tu trabajo es la lectura.
+
+La "clasificación" de cada pieza (GANADOR_ALCANCE, GANADOR_AUTORIDAD, NEUTRO, EXPERIMENTO_FALLIDO) ya está calculada contra el baseline propio: usala tal cual. SIN_BASELINE y MADURANDO significan que de esa pieza todavía no se puede afirmar nada. La conversión no se mide en este sistema: no clasifiques nada como ganador de conversión.
 
 Reglas de esquema, no de criterio editorial:
 - "knowns", "hypotheses" y "unknowns" van en markdown: una lista de viñetas (3 a 6 cada una), cada viñeta una sola oración. Esto se muestra en una card compacta, no en un informe — nada de párrafos largos ni de repetir el mismo punto con otras palabras.
@@ -78,20 +119,50 @@ Reglas de esquema, no de criterio editorial:
  * piezas recientes. Viaja como mensaje `{ role: "system" }` DESPUÉS del turno
  * del usuario (no en el `system` de arriba, que se cachea) porque cambia en
  * cada turno — meterlo en el prefijo cacheado invalidaría el caché siempre.
- * Mientras §3.11 no exista, se arma con lo que ya hay: totales del período y
- * mejores piezas.
+ * Trae el baseline y la clasificación de §3.11 (SOC §16–17) más las mejores
+ * piezas por interacción.
  */
-export function buildContentOSStateBlock(platform: BrandPlatform, insights: BrandInsightsSummary | null): string {
+export function buildContentOSStateBlock(
+  platform: BrandPlatform,
+  insights: BrandInsightsSummary | null,
+  posts: AnalysisPost[],
+): string {
   if (!insights) {
     return "Estado del sistema: todavía no hay suficiente contenido propio sincronizado con métricas. Si hace falta, usá buscar_mis_posts para ver qué hay disponible.";
   }
 
-  const bestContent = insights.topPosts.slice(0, 5).map(formatPost).join("\n") || "  (sin datos suficientes)";
+  const bestContent =
+    insights.topPosts
+      .slice(0, 5)
+      .map((p) => formatPost(p, insights.results[p.postId]))
+      .join("\n") || "  (sin datos suficientes)";
+
+  const newestFirst = [...posts]
+    .filter((p) => p.publishedAt !== null)
+    .sort((a, b) => (b.publishedAt as string).localeCompare(a.publishedAt as string));
+  const withClass = (...classes: PostResult["classification"][]) =>
+    newestFirst.filter((p) => classes.includes(insights.results[p.postId]?.classification));
+  const lines = (list: AnalysisPost[], take: number) =>
+    list
+      .slice(0, take)
+      .map((p) => formatPost(p, insights.results[p.postId]))
+      .join("\n") || "  (ninguno todavía)";
+
+  const unclassified = withClass("MADURANDO", "SIN_BASELINE");
 
   return `Estado del sistema (se recalcula en cada turno, no forma parte del prompt cacheado):
 Cuenta: ${PLATFORM_LABEL[platform]}
 Período con métricas: ${insights.periodFrom ?? "?"} a ${insights.periodTo ?? "?"} (${insights.totalPosts} posts)
 
-Contenido propio que mejor funcionó últimamente (para fundar una idea o inspirarte en qué repetir — nunca copiar literal):
+Baseline propio (SOC §16) — mediana de las últimas ${BASELINE_WINDOW} piezas maduras del mismo formato. Ganador desde ${formatMultiple(WINNER_THRESHOLD)}, experimento fallido hasta ${formatMultiple(FAILED_THRESHOLD)}:
+${formatBaselines(insights.baselines)}
+
+Clasificación (SOC §17) — calculada contra ese baseline, no es una opinión. Si una pieza no figura acá es que todavía no se puede afirmar nada de ella (${unclassified.length} sin clasificar: recién publicadas o sin muestra suficiente en su formato):
+Ganadores más recientes:
+${lines(withClass("GANADOR_ALCANCE", "GANADOR_AUTORIDAD"), 5)}
+Experimentos fallidos más recientes (SOC §17: no son tiempo perdido, sirven para no repetir el error):
+${lines(withClass("EXPERIMENTO_FALLIDO"), 3)}
+
+Contenido propio que mejor funcionó últimamente por interacción (para fundar una idea o inspirarte en qué repetir — nunca copiar literal):
 ${bestContent}`;
 }
