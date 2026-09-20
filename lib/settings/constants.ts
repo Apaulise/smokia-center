@@ -10,6 +10,13 @@ export const WINDSOR_KEY_SETTING = "windsor_api_key";
 export const ANTHROPIC_KEY_SETTING = "anthropic_api_key";
 
 /**
+ * Clave en `settings` para la API key de Google AI Studio (Gemini), Plans/03
+ * §3.14. Es el modelo barato del módulo: clasifica qué publicación ajena sirve
+ * para la marca, una tarea que no justifica pagar un modelo grande.
+ */
+export const GEMINI_KEY_SETTING = "gemini_api_key";
+
+/**
  * Clave en `settings` para el actor de Apify configurado por el usuario para
  * una fuente puntual. Sobreescribe el `defaultActorId` del proveedor
  * (lib/providers/*) — necesario en LinkedIn, donde no hay un actor por default.

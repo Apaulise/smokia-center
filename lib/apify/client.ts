@@ -17,15 +17,44 @@ export interface ApifyRun {
   status: string;
   defaultDatasetId: string;
   usageTotalUsd: number | null;
+  /**
+   * Lo que cuesta la corrida contando lo que el actor ya cobró por evento.
+   * `usageTotalUsd` sola puede quedarse corta al terminar: en `apify/instagram-scraper`
+   * (pago por resultado) dio US$ 0,0081 al reconciliar y US$ 0,054 minutos después,
+   * porque los eventos cobrados se contabilizan con demora. Los actores que no
+   * cobran por evento devuelven el mismo número que `usageTotalUsd`.
+   */
+  costUsd: number | null;
+}
+
+/** Suma `chargedEventCounts × eventPriceUsd`. null si el actor no cobra por evento o falta algún precio. */
+function chargedEventsUsd(data: Record<string, unknown>): number | null {
+  const counts = data.chargedEventCounts as Record<string, unknown> | undefined;
+  const pricing = (data.pricingInfo as { pricingPerEvent?: { actorChargeEvents?: Record<string, { eventPriceUsd?: unknown }> } } | undefined)
+    ?.pricingPerEvent?.actorChargeEvents;
+  if (!counts || !pricing) return null;
+
+  let total = 0;
+  for (const [event, count] of Object.entries(counts)) {
+    if (typeof count !== "number" || count === 0) continue;
+    const price = pricing[event]?.eventPriceUsd;
+    if (typeof price !== "number") return null; // un evento sin precio conocido: mejor no adivinar
+    total += count * price;
+  }
+  return total;
 }
 
 function mapRun(data: Record<string, unknown>): ApifyRun {
   const usage = data.usageTotalUsd ?? (data.usageUsd as Record<string, unknown> | undefined)?.total;
+  const usageTotalUsd = typeof usage === "number" ? usage : null;
+  const events = chargedEventsUsd(data);
   return {
     id: String(data.id),
     status: String(data.status),
     defaultDatasetId: String(data.defaultDatasetId),
-    usageTotalUsd: typeof usage === "number" ? usage : null,
+    usageTotalUsd,
+    // El mayor de los dos: si `usageTotalUsd` ya incluye los eventos es igual o más grande, y si todavía no, gana la suma de eventos.
+    costUsd: usageTotalUsd === null && events === null ? null : Math.max(usageTotalUsd ?? 0, events ?? 0),
   };
 }
 

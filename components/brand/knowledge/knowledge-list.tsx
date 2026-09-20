@@ -115,8 +115,8 @@ function KnowledgeEntry({ note, onEdit }: { note: KnowledgeRow; onEdit: () => vo
               </Link>
             ) : null}
             {note.content_item_id ? (
-              <Link href="/marca/ideas" className="text-cyan hover:underline">
-                Ver ideas guardadas
+              <Link href="/marca/planificador" className="text-cyan hover:underline">
+                Ver en el planificador
               </Link>
             ) : null}
           </div>

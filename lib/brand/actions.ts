@@ -6,44 +6,38 @@ import { after } from "next/server";
 
 import { runBrandChatTurn } from "@/lib/brand/ai/chat";
 import type { BrandChatWireTurn } from "@/lib/brand/ai/chat-types";
+import { getAnthropicApiKey } from "@/lib/brand/ai/key";
 import { generateBrandRecommendations } from "@/lib/brand/ai/recommendations";
 import { computeBrandInsights, MIN_POSTS_FOR_ANALYSIS } from "@/lib/brand/insights";
+import { getPublishedHypotheses } from "@/lib/brand/planner/queries";
 import { getBrandPostsForAnalysis } from "@/lib/brand/queries";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
-import { runBrandSync, type BrandSyncResult } from "@/lib/brand/sync";
-import { decrypt } from "@/lib/crypto";
-import { ANTHROPIC_KEY_SETTING } from "@/lib/settings/constants";
+import { AUTO_SYNC_MIN_HOURS, runBrandSync, type BrandSyncResult } from "@/lib/brand/sync";
 import { createClient, requireUser } from "@/lib/supabase/server";
 import type { Database, Json } from "@/lib/supabase/database.types";
 
-/** Dispara una sincronización para el usuario logueado (botón "Sincronizar ahora", §3.3). */
-export async function syncBrandNow(platform: BrandPlatform): Promise<BrandSyncResult> {
+/**
+ * Dispara una sincronización para el usuario logueado: el botón "Sincronizar
+ * ahora" (§3.3) y, con `onlyIfStale`, el contador automático al abrir /marca
+ * (§3.13). El guard está acá en el servidor y no en el cliente: dos pestañas
+ * abiertas a la vez, o un doble montaje, no pueden disparar dos corridas.
+ *
+ * Se llama desde una acción de cliente y no desde el Server Component de la
+ * página porque `runBrandSync` usa el cliente admin, y CLAUDE.md §4 prohíbe la
+ * service role en un Server Component.
+ */
+export async function syncBrandNow(
+  platform: BrandPlatform,
+  options: { onlyIfStale?: boolean } = {},
+): Promise<BrandSyncResult> {
   const user = await requireUser();
-  const result = await runBrandSync(user.id, platform);
-  revalidatePath("/marca");
+  const result = await runBrandSync(
+    user.id,
+    platform,
+    options.onlyIfStale ? { skipIfCompletedWithinHours: AUTO_SYNC_MIN_HOURS } : {},
+  );
+  if (!result.skipped) revalidatePath("/marca");
   return result;
-}
-
-type ApiKeyResult = { ok: true; apiKey: string } | { ok: false; message: string };
-
-/** Descifra la key de Anthropic guardada en Configuración. Usado por §3.5 y §3.6. */
-async function getAnthropicApiKey(): Promise<ApiKeyResult> {
-  const supabase = await createClient();
-  const { data: settingsRow } = await supabase
-    .from("settings")
-    .select("value_encrypted")
-    .eq("key", ANTHROPIC_KEY_SETTING)
-    .maybeSingle();
-
-  if (!settingsRow) {
-    return { ok: false, message: "Falta cargar la API key de Anthropic en Configuración." };
-  }
-
-  try {
-    return { ok: true, apiKey: decrypt(settingsRow.value_encrypted) };
-  } catch {
-    return { ok: false, message: "La API key guardada no se pudo leer. Volvé a cargarla en Configuración." };
-  }
 }
 
 export type GenerateAnalysisResult = { ok: true; count: number } | { ok: false; message: string };
@@ -81,7 +75,12 @@ export async function generateBrandAnalysis(platform: BrandPlatform): Promise<Ge
 
   let analysis;
   try {
-    analysis = await generateBrandRecommendations({ apiKey, platform, insights });
+    analysis = await generateBrandRecommendations({
+      apiKey,
+      platform,
+      insights,
+      hypotheses: await getPublishedHypotheses(platform),
+    });
   } catch (error) {
     if (error instanceof Anthropic.AuthenticationError) {
       return { ok: false, message: "Anthropic rechazó la key. Revisala en Configuración." };
@@ -218,7 +217,11 @@ export async function sendBrandChatMessage(params: {
 
 export type SaveContentIdeaResult = { ok: true; id: string } | { ok: false; message: string };
 
-/** "Guardar como idea" (§3.6): crea el brand_content_items que va a alimentar el planificador (§3.7). */
+/**
+ * "Guardar como idea" (§3.6): crea el brand_content_items que entra al
+ * planificador (§3.7) por la bandeja "Sin fecha". Guarda también el objetivo y
+ * la hipótesis: una pieza sin hipótesis no se puede evaluar después.
+ */
 export async function saveBrandContentIdea(input: {
   threadId: string | null;
   platform: BrandPlatform;
@@ -227,6 +230,8 @@ export async function saveBrandContentIdea(input: {
   idea?: string;
   caption?: string;
   hashtags?: string[];
+  objective?: Database["public"]["Enums"]["brand_recommendation_objective"] | null;
+  hypothesis?: string;
 }): Promise<SaveContentIdeaResult> {
   const user = await requireUser();
   const supabase = await createClient();
@@ -244,6 +249,8 @@ export async function saveBrandContentIdea(input: {
       idea: input.idea?.trim() || null,
       caption: input.caption?.trim() || null,
       hashtags: input.hashtags ?? [],
+      objective: input.objective ?? null,
+      hypothesis: input.hypothesis?.trim() || null,
       source_thread_id: input.threadId,
     })
     .select("id")

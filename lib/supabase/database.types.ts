@@ -332,53 +332,263 @@ export type Database = {
         }
         Relationships: []
       }
-      brand_content_items: {
+      brand_competitor_posts: {
         Row: {
           caption: string | null
+          comments: number | null
+          competitor_id: string
           created_at: string
+          dismissed_at: string | null
+          external_id: string
+          id: string
+          is_pinned: boolean
+          kind: Database["public"]["Enums"]["brand_post_kind"]
+          likes: number | null
+          owner_id: string
+          permalink: string | null
+          published_at: string | null
+          raw: Json | null
+          relevance_checked_at: string | null
+          relevance_reason: string | null
+          relevance_score: number | null
+          thumbnail_url: string | null
+          updated_at: string
+          views: number | null
+        }
+        Insert: {
+          caption?: string | null
+          comments?: number | null
+          competitor_id: string
+          created_at?: string
+          dismissed_at?: string | null
+          external_id: string
+          id?: string
+          is_pinned?: boolean
+          kind: Database["public"]["Enums"]["brand_post_kind"]
+          likes?: number | null
+          owner_id: string
+          permalink?: string | null
+          published_at?: string | null
+          raw?: Json | null
+          relevance_checked_at?: string | null
+          relevance_reason?: string | null
+          relevance_score?: number | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          views?: number | null
+        }
+        Update: {
+          caption?: string | null
+          comments?: number | null
+          competitor_id?: string
+          created_at?: string
+          dismissed_at?: string | null
+          external_id?: string
+          id?: string
+          is_pinned?: boolean
+          kind?: Database["public"]["Enums"]["brand_post_kind"]
+          likes?: number | null
+          owner_id?: string
+          permalink?: string | null
+          published_at?: string | null
+          raw?: Json | null
+          relevance_checked_at?: string | null
+          relevance_reason?: string | null
+          relevance_score?: number | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_competitor_posts_competitor_id_fkey"
+            columns: ["competitor_id"]
+            isOneToOne: false
+            referencedRelation: "brand_competitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_competitors: {
+        Row: {
+          apify_run_id: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          last_cost_usd: number | null
+          last_error: string | null
+          last_run_started_at: string | null
+          last_synced_at: string | null
+          owner_id: string
+          platform: Database["public"]["Enums"]["brand_platform"]
+          profile_pic_url: string | null
+          results_limit: number
+          status: Database["public"]["Enums"]["job_status"]
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          apify_run_id?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          last_cost_usd?: number | null
+          last_error?: string | null
+          last_run_started_at?: string | null
+          last_synced_at?: string | null
+          owner_id: string
+          platform: Database["public"]["Enums"]["brand_platform"]
+          profile_pic_url?: string | null
+          results_limit?: number
+          status?: Database["public"]["Enums"]["job_status"]
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          apify_run_id?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          last_cost_usd?: number | null
+          last_error?: string | null
+          last_run_started_at?: string | null
+          last_synced_at?: string | null
+          owner_id?: string
+          platform?: Database["public"]["Enums"]["brand_platform"]
+          profile_pic_url?: string | null
+          results_limit?: number
+          status?: Database["public"]["Enums"]["job_status"]
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      brand_content_items: {
+        Row: {
+          angle: string | null
+          caption: string | null
+          created_at: string
+          external_id: string | null
           hashtags: string[]
+          hook: string | null
+          hypothesis: string | null
           id: string
           idea: string | null
           kind: Database["public"]["Enums"]["brand_post_kind"]
+          knowledge_id: string | null
+          media: Json
+          objective:
+            | Database["public"]["Enums"]["brand_recommendation_objective"]
+            | null
           owner_id: string
+          parent_item_id: string | null
           platform: Database["public"]["Enums"]["brand_platform"]
+          post_id: string | null
+          publish_error: string | null
+          publish_started_at: string | null
+          published_at: string | null
+          scheduled_for: string | null
           script: string | null
+          source_competitor_post_id: string | null
           source_thread_id: string | null
+          source_url: string | null
           status: Database["public"]["Enums"]["brand_content_status"]
           title: string
           updated_at: string
         }
         Insert: {
+          angle?: string | null
           caption?: string | null
           created_at?: string
+          external_id?: string | null
           hashtags?: string[]
+          hook?: string | null
+          hypothesis?: string | null
           id?: string
           idea?: string | null
           kind: Database["public"]["Enums"]["brand_post_kind"]
+          knowledge_id?: string | null
+          media?: Json
+          objective?:
+            | Database["public"]["Enums"]["brand_recommendation_objective"]
+            | null
           owner_id: string
+          parent_item_id?: string | null
           platform: Database["public"]["Enums"]["brand_platform"]
+          post_id?: string | null
+          publish_error?: string | null
+          publish_started_at?: string | null
+          published_at?: string | null
+          scheduled_for?: string | null
           script?: string | null
+          source_competitor_post_id?: string | null
           source_thread_id?: string | null
+          source_url?: string | null
           status?: Database["public"]["Enums"]["brand_content_status"]
           title: string
           updated_at?: string
         }
         Update: {
+          angle?: string | null
           caption?: string | null
           created_at?: string
+          external_id?: string | null
           hashtags?: string[]
+          hook?: string | null
+          hypothesis?: string | null
           id?: string
           idea?: string | null
           kind?: Database["public"]["Enums"]["brand_post_kind"]
+          knowledge_id?: string | null
+          media?: Json
+          objective?:
+            | Database["public"]["Enums"]["brand_recommendation_objective"]
+            | null
           owner_id?: string
+          parent_item_id?: string | null
           platform?: Database["public"]["Enums"]["brand_platform"]
+          post_id?: string | null
+          publish_error?: string | null
+          publish_started_at?: string | null
+          published_at?: string | null
+          scheduled_for?: string | null
           script?: string | null
+          source_competitor_post_id?: string | null
           source_thread_id?: string | null
+          source_url?: string | null
           status?: Database["public"]["Enums"]["brand_content_status"]
           title?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "brand_content_items_knowledge_id_fkey"
+            columns: ["knowledge_id"]
+            isOneToOne: false
+            referencedRelation: "brand_knowledge"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_content_items_parent_item_id_fkey"
+            columns: ["parent_item_id"]
+            isOneToOne: false
+            referencedRelation: "brand_content_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_content_items_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "brand_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_content_items_source_competitor_post_id_fkey"
+            columns: ["source_competitor_post_id"]
+            isOneToOne: false
+            referencedRelation: "brand_competitor_posts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "brand_content_items_source_thread_id_fkey"
             columns: ["source_thread_id"]
@@ -387,6 +597,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      brand_goals: {
+        Row: {
+          baseline_date: string
+          baseline_followers: number
+          created_at: string
+          deadline: string | null
+          id: string
+          owner_id: string
+          platform: Database["public"]["Enums"]["brand_platform"]
+          status: Database["public"]["Enums"]["brand_goal_status"]
+          target_followers: number
+          updated_at: string
+        }
+        Insert: {
+          baseline_date: string
+          baseline_followers: number
+          created_at?: string
+          deadline?: string | null
+          id?: string
+          owner_id: string
+          platform: Database["public"]["Enums"]["brand_platform"]
+          status?: Database["public"]["Enums"]["brand_goal_status"]
+          target_followers: number
+          updated_at?: string
+        }
+        Update: {
+          baseline_date?: string
+          baseline_followers?: number
+          created_at?: string
+          deadline?: string | null
+          id?: string
+          owner_id?: string
+          platform?: Database["public"]["Enums"]["brand_platform"]
+          status?: Database["public"]["Enums"]["brand_goal_status"]
+          target_followers?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       brand_knowledge: {
         Row: {
@@ -1105,6 +1354,16 @@ export type Database = {
         Args: { p_platform: Database["public"]["Enums"]["brand_platform"] }
         Returns: number
       }
+      brand_define_goal: {
+        Args: {
+          p_baseline: number
+          p_baseline_date: string
+          p_deadline?: string
+          p_platform: Database["public"]["Enums"]["brand_platform"]
+          p_target: number
+        }
+        Returns: string
+      }
       brand_latest_posts: {
         Args: {
           p_limit?: number
@@ -1205,6 +1464,7 @@ export type Database = {
         | "EDITADO"
         | "LISTO"
         | "PUBLICADO"
+      brand_goal_status: "ACTIVA" | "CUMPLIDA" | "ARCHIVADA"
       brand_knowledge_collection:
         | "WINNERS"
         | "LOSERS"
@@ -1394,6 +1654,7 @@ export const Constants = {
         "LISTO",
         "PUBLICADO",
       ],
+      brand_goal_status: ["ACTIVA", "CUMPLIDA", "ARCHIVADA"],
       brand_knowledge_collection: [
         "WINNERS",
         "LOSERS",

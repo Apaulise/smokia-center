@@ -1,9 +1,21 @@
+"use client";
+
 import { Eye } from "lucide-react";
+import { useState } from "react";
 
 import { cn } from "@/lib/utils";
 
-/** Miniatura 9:16 de una pieza (thumbnail de Instagram, o un placeholder si no hay). El ancho lo define quien la usa. */
+/**
+ * Miniatura 9:16 de una pieza (thumbnail de Instagram, o un placeholder si no hay). El ancho lo define quien la usa.
+ *
+ * Las URLs de imagen del CDN de Instagram caducan a los pocos días, así que una
+ * miniatura guardada puede dejar de cargar: en ese caso cae al mismo
+ * placeholder en vez de mostrar una imagen rota.
+ */
 export function PostThumb({ url, className }: { url: string | null; className?: string }) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const showImage = url !== null && failedUrl !== url;
+
   return (
     <div
       className={cn(
@@ -11,9 +23,9 @@ export function PostThumb({ url, className }: { url: string | null; className?: 
         className,
       )}
     >
-      {url ? (
+      {showImage ? (
         // eslint-disable-next-line @next/next/no-img-element -- URL externa de Instagram, mismo criterio que la biblioteca
-        <img src={url} alt="" className="size-full object-cover" />
+        <img src={url} alt="" className="size-full object-cover" onError={() => setFailedUrl(url)} />
       ) : (
         <div className="flex size-full items-center justify-center text-muted">
           <Eye className="size-4" />

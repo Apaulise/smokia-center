@@ -3,10 +3,15 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { BrandChatWireTurn } from "./chat-types";
 import { createAnthropicClient } from "./client";
 import { getContentOS } from "./content-os";
-import { buildContentOSStateBlock } from "./prompts";
+import { buildContentOSStateBlock, type GoalSnapshot } from "./prompts";
 import { BRAND_CHAT_TOOLS, runBrandChatTool } from "./tools";
+import { attributeFollowers } from "@/lib/brand/goals/attribution";
+import { computeGoalProgress } from "@/lib/brand/goals/progress";
+import { getCurrentGoal, getFollowerSnapshots } from "@/lib/brand/goals/queries";
 import { computeBrandInsights } from "@/lib/brand/insights";
+import { todayIso } from "@/lib/leads/calendar";
 import { getKnowledgeCounts, getOpenExperiments } from "@/lib/brand/knowledge/queries";
+import { getPublishedHypotheses } from "@/lib/brand/planner/queries";
 import { getBrandPostsForAnalysis } from "@/lib/brand/queries";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
 import { createClient } from "@/lib/supabase/server";
@@ -63,19 +68,57 @@ export async function runBrandChatTurn(params: {
   const priorTurns = (historyRows ?? []).flatMap((row) => row.content as unknown as BrandChatWireTurn[]);
   const messages: Anthropic.MessageParam[] = priorTurns.map((turn) => ({ role: turn.role, content: turn.content }));
 
-  const [posts, knowledgeCounts, openExperiments] = await Promise.all([
+  const [posts, knowledgeCounts, openExperiments, hypotheses, currentGoal, snapshots] = await Promise.all([
     getBrandPostsForAnalysis(params.platform),
     getKnowledgeCounts(),
     getOpenExperiments(),
+    getPublishedHypotheses(params.platform),
+    getCurrentGoal(params.platform),
+    getFollowerSnapshots(params.platform),
   ]);
   const insights = computeBrandInsights(posts);
+  // La meta y las sorpresas de seguidores (§3.13) van como dato del turno, calculadas acá:
+  // el modelo las cita, no las recalcula.
+  const now = new Date();
+  const goal: GoalSnapshot = {
+    progress: currentGoal
+      ? computeGoalProgress({
+          goal: {
+            targetFollowers: currentGoal.target_followers,
+            baselineFollowers: currentGoal.baseline_followers,
+            baselineDate: currentGoal.baseline_date,
+            deadline: currentGoal.deadline,
+          },
+          snapshots,
+          today: todayIso(),
+        })
+      : null,
+    surprises: attributeFollowers({
+      posts: posts.map((post) => ({
+        postId: post.postId,
+        kind: post.kind,
+        publishedAt: post.publishedAt,
+        views: post.views,
+        newFollowers: post.newFollowers,
+      })),
+      snapshots,
+      now,
+    }).surprises,
+  };
   const system = getContentOS();
   // Estado variable (§3.10): no se cachea, así que no entra al `system` de
   // arriba — viaja como mensaje de sistema a mitad de conversación, después
   // del último turno del usuario, y se arma de nuevo en cada vuelta del loop
   // sin persistirse en `messages` (si se guardara, el próximo turno lo vería
   // desactualizado, y el objetivo es que sea la lectura del momento).
-  const stateBlock = buildContentOSStateBlock(params.platform, insights, posts, { counts: knowledgeCounts, openExperiments });
+  const stateBlock = buildContentOSStateBlock(
+    params.platform,
+    insights,
+    posts,
+    { counts: knowledgeCounts, openExperiments },
+    hypotheses,
+    goal,
+  );
 
   const client = createAnthropicClient(params.apiKey);
   const tools = [...BRAND_CHAT_TOOLS, { type: "web_search_20260209", name: "web_search", max_uses: 5 } as const];

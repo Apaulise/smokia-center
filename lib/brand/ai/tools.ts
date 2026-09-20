@@ -11,6 +11,7 @@ import {
   KnowledgePatchInput,
   NewKnowledgeInput,
 } from "@/lib/brand/knowledge/schema";
+import { getContentItemForPost } from "@/lib/brand/planner/queries";
 import { getBrandContentLibrary, getBrandPostMetricsHistory, type ContentSortField } from "@/lib/brand/queries";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
 
@@ -82,7 +83,8 @@ export const BRAND_CHAT_TOOLS: Anthropic.Tool[] = [
   },
   {
     name: "metricas_de_post",
-    description: "Trae la evolución día a día de las métricas de una pieza puntual, desde que se publicó hasta hoy.",
+    description:
+      "Trae la evolución día a día de las métricas de una pieza puntual, desde que se publicó hasta hoy. Si la pieza salió del planificador, trae también `pieza_planificada`: el objetivo y la hipótesis con que se planificó ANTES de grabar (SOC §12). Compará el resultado contra esa hipótesis, y si ya se puede concluir, guardá la conclusión en APRENDIZAJES o LOSERS.",
     input_schema: {
       type: "object",
       properties: {
@@ -240,7 +242,19 @@ export async function runBrandChatTool(name: string, rawInput: unknown, ctx: Bra
         reel_avg_watch_time_ms: row.reel_avg_watch_time_ms,
         reel_skip_rate: row.reel_skip_rate,
       }));
-      return { content: JSON.stringify(rows), isError: false };
+      const planned = await getContentItemForPost(input.post_id);
+      const plannedPiece = planned
+        ? {
+            titulo: planned.title,
+            objetivo: planned.objective,
+            hipotesis: planned.hypothesis,
+            hook: planned.hook,
+            angulo: planned.angle,
+            es_variante_de_un_ganador: planned.parent_item_id !== null,
+            publicada_el: planned.published_at,
+          }
+        : null;
+      return { content: JSON.stringify({ pieza_planificada: plannedPiece, metricas: rows }), isError: false };
     }
 
     if (name === "buscar_conocimiento") {

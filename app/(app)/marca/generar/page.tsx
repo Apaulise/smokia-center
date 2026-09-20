@@ -45,18 +45,14 @@ export default async function GenerarPage({ searchParams }: { searchParams: Prom
   const thread = (hilo ? threads.find((t) => t.id === hilo) : null) ?? threads[0] ?? null;
   const messages = thread ? await getBrandChatMessages(thread.id) : [];
 
+  // Sin PageHeader ni padding: el chat ocupa todo el alto y ancho del área principal.
   return (
-    <>
-      <PageHeader eyebrow="Gestor de Marca Personal" title="Generar contenido" description="Ideas, guiones, captions y hashtags." />
-      <div className="px-6 py-8 lg:px-10">
-        <BrandChatPanel
-          platform={PLATFORM}
-          ownerId={user.id}
-          initialThreads={threads}
-          initialThread={thread}
-          initialMessages={messages}
-        />
-      </div>
-    </>
+    <BrandChatPanel
+      platform={PLATFORM}
+      ownerId={user.id}
+      initialThreads={threads}
+      initialThread={thread}
+      initialMessages={messages}
+    />
   );
 }

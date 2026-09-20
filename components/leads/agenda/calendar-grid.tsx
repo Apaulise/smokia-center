@@ -1,71 +1,82 @@
 "use client";
 
-import { useMemo, useState, useTransition, type DragEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState, type DragEvent, type ReactNode } from "react";
 
-import { moveAppointment } from "@/lib/leads/actions";
-import type { AppointmentStatus } from "@/lib/leads/appointments";
-import { dayLabelShort, dayNumber, isoDateOf, timeOfDay } from "@/lib/leads/calendar";
-import type { AppointmentWithLead } from "@/lib/leads/queries";
+import { dayLabelShort, dayNumber } from "@/lib/leads/calendar";
 import { cn } from "@/lib/utils";
-
-const STATUS_DOT: Record<AppointmentStatus, string> = {
-  AGENDADA: "bg-cyan",
-  CONFIRMADA: "bg-violet",
-  REALIZADA: "bg-positive",
-  NO_ASISTIO: "bg-warning",
-  CANCELADA: "bg-danger",
-};
 
 const MONTH_CHIPS_VISIBLE = 3;
 
-/** Grilla de mes o semana con drag & drop nativo (mismo patrón que LeadsKanban) para reprogramar turnos. */
-export function CalendarGrid({
+/**
+ * Lo que informa una tarjeta al soltarse en un día. `time` es la hora que la
+ * tarjeta declaró al empezar el arrastre (`getDragTime`), o null si viene de
+ * afuera de la grilla — por ejemplo la bandeja "Sin fecha" del planificador.
+ */
+export interface CalendarMove {
+  id: string;
+  dateIso: string;
+  time: string | null;
+}
+
+/**
+ * Grilla de mes o semana con drag & drop nativo (mismo patrón que LeadsKanban).
+ * No sabe qué es lo que muestra: la agenda de Leads le pasa turnos y el
+ * planificador de Marca le pasa piezas de contenido (Plans/03 §3.7). Quien la
+ * usa decide qué dibuja dentro de cada tarjeta y qué pasa al soltarla.
+ */
+export function CalendarGrid<T extends { id: string }>({
   mode,
   days,
-  appointments,
+  items,
+  getDay,
+  renderChip,
+  getDragTime,
+  canDrag,
   currentMonth,
   today,
   onCreateAt,
   onEdit,
+  onMove,
 }: {
   mode: "mes" | "semana";
   days: string[];
-  appointments: AppointmentWithLead[];
+  items: T[];
+  /** A qué día calendario ("YYYY-MM-DD") pertenece la tarjeta, o null si no se dibuja. */
+  getDay: (item: T) => string | null;
+  /** El interior de la tarjeta; el contenedor (arrastrable, clicable) lo pone la grilla. */
+  renderChip: (item: T) => ReactNode;
+  /** La hora ("HH:mm") que viaja con la tarjeta al arrastrarla. */
+  getDragTime?: (item: T) => string | null;
+  /** Por default toda tarjeta se arrastra. */
+  canDrag?: (item: T) => boolean;
   /** "YYYY-MM" del mes que se está mostrando — para atenuar los días de otro mes (sólo modo mes). */
   currentMonth?: string;
   today: string;
   onCreateAt: (dateIso: string) => void;
-  onEdit: (appointment: AppointmentWithLead) => void;
+  onEdit: (item: T) => void;
+  onMove: (move: CalendarMove) => void;
 }) {
-  const router = useRouter();
   const [dragOverDay, setDragOverDay] = useState<string | null>(null);
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
-  const [, startTransition] = useTransition();
 
   const byDay = useMemo(() => {
-    const map = new Map<string, AppointmentWithLead[]>();
-    for (const appt of appointments) {
-      const key = isoDateOf(appt.starts_at);
+    const map = new Map<string, T[]>();
+    for (const item of items) {
+      const key = getDay(item);
+      if (!key) continue;
       const list = map.get(key) ?? [];
-      list.push(appt);
+      list.push(item);
       map.set(key, list);
     }
     return map;
-  }, [appointments]);
+  }, [items, getDay]);
 
   function handleDrop(dateIso: string, event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setDragOverDay(null);
     const id = event.dataTransfer.getData("text/plain");
-    const time = event.dataTransfer.getData("text/x-time");
-    if (!id || !time) return;
-
-    const newStartsAtIso = new Date(`${dateIso}T${time}:00-03:00`).toISOString();
-    startTransition(async () => {
-      await moveAppointment(id, newStartsAtIso);
-      router.refresh();
-    });
+    if (!id) return;
+    onMove({ id, dateIso, time: event.dataTransfer.getData("text/x-time") || null });
   }
 
   function toggleExpanded(dateIso: string) {
@@ -89,12 +100,12 @@ export function CalendarGrid({
 
       <div className={cn("grid grid-cols-7", mode === "mes" ? "auto-rows-fr" : "")}>
         {days.map((dateIso) => {
-          const dayAppointments = byDay.get(dateIso) ?? [];
+          const dayItems = byDay.get(dateIso) ?? [];
           const isToday = dateIso === today;
           const outsideMonth = mode === "mes" && currentMonth ? !dateIso.startsWith(currentMonth) : false;
           const expanded = expandedDays.has(dateIso) || mode === "semana";
-          const visible = expanded ? dayAppointments : dayAppointments.slice(0, MONTH_CHIPS_VISIBLE);
-          const hiddenCount = dayAppointments.length - visible.length;
+          const visible = expanded ? dayItems : dayItems.slice(0, MONTH_CHIPS_VISIBLE);
+          const hiddenCount = dayItems.length - visible.length;
 
           return (
             <div
@@ -125,23 +136,27 @@ export function CalendarGrid({
               </button>
 
               <div className="space-y-1">
-                {visible.map((appt) => (
-                  <div
-                    key={appt.id}
-                    draggable
-                    onDragStart={(event) => {
-                      event.dataTransfer.setData("text/plain", appt.id);
-                      event.dataTransfer.setData("text/x-time", timeOfDay(appt.starts_at));
-                    }}
-                    onClick={() => onEdit(appt)}
-                    className="flex cursor-grab items-start gap-1.5 truncate rounded-[8px] border border-line/60 bg-surface/60 px-1.5 py-1 text-left text-xs hover:border-cyan/40 active:cursor-grabbing"
-                  >
-                    <span className={cn("mt-0.5 size-1.5 shrink-0 rounded-full", STATUS_DOT[appt.status])} />
-                    <span className="truncate text-ink">
-                      <span className="tabular text-muted">{timeOfDay(appt.starts_at)}</span> {appt.title}
-                    </span>
-                  </div>
-                ))}
+                {visible.map((item) => {
+                  const draggable = canDrag ? canDrag(item) : true;
+                  return (
+                    <div
+                      key={item.id}
+                      draggable={draggable}
+                      onDragStart={(event) => {
+                        event.dataTransfer.setData("text/plain", item.id);
+                        const time = getDragTime?.(item);
+                        if (time) event.dataTransfer.setData("text/x-time", time);
+                      }}
+                      onClick={() => onEdit(item)}
+                      className={cn(
+                        "flex items-start gap-1.5 truncate rounded-[8px] border border-line/60 bg-surface/60 px-1.5 py-1 text-left text-xs hover:border-cyan/40",
+                        draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
+                      )}
+                    >
+                      {renderChip(item)}
+                    </div>
+                  );
+                })}
                 {hiddenCount > 0 ? (
                   <button
                     type="button"
@@ -151,7 +166,7 @@ export function CalendarGrid({
                     +{hiddenCount} más
                   </button>
                 ) : null}
-                {expanded && dayAppointments.length > MONTH_CHIPS_VISIBLE && mode === "mes" ? (
+                {expanded && dayItems.length > MONTH_CHIPS_VISIBLE && mode === "mes" ? (
                   <button
                     type="button"
                     onClick={() => toggleExpanded(dateIso)}

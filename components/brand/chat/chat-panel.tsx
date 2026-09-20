@@ -7,7 +7,6 @@ import { ChatMessage } from "./chat-message";
 import { SaveIdeaDialog } from "./save-idea-dialog";
 import { ChatThreadList } from "./thread-list";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { sendBrandChatMessage } from "@/lib/brand/actions";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
 import { createClient } from "@/lib/supabase/client";
@@ -63,6 +62,7 @@ export function BrandChatPanel({
   const [savedMessageIds, setSavedMessageIds] = useState<ReadonlySet<string>>(new Set());
   const supabaseRef = useRef(createClient());
   const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const threadIdRef = useRef(threadId);
   // Cuenta las aperturas de hilo: si el usuario cambia de opinión mientras una carga, sólo vale la última.
   const loadRequestRef = useRef(0);
@@ -94,6 +94,14 @@ export function BrandChatPanel({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // El input crece con el texto hasta el tope del max-h-40 (160px), como en el diseño.
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [input]);
 
   const busy = pending || messages.some((m) => m.role === "ASISTENTE" && m.status === "EN_CURSO");
   const activeTitle = threadId ? (threads.find((t) => t.id === threadId)?.title ?? null) : null;
@@ -199,8 +207,9 @@ export function BrandChatPanel({
   }
 
   return (
-    <div className="flex h-[calc(100vh-220px)] min-h-[480px] overflow-hidden rounded-[20px] border border-line bg-elevated/80">
-      <aside className="hidden w-64 shrink-0 border-r border-line/60 md:block">
+    // Alto de pantalla completo; en mobile se descuenta la barra del menú (lg:hidden) que queda arriba.
+    <div className="flex h-[calc(100dvh-61px)] min-h-[480px] overflow-hidden lg:h-dvh">
+      <aside className="hidden w-72 shrink-0 border-r border-line/60 md:block">
         <ChatThreadList
           threads={threads}
           activeId={threadId}
@@ -212,58 +221,70 @@ export function BrandChatPanel({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-center justify-between gap-3 border-b border-line/60 px-4 py-3">
+        {/* En mobile no hay lista lateral: la acción de nueva conversación queda acá. */}
+        <div className="flex items-center justify-between gap-3 border-b border-line/60 px-4 py-3 md:hidden">
           <p className="truncate text-sm text-muted">{activeTitle ?? "Conversación nueva"}</p>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="md:hidden"
-            onClick={handleNewThread}
-            disabled={messages.length === 0}
-          >
+          <Button type="button" variant="ghost" size="sm" onClick={handleNewThread} disabled={messages.length === 0}>
             <Plus className="size-3.5" />
             Nueva conversación
           </Button>
         </div>
 
-        <div className={cn("flex-1 space-y-4 overflow-y-auto px-4 py-4 transition-opacity", loadingThread && "opacity-60")}>
-          {messages.length === 0 ? (
-            <p className="py-12 text-center text-sm text-muted">
-              Pedile una idea, un guion o un caption. Puede buscar en tus posts y en la web antes de responder.
-            </p>
-          ) : (
-            messages.map((row) => (
-              <ChatMessage
-                key={row.id}
-                row={row}
-                saved={savedMessageIds.has(row.id)}
-                onSaveIdea={row.role === "ASISTENTE" ? (messageId, text) => setIdeaDraft({ messageId, text }) : undefined}
-              />
-            ))
+        <div
+          className={cn(
+            "flex-1 overflow-y-auto transition-opacity [scrollbar-color:var(--color-line)_transparent] [scrollbar-width:thin]",
+            loadingThread && "opacity-60",
           )}
-          <div ref={bottomRef} />
+        >
+          <div className="mx-auto flex max-w-[760px] flex-col gap-7 px-4 pt-8 pb-6 sm:px-8 sm:pt-10">
+            {messages.length === 0 ? (
+              <p className="py-12 text-center text-sm text-muted">
+                Pedile una idea, un guion o un caption. Puede buscar en tus posts y en la web antes de responder.
+              </p>
+            ) : (
+              messages.map((row) => (
+                <ChatMessage
+                  key={row.id}
+                  row={row}
+                  saved={savedMessageIds.has(row.id)}
+                  onSaveIdea={row.role === "ASISTENTE" ? (messageId, text) => setIdeaDraft({ messageId, text }) : undefined}
+                />
+              ))
+            )}
+            <div ref={bottomRef} />
+          </div>
         </div>
 
-        {error ? <p className="border-t border-line/60 px-4 py-2 text-xs text-danger">{error}</p> : null}
-
-        <div className="flex items-end gap-2 border-t border-line/60 p-4">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            placeholder="Escribí lo que necesitás para el próximo contenido…"
-            className="min-h-12 flex-1"
-            disabled={busy}
-          />
-          <Button type="button" variant="primary" onClick={handleSend} disabled={busy || !input.trim()}>
-            {busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-          </Button>
+        <div className="shrink-0 px-4 pt-3 pb-5 sm:px-8">
+          <div className="mx-auto max-w-[760px]">
+            {error ? <p className="mb-2 text-xs text-danger">{error}</p> : null}
+            <div className="flex items-end gap-3 rounded-[16px] border border-line bg-elevated/80 py-3 pr-3 pl-5 transition-colors focus-within:border-cyan/40">
+              <textarea
+                ref={textareaRef}
+                rows={1}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="Escribí lo que necesitás para el próximo contenido…"
+                disabled={busy}
+                className="max-h-40 flex-1 resize-none border-none bg-transparent py-1.5 text-[14.5px] leading-normal text-ink outline-none placeholder:text-muted/60 disabled:opacity-40"
+              />
+              <button
+                type="button"
+                onClick={handleSend}
+                disabled={busy || !input.trim()}
+                aria-label="Enviar mensaje"
+                className="flex size-[38px] shrink-0 items-center justify-center rounded-[10px] bg-cyan text-(--color-base) transition-colors hover:bg-cyan-soft focus-visible:ring-2 focus-visible:ring-cyan/40 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40"
+              >
+                {busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

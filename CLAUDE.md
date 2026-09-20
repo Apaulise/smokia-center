@@ -13,9 +13,9 @@ Panel central del negocio de Awareness AI, una agencia de IA y automatización. 
 | **Panel principal** | Agrega métricas de las tres patas | Fase 4 — placeholder |
 | **Gestor de Leads** | Genera listas por rubro y zona, seguimiento hasta el cierre | **Fase 1 — en construcción** |
 | **Gestor de Facturación** | Ingresos, clientes, cobros | Fase 2 — no empezado |
-| **Gestor de Marca Personal** | Contenido y presencia | Fase 3 — en construcción |
+| **Gestor de Marca Personal** | Contenido y presencia | Fase 3 — reabierta para §3.13 (objetivo de seguidores, checklist manual hecho salvo 8 y 10, que piden publicar un reel real) y §3.14 (competencia accionable, cerrado el 2026-09-20 con checklist manual hecho); §3.7 sin verificar, §3.9 YouTube diferido |
 
-Los planes viven en `Plans/`, numerados por fase: [01 — Gestor de Leads](Plans/01-gestor-de-leads.md) y [03 — Gestor de Marca Personal](Plans/03-gestor-de-marca-personal.md), este último escrito por adelantado y hoy **en construcción** (ver §2). El manual de identidad visual, en [Awareness_AI_Manual_de_Marca.md](Awareness_AI_Manual_de_Marca.md).
+Los planes viven en `Plans/`, numerados por fase: [01 — Gestor de Leads](Plans/01-gestor-de-leads.md) y [03 — Gestor de Marca Personal](Plans/03-gestor-de-marca-personal.md), este último escrito por adelantado y hoy **reabierto sólo para §3.13** (objetivo de seguidores, implementado el 2026-09-20; checklist manual hecho salvo los ítems 8 y 10, que piden publicar un reel real): §3.1–§3.8 y §3.10–§3.12 están construidos, §3.7 (planificador y publicación) sigue sin verificar en la app real y §3.9 (YouTube) queda diferido (ver §2). El manual de identidad visual, en [Awareness_AI_Manual_de_Marca.md](Awareness_AI_Manual_de_Marca.md).
 
 ---
 
@@ -36,22 +36,6 @@ Esto no es una preferencia de estilo: es la decisión que evita terminar con tre
 ## 3. Arquitectura
 
 Next.js 16 (App Router) + Supabase (Postgres, Auth, RLS, Realtime). **Sin ORM**: query builder de `supabase-js` sobre tipos generados del esquema real.
-
-```
-app/(auth)/login          Público
-app/auth/callback         Callback de Google OAuth
-app/(app)/*               Todo lo autenticado (middleware protege el grupo)
-  leads/                  Dashboard, lista, ficha, generar, agenda
-  configuracion/          API keys, rubros, plantillas
-app/api/apify/webhook     Service role — saltea RLS (ver §4)
-app/api/jobs/reconcile    Cron/fallback de importación
-lib/supabase/             client (browser) · server (RSC/actions) · admin (service role) · database.types (generado)
-lib/providers/            Una fuente de leads por archivo + registry
-lib/apify/                Cliente HTTP y reconciliación de corridas
-lib/leads/                actions · queries · dedupe · goals
-supabase/migrations/      SQL versionado: tablas, RLS, funciones
-components/ui/            Design system de marca
-```
 
 ### Flujo de una generación de leads, de punta a punta
 
@@ -98,13 +82,7 @@ Es el único lugar del código donde el aislamiento depende del código y no de 
 
 Ver [Awareness_AI_Manual_de_Marca.md](Awareness_AI_Manual_de_Marca.md). La app es **dark-only**: el manual es dark-first y no define paleta clara, así que no se inventa una.
 
-```css
---bg:#070B17;  --bg-2:#0C1730;  --surface:#12213E;
---cyan:#18D6E8;  --cyan-soft:#72F4F1;
---violet:#7C3AED;  --purple:#4C1D95;
---text:#F4F7FF;  --text-muted:#AAB8D4;  --border:#2B416D;
---gradient-primary: linear-gradient(135deg,#18D6E8 0%,#4C7DFF 45%,#7C3AED 100%);
-```
+Tokens de color definidos en `app/globals.css`.
 
 - **Tipografías:** Sora (titulares), Inter (cuerpo/UI), JetBrains Mono (números y datos)
 - **Convención de color, codificada en las variantes de los componentes:** *cyan = acción y resultado*, *violeta = proceso e innovación*. No se decide pantalla por pantalla
@@ -126,15 +104,7 @@ El código (variables, funciones, tablas) va en inglés. La frontera es la panta
 
 ## 8. Comandos
 
-```bash
-npm run dev          # Next.js en desarrollo
-npm run build        # Build de producción
-npm run lint         # ESLint
-npm run typecheck    # tsc --noEmit
-npm run db:push      # Aplica supabase/migrations/ al proyecto en la nube
-npm run db:types     # Regenera database.types.ts  ← después de CADA migración
-npm run db:diff      # Muestra drift entre la base y las migraciones
-```
+Los scripts están en `package.json` (`db:*` para Supabase).
 
 **No hay Supabase local.** Requiere Docker y la decisión fue trabajar directo contra
 la nube, así que los comandos van con `--linked`, no con `--local`. El setup de una
@@ -147,16 +117,7 @@ proyecto real. Antes de una migración destructiva, mirar `db:diff`.
 
 ## 9. Receta: agregar una fuente de leads
 
-1. Crear `lib/providers/<fuente>.ts` implementando `LeadSourceProvider`:
-   - `criteriaSchema` (Zod) — **el formulario de `/leads/generar` se renderiza solo desde acá**
-   - `buildInput(criteria)` — criterios → input del actor de Apify
-   - `mapItem(item)` — item del dataset → `NormalizedLead`. Devolver `null` descarta el item
-   - `estimateCost(criteria)`
-2. Registrarlo en `lib/providers/registry.ts`
-3. Agregar el valor al enum `lead_source` con una migración
-4. `npm run db:types`
-
-**No hace falta tocar la UI.** Si estás editando una pantalla para sumar una fuente, la abstracción se rompió.
+Ver la skill `agregar-fuente-de-leads` (`.claude/skills/agregar-fuente-de-leads/SKILL.md`): se carga sólo al sumar una fuente.
 
 ---
 

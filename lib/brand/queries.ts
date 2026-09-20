@@ -186,18 +186,6 @@ export async function getBrandChatThreads(platform: BrandPlatform) {
   return data ?? [];
 }
 
-/** Las ideas guardadas desde el chat, la más nueva primero (§3.6). El planificador (§3.7) las va a tomar de esta misma tabla. */
-export async function getBrandContentItems(platform: BrandPlatform) {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("brand_content_items")
-    .select("*")
-    .eq("platform", platform)
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return data ?? [];
-}
-
 export async function getBrandChatMessages(threadId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase

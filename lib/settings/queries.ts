@@ -2,7 +2,7 @@ import { decrypt, maskSecret } from "@/lib/crypto";
 import type { LeadSource } from "@/lib/providers/types";
 import { createClient } from "@/lib/supabase/server";
 
-import { ANTHROPIC_KEY_SETTING, APIFY_KEY_SETTING, WINDSOR_KEY_SETTING } from "./constants";
+import { ANTHROPIC_KEY_SETTING, APIFY_KEY_SETTING, GEMINI_KEY_SETTING, WINDSOR_KEY_SETTING } from "./constants";
 
 const ACTOR_KEY_PREFIX = "apify_actor_";
 
@@ -39,6 +39,10 @@ export async function getWindsorKeyStatus() {
 
 export async function getAnthropicKeyStatus() {
   return getKeyStatus(ANTHROPIC_KEY_SETTING);
+}
+
+export async function getGeminiKeyStatus() {
+  return getKeyStatus(GEMINI_KEY_SETTING);
 }
 
 export async function listIndustries() {

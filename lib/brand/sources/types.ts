@@ -73,12 +73,28 @@ export interface NormalizedComment {
   commentedAt: string | null;
 }
 
+/** Un archivo a publicar: la URL pública del bucket `brand-media` y si es imagen o video. */
+export interface PublishMedia {
+  /** Instagram la busca desde sus propios servidores (ver §3.7): tiene que ser pública. */
+  url: string;
+  type: "IMAGE" | "VIDEO";
+}
+
 export interface PublishParams {
-  accountExternalId: string;
+  apiKey: string;
+  /** Username de la cuenta (`brand_accounts.username`): con eso se resuelve la cuenta en Windsor. */
+  accountUsername: string | null;
   kind: BrandPostKind;
   caption: string | null;
-  /** URL pública (bucket `brand-media`, ver §3.7) — Instagram la busca desde sus propios servidores. */
-  mediaUrl: string;
+  /** Uno para reel/post/historia; de 2 a 10 para un carrusel. */
+  media: PublishMedia[];
+}
+
+export interface PublishResult {
+  /** El id de la pieza en la plataforma. Null si el conector no lo devolvió — la sincronización la empalma después. */
+  externalId: string | null;
+  /** Lo que respondió el conector, para mostrarlo tal cual. */
+  message: string | null;
 }
 
 /**
@@ -123,5 +139,5 @@ export interface BrandSourceProvider {
   /** `row` ya viene escopeado a una sola dimensión (ver `audienceFields`). */
   mapAudience?(dimension: BrandAudienceDimension, row: unknown): NormalizedAudienceRow | null;
   mapComment?(row: unknown): NormalizedComment | null;
-  publish?(params: PublishParams): Promise<{ externalId: string }>;
+  publish?(params: PublishParams): Promise<PublishResult>;
 }

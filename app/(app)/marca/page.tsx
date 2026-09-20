@@ -1,6 +1,8 @@
 import { Eye, Heart, KeyRound, TrendingUp, UserPlus, Users } from "lucide-react";
 
 import { AudienceBars } from "@/components/brand/dashboard/audience-bars";
+import { GoalCard } from "@/components/brand/goals/goal-card";
+import { NextStepsCard } from "@/components/brand/goals/next-steps-card";
 import { LatestPostsGrid } from "@/components/brand/dashboard/latest-posts-grid";
 import { BrandLineChart } from "@/components/brand/dashboard/line-chart";
 import { BrandSyncPanel } from "@/components/brand/sync-panel";
@@ -9,14 +11,30 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatTile } from "@/components/ui/stat-tile";
+import { buildNextSteps, countMatureReels } from "@/lib/brand/goals/next-steps";
+import { computeGoalProgress } from "@/lib/brand/goals/progress";
+import {
+  countCompetitorOutliers,
+  countPiecesFromRadar,
+  getCurrentGoal,
+  getFollowerSnapshots,
+  getKnowledgeUsage,
+  getLastCompletedSyncAt,
+  getPlanningRows,
+  toStepItems,
+} from "@/lib/brand/goals/queries";
+import { classifyPosts, computeCurrentBaselines } from "@/lib/brand/insights/baseline";
+import { summarizeWeek } from "@/lib/brand/planner/week";
 import {
   getBrandAccountSummary,
   getBrandAudienceSummary,
   getBrandContentViewsTotal,
   getBrandLatestPosts,
   getBrandMetricsTimeline,
+  getBrandPostsForAnalysis,
   getLatestBrandSyncJob,
 } from "@/lib/brand/queries";
+import { todayIso, weekDays } from "@/lib/leads/calendar";
 import { requireUser } from "@/lib/supabase/server";
 
 export const metadata = { title: "Marca Personal · Awareness AI" };
@@ -34,13 +52,34 @@ function formatCompact(value: number) {
 export default async function MarcaPage() {
   const user = await requireUser();
 
-  const [account, timeline, audience, latestPosts, viewsTotal, latestJob] = await Promise.all([
+  const [
+    account,
+    timeline,
+    audience,
+    latestPosts,
+    viewsTotal,
+    latestJob,
+    goal,
+    snapshots,
+    planningRows,
+    posts,
+    knowledge,
+    competitorOutliers,
+    lastSyncAt,
+  ] = await Promise.all([
     getBrandAccountSummary(PLATFORM, WINDOW_DAYS),
     getBrandMetricsTimeline(PLATFORM, WINDOW_DAYS),
     getBrandAudienceSummary(PLATFORM),
     getBrandLatestPosts(PLATFORM, 8),
     getBrandContentViewsTotal(PLATFORM),
     getLatestBrandSyncJob(PLATFORM),
+    getCurrentGoal(PLATFORM),
+    getFollowerSnapshots(PLATFORM),
+    getPlanningRows(PLATFORM),
+    getBrandPostsForAnalysis(PLATFORM),
+    getKnowledgeUsage(),
+    countCompetitorOutliers(PLATFORM),
+    getLastCompletedSyncAt(PLATFORM),
   ]);
 
   if (!account) {
@@ -72,6 +111,39 @@ export default async function MarcaPage() {
       ? account.followers_count - account.followers_at_oldest
       : null;
 
+  // La meta y los próximos pasos (§3.13). Todo se calcula acá con lógica pura: el modelo no interviene.
+  const now = new Date();
+  const currentFollowers = snapshots.at(-1)?.followers ?? account.followers_count;
+  const goalProgress = goal
+    ? computeGoalProgress({
+        goal: {
+          targetFollowers: goal.target_followers,
+          baselineFollowers: goal.baseline_followers,
+          baselineDate: goal.baseline_date,
+          deadline: goal.deadline,
+        },
+        snapshots,
+        today: todayIso(),
+      })
+    : null;
+
+  const results = classifyPosts(posts, now);
+  const nextSteps = buildNextSteps({
+    now,
+    goal: goalProgress,
+    week: summarizeWeek(planningRows, weekDays(todayIso())),
+    hasWinners: Object.values(results).some((result) => result.classification.startsWith("GANADOR")),
+    items: toStepItems(planningRows),
+    concludedPostIds: knowledge.concludedPostIds,
+    reelBaseline: {
+      hasBaseline: computeCurrentBaselines(posts, now).some((baseline) => baseline.kind === "REEL" && baseline.reach !== null),
+      matureReels: countMatureReels(posts, now),
+    },
+    competitorOutliers,
+    piecesFromRadar: countPiecesFromRadar(planningRows, knowledge.radarIds),
+    lastSyncAt,
+  });
+
   const reachTotal = timeline.reduce((sum, p) => sum + (p.reach ?? 0), 0);
   const interactionsTotal = timeline.reduce((sum, p) => sum + (p.total_interactions ?? 0), 0);
 
@@ -85,6 +157,11 @@ export default async function MarcaPage() {
       />
 
       <div className="space-y-6 px-6 py-8 lg:px-10">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <GoalCard platform={PLATFORM} goal={goal} progress={goalProgress} currentFollowers={currentFollowers} />
+          <NextStepsCard steps={nextSteps} />
+        </div>
+
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
           <StatTile
             label="Seguidores"

@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import { ActorOverridesForm } from "@/components/settings/actor-overrides-form";
 import { AnthropicKeyForm } from "@/components/settings/anthropic-key-form";
 import { ApifyKeyForm } from "@/components/settings/apify-key-form";
+import { GeminiKeyForm } from "@/components/settings/gemini-key-form";
 import { IndustriesManager } from "@/components/settings/industries-manager";
 import { TemplatesManager } from "@/components/settings/templates-manager";
 import { WindsorKeyForm } from "@/components/settings/windsor-key-form";
@@ -12,6 +13,7 @@ import {
   getActorOverrides,
   getAnthropicKeyStatus,
   getApifyKeyStatus,
+  getGeminiKeyStatus,
   getWindsorKeyStatus,
   listIndustries,
   listMessageTemplates,
@@ -20,10 +22,11 @@ import {
 export const metadata = { title: "Configuración · Awareness AI" };
 
 export default async function ConfiguracionPage() {
-  const [apifyStatus, windsorStatus, anthropicStatus, industries, templates, actorOverrides] = await Promise.all([
+  const [apifyStatus, windsorStatus, anthropicStatus, geminiStatus, industries, templates, actorOverrides] = await Promise.all([
     getApifyKeyStatus(),
     getWindsorKeyStatus(),
     getAnthropicKeyStatus(),
+    getGeminiKeyStatus(),
     listIndustries(),
     listMessageTemplates(),
     getActorOverrides(),
@@ -34,7 +37,7 @@ export default async function ConfiguracionPage() {
       <PageHeader
         eyebrow="Configuración"
         title="Conexiones y preferencias"
-        description="API keys de Apify, Windsor.ai y Anthropic, rubros y plantillas de mensajes."
+        description="API keys de Apify, Windsor.ai, Anthropic y Google AI Studio, rubros y plantillas de mensajes."
       />
       <div className="space-y-6 px-6 py-8 lg:px-10">
         <Card>
@@ -79,6 +82,21 @@ export default async function ConfiguracionPage() {
           />
           <CardBody>
             <AnthropicKeyForm configured={anthropicStatus.configured} masked={anthropicStatus.masked} />
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title={
+              <span className="flex items-center gap-2">
+                <Sparkles className="size-4 text-violet" />
+                Google AI Studio (Gemini)
+              </span>
+            }
+            description="Clasifica qué publicaciones de la competencia sirven para tu nicho. Es el free tier de Google: no se cobra, y sin ella la pantalla funciona igual, sólo que sin ese filtro."
+          />
+          <CardBody>
+            <GeminiKeyForm configured={geminiStatus.configured} masked={geminiStatus.masked} />
           </CardBody>
         </Card>
 

@@ -1,3 +1,5 @@
+import { listWindsorAccounts, runWindsorAction, WindsorActionError } from "@/lib/windsor/client";
+
 import type { BrandAudienceDimension, BrandPostKind, BrandSourceProvider } from "./types";
 import { asRecord, firstNumber, firstString } from "./utils";
 
@@ -96,10 +98,59 @@ export const instagramProvider: BrandSourceProvider = {
   capabilities: {
     audience: true,
     stories: true,
-    // Windsor hoy sólo publica un post de imagen simple; carruseles, reels e
-    // historias están en el plan (§3.7) pero el conector todavía no los
-    // soporta. Reconfirmar contra GET /instagram/actions al llegar a §3.7.
-    publish: ["POST"],
+    // Confirmado contra GET /instagram/actions al llegar a §3.7: el conector
+    // ofrece create_image_post, create_video_post, create_story y
+    // create_carousel_post. Instagram publica todo video simple como Reel, así
+    // que REEL y VIDEO comparten acción.
+    publish: ["REEL", "VIDEO", "POST", "CARRUSEL", "HISTORIA"],
+  },
+
+  async publish({ apiKey, accountUsername, kind, caption, media }) {
+    const accounts = await listWindsorAccounts(apiKey, "instagram");
+    // El id que Windsor espera acá no es el `external_id` de brand_accounts
+    // (ver listWindsorAccounts): se resuelve por username, o por la única
+    // cuenta conectada.
+    const account =
+      accounts.find((a) => a.name && accountUsername && a.name.toLowerCase() === accountUsername.toLowerCase()) ??
+      (accounts.length === 1 ? accounts[0] : null);
+    if (!account) {
+      throw new WindsorActionError(
+        accounts.length === 0
+          ? "Windsor no tiene ninguna cuenta de Instagram conectada."
+          : "No se pudo saber a qué cuenta de Instagram publicar: hay varias conectadas en Windsor.",
+        true,
+      );
+    }
+
+    const first = media[0];
+    if (!first) throw new WindsorActionError("La pieza no tiene archivos para publicar.", true);
+
+    let action: string;
+    let params: Record<string, unknown>;
+    switch (kind) {
+      case "REEL":
+      case "VIDEO":
+        action = "create_video_post";
+        params = { video_url: first.url, caption };
+        break;
+      case "POST":
+        action = "create_image_post";
+        params = { image_url: first.url, caption };
+        break;
+      case "CARRUSEL":
+        action = "create_carousel_post";
+        params = { image_urls: media.map((m) => m.url), caption };
+        break;
+      case "HISTORIA":
+        // Las historias no llevan caption (lo dice el conector).
+        action = "create_story";
+        params = first.type === "VIDEO" ? { video_url: first.url } : { image_url: first.url };
+        break;
+      default:
+        throw new WindsorActionError(`Instagram no publica piezas de tipo ${kind}.`, true);
+    }
+
+    return runWindsorAction({ apiKey, connector: "instagram", account: account.id, action, params });
   },
 
   mapAccount(raw) {

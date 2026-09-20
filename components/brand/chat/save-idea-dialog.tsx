@@ -10,10 +10,12 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { saveBrandContentIdea } from "@/lib/brand/actions";
 import { extractHashtags } from "@/lib/brand/insights";
+import { CONTENT_OBJECTIVES, OBJECTIVE_LABEL, type ContentObjective } from "@/lib/brand/planner/schema";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
 import type { Database } from "@/lib/supabase/database.types";
 
 type BrandPostKind = Database["public"]["Enums"]["brand_post_kind"];
+type Objective = ContentObjective;
 
 const KIND_OPTIONS: { value: BrandPostKind; label: string }[] = [
   { value: "REEL", label: "Reel" },
@@ -49,6 +51,8 @@ export function SaveIdeaDialog({
   const [idea, setIdea] = useState(initialText);
   const [hashtags, setHashtags] = useState(() => extractHashtags(initialText).join(" "));
   const [kind, setKind] = useState<BrandPostKind>("REEL");
+  const [objective, setObjective] = useState<Objective | "">("");
+  const [hypothesis, setHypothesis] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,6 +66,8 @@ export function SaveIdeaDialog({
       title,
       idea,
       hashtags: hashtags.split(/\s+/).filter(Boolean),
+      objective: objective || null,
+      hypothesis,
     });
     setSaving(false);
     if (!result.ok) {
@@ -73,7 +79,7 @@ export function SaveIdeaDialog({
   }
 
   return (
-    <Dialog open={open} onClose={onClose} title="Guardar como idea" description="Queda disponible para el planificador.">
+    <Dialog open={open} onClose={onClose} title="Guardar como idea" description="Queda en la bandeja “Sin fecha” del planificador.">
       <div className="space-y-4">
         <div>
           <label className="mb-1.5 block text-xs text-muted">Título</label>
@@ -88,6 +94,28 @@ export function SaveIdeaDialog({
               </option>
             ))}
           </Select>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
+          <div>
+            <label className="mb-1.5 block text-xs text-muted">Objetivo</label>
+            <Select value={objective} onChange={(e) => setObjective(e.target.value as Objective | "")}>
+              <option value="">Sin definir</option>
+              {CONTENT_OBJECTIVES.map((value) => (
+                <option key={value} value={value}>
+                  {OBJECTIVE_LABEL[value]}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs text-muted">Hipótesis</label>
+            <Textarea
+              value={hypothesis}
+              onChange={(e) => setHypothesis(e.target.value)}
+              placeholder="Probamos si [formato] aplicado a [tema] mediante [ángulo] rinde mejor porque […]"
+              className="min-h-20"
+            />
+          </div>
         </div>
         <div>
           <label className="mb-1.5 block text-xs text-muted">Idea / guion</label>

@@ -25,6 +25,7 @@
 // volumen para que traer todo de una sea un problema en esta escala.
 const HISTORY_START = "2010-01-01";
 
+import { linkPublishedItems } from "@/lib/brand/planner/link";
 import { getBrandSource } from "@/lib/brand/sources/registry";
 import type {
   BrandAudienceDimension,
@@ -42,10 +43,32 @@ import { queryWindsorConnector } from "@/lib/windsor/client";
 
 type Admin = ReturnType<typeof createAdminClient>;
 
+/**
+ * Una sincronización "en curso" que lleva más que esto se da por muerta (el
+ * proceso se cortó a la mitad): la mayor duración de una corrida es el
+ * `maxDuration` de 60 s, así que diez minutos sobran. Hay un índice único sobre
+ * "una EN_CURSO por cuenta", y sin esta limpieza una muerta lo bloquearía para siempre.
+ */
+const STALE_RUNNING_MINUTES = 10;
+
+/** Cada cuánto como mínimo se sincroniza sola al abrir /marca (Plans/03 §3.13). */
+export const AUTO_SYNC_MIN_HOURS = 6;
+
 export interface BrandSyncResult {
   status: Database["public"]["Enums"]["job_status"];
   itemsImported: number;
   error?: string;
+  /**
+   * Presente cuando NO se corrió: `EN_CURSO` si ya había otra sincronización de
+   * esta cuenta andando, `RECIENTE` si la última terminó hace menos de lo pedido.
+   * No es un error: es el guard funcionando.
+   */
+  skipped?: "EN_CURSO" | "RECIENTE";
+}
+
+export interface BrandSyncOptions {
+  /** No sincronizar si la última completada terminó hace menos de estas horas. */
+  skipIfCompletedWithinHours?: number;
 }
 
 function extractDate(raw: unknown, fallback: string): string {
@@ -54,7 +77,11 @@ function extractDate(raw: unknown, fallback: string): string {
   return firstString(row, ["date"]) ?? fallback;
 }
 
-export async function runBrandSync(ownerId: string, platform: BrandPlatform): Promise<BrandSyncResult> {
+export async function runBrandSync(
+  ownerId: string,
+  platform: BrandPlatform,
+  options: BrandSyncOptions = {},
+): Promise<BrandSyncResult> {
   const admin = createAdminClient();
   const provider = getBrandSource(platform);
   if (!provider) {
@@ -81,6 +108,29 @@ export async function runBrandSync(ownerId: string, platform: BrandPlatform): Pr
 
   const today = new Date().toISOString().slice(0, 10);
 
+  // Los guards van pegados al insert del job: cuanto más lejos, más grande la ventana
+  // en la que dos pestañas abiertas a la vez pasan las dos el chequeo.
+  if (options.skipIfCompletedWithinHours !== undefined) {
+    const since = new Date(Date.now() - options.skipIfCompletedWithinHours * 3_600_000).toISOString();
+    const { data: recent } = await admin
+      .from("brand_sync_jobs")
+      .select("id")
+      .eq("owner_id", ownerId)
+      .eq("platform", platform)
+      .eq("status", "COMPLETADO")
+      .gte("finished_at", since)
+      .limit(1);
+    if (recent && recent.length > 0) return { status: "COMPLETADO", itemsImported: 0, skipped: "RECIENTE" };
+  }
+
+  await admin
+    .from("brand_sync_jobs")
+    .update({ status: "FALLIDO", error: "Interrumpida: quedó en curso sin terminar.", finished_at: new Date().toISOString() })
+    .eq("owner_id", ownerId)
+    .eq("platform", platform)
+    .eq("status", "EN_CURSO")
+    .lt("started_at", new Date(Date.now() - STALE_RUNNING_MINUTES * 60_000).toISOString());
+
   const { data: job, error: jobError } = await admin
     .from("brand_sync_jobs")
     .insert({
@@ -94,6 +144,8 @@ export async function runBrandSync(ownerId: string, platform: BrandPlatform): Pr
     .select("id")
     .single();
 
+  // 23505 = el índice único "una EN_CURSO por cuenta": otra corrida (otra pestaña, o el cron) ya está andando.
+  if (jobError?.code === "23505") return { status: "EN_CURSO", itemsImported: 0, skipped: "EN_CURSO" };
   if (jobError || !job) {
     return { status: "FALLIDO", itemsImported: 0, error: "No se pudo crear el job de sincronización." };
   }
@@ -109,10 +161,12 @@ export async function runBrandSync(ownerId: string, platform: BrandPlatform): Pr
     });
 
     const accountIds = new Map<string, string>();
+    let latestFollowers: number | null = null;
 
     for (const raw of identityRows) {
       const snapshot = provider.mapAccount(raw);
       if (!snapshot) continue;
+      if (snapshot.followersCount !== null) latestFollowers = Math.max(latestFollowers ?? 0, snapshot.followersCount);
 
       const { data: account, error } = await admin
         .from("brand_accounts")
@@ -145,6 +199,18 @@ export async function runBrandSync(ownerId: string, platform: BrandPlatform): Pr
         },
         { onConflict: "account_id,captured_on" },
       );
+    }
+
+    // La meta de seguidores que ya se alcanzó pasa a CUMPLIDA (§3.13). Es un extra: no
+    // puede tirar abajo una sincronización que ya trajo el contador.
+    if (latestFollowers !== null) {
+      await admin
+        .from("brand_goals")
+        .update({ status: "CUMPLIDA" })
+        .eq("owner_id", ownerId)
+        .eq("platform", platform)
+        .eq("status", "ACTIVA")
+        .lte("target_followers", latestFollowers);
     }
 
     // 1b. Métricas diarias — consulta separada (ver comment del header),
@@ -215,6 +281,15 @@ export async function runBrandSync(ownerId: string, platform: BrandPlatform): Pr
         mapComment: provider.mapComment,
         today,
       });
+    }
+
+    // Empalma lo publicado desde el planificador con su fila recién importada
+    // (§3.7). Es un extra: si falla no puede tirar abajo una sincronización
+    // que ya trajo todo lo demás, y la próxima corrida lo reintenta.
+    try {
+      await linkPublishedItems(admin, ownerId, platform);
+    } catch {
+      // se reintenta en la siguiente sincronización
     }
 
     await admin

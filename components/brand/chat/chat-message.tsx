@@ -1,4 +1,4 @@
-import { Bot, Search, User } from "lucide-react";
+import { Search } from "lucide-react";
 import Link from "next/link";
 
 import { Markdown } from "@/components/brand/markdown";
@@ -78,17 +78,19 @@ export function ChatMessage({
   const { text, tools } = extractParts(row);
   const streaming = row.status === "EN_CURSO";
 
+  // Sin burbujas: una etiqueta de remitente arriba y el texto suelto debajo. La persona a la derecha, el asistente sangrado bajo su marca.
   return (
-    <div className={cn("flex gap-3", isUser && "flex-row-reverse")}>
-      <div
-        className={cn(
-          "flex size-8 shrink-0 items-center justify-center rounded-full border",
-          isUser ? "border-line bg-surface/60 text-muted" : "border-cyan/30 bg-cyan/10 text-cyan",
+    <div className={cn("flex flex-col gap-2", isUser && "items-end")}>
+      <div className={cn("flex items-center gap-2", isUser && "flex-row-reverse")}>
+        {isUser ? null : (
+          <span className="flex size-[26px] shrink-0 items-center justify-center rounded-[7px] border border-cyan/40">
+            <span className={cn("size-2 rounded-full bg-cyan", streaming && "animate-pulse")} />
+          </span>
         )}
-      >
-        {isUser ? <User className="size-4" /> : <Bot className="size-4" />}
+        <span className="text-xs font-semibold tracking-[0.02em] text-muted uppercase">{isUser ? "Tú" : "Asistente"}</span>
       </div>
-      <div className={cn("min-w-0 max-w-[80%] space-y-2", isUser && "flex flex-col items-end")}>
+
+      <div className={cn("flex min-w-0 max-w-full flex-col gap-2", isUser ? "items-end" : "pl-[34px]")}>
         {tools.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
             {tools.map((label, index) => (
@@ -100,28 +102,27 @@ export function ChatMessage({
           </div>
         ) : null}
         {text || streaming ? (
-          <div
-            className={cn(
-              "rounded-[16px] border px-4 py-3 text-sm text-ink",
-              isUser ? "border-line bg-surface/60 whitespace-pre-wrap" : "border-line bg-elevated/80",
-            )}
-          >
+          <div className={cn("text-[15px] leading-[1.65] text-ink", isUser && "max-w-[85%] text-right whitespace-pre-wrap")}>
             {/* Lo que escribe la persona es texto plano; lo que devuelve el modelo es markdown. */}
-            {isUser ? text : <Markdown>{text}</Markdown>}
+            {isUser ? text : <Markdown className="text-[15px] leading-[1.65]">{text}</Markdown>}
             {streaming ? <span className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse bg-cyan align-middle" /> : null}
           </div>
         ) : null}
         {row.status === "FALLIDO" ? <p className="text-xs text-danger">{row.error ?? "Algo falló generando la respuesta."}</p> : null}
         {!isUser && !streaming && text ? (
           saved ? (
-            <p className="text-xs text-positive">
+            <p className="text-[13px] text-positive">
               ✓ Idea guardada ·{" "}
-              <Link href="/marca/ideas" className="text-cyan hover:underline">
-                Ver ideas guardadas
+              <Link href="/marca/planificador" className="text-cyan hover:underline">
+                Verla en el planificador
               </Link>
             </p>
           ) : (
-            <button type="button" onClick={() => onSaveIdea?.(row.id, text)} className="text-xs text-cyan hover:underline">
+            <button
+              type="button"
+              onClick={() => onSaveIdea?.(row.id, text)}
+              className="w-fit text-[13px] font-semibold text-cyan hover:text-cyan-soft hover:underline"
+            >
               Guardar como idea
             </button>
           )

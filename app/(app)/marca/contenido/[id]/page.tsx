@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { ResultDetail } from "@/components/brand/content/result-detail";
 import { BrandLineChart, type LineChartPoint } from "@/components/brand/dashboard/line-chart";
+import { FollowerGainCard } from "@/components/brand/goals/follower-gain-card";
 import { Markdown } from "@/components/brand/markdown";
 import { PageHeader } from "@/components/shell/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -12,11 +13,16 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { extractHashtags } from "@/lib/brand/insights";
 import { getKnowledgeForPost } from "@/lib/brand/knowledge/queries";
 import { COLLECTION_LABEL, ORIGIN_LABEL } from "@/lib/brand/knowledge/schema";
+import { attributeFollowers, type AttributionPost } from "@/lib/brand/goals/attribution";
+import { getFollowerSnapshots } from "@/lib/brand/goals/queries";
+import { classifyPosts } from "@/lib/brand/insights/baseline";
+import { getContentItemForPost } from "@/lib/brand/planner/queries";
+import { OBJECTIVE_LABEL } from "@/lib/brand/planner/schema";
 import {
   getBrandPost,
-  getBrandPostClassifications,
   getBrandPostComments,
   getBrandPostMetricsHistory,
+  getBrandPostsForAnalysis,
 } from "@/lib/brand/queries";
 
 const PLATFORM = "INSTAGRAM" as const;
@@ -53,12 +59,32 @@ export default async function ContenidoDetallePage({ params }: { params: Promise
   const post = await getBrandPost(id);
   if (!post) notFound();
 
-  const [metrics, comments, results, notes] = await Promise.all([
+  const [metrics, comments, posts, notes, planned, snapshots] = await Promise.all([
     getBrandPostMetricsHistory(id),
     getBrandPostComments(id),
-    getBrandPostClassifications(PLATFORM),
+    getBrandPostsForAnalysis(PLATFORM),
     getKnowledgeForPost(id),
+    getContentItemForPost(id),
+    getFollowerSnapshots(PLATFORM),
   ]);
+
+  // Las dos lecturas salen del mismo catálogo de piezas propias: la clasificación (§3.11) y los
+  // seguidores tras publicar (§3.13, estimación). La segunda nunca cambia a la primera.
+  const now = new Date();
+  const results = classifyPosts(posts, now);
+  const attribution = attributeFollowers({
+    posts: posts.map(
+      (post): AttributionPost => ({
+        postId: post.postId,
+        kind: post.kind,
+        publishedAt: post.publishedAt,
+        views: post.views,
+        newFollowers: post.newFollowers,
+      }),
+    ),
+    snapshots,
+    now,
+  });
 
   const hashtags = extractHashtags(post.caption);
   const captionWithoutTags = post.caption?.replace(/#[\p{L}0-9_]+/gu, "").trim() || null;
@@ -139,6 +165,53 @@ export default async function ContenidoDetallePage({ params }: { params: Promise
 
         <div className="space-y-6 lg:col-span-2">
           <ResultDetail result={results[id]} />
+
+          <FollowerGainCard
+            gain={attribution.gains[id]}
+            surprise={attribution.surprises.find((surprise) => surprise.postId === id)}
+            currentFollowers={snapshots.at(-1)?.followers ?? null}
+          />
+
+          {planned ? (
+            <Card>
+              <CardHeader
+                title="Hipótesis con la que salió"
+                description="Lo que se escribió en el planificador antes de grabar. Se compara contra el resultado de arriba."
+              />
+              <CardBody className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  {planned.objective ? <Badge tone="cyan">{OBJECTIVE_LABEL[planned.objective]}</Badge> : null}
+                  <Badge tone="violet">{planned.parent_item_id ? "Variante de un ganador" : "Experimento nuevo"}</Badge>
+                </div>
+                {planned.hypothesis ? (
+                  <p className="text-sm text-ink whitespace-pre-wrap">{planned.hypothesis}</p>
+                ) : (
+                  <p className="text-sm text-muted">
+                    Esta pieza salió sin hipótesis escrita: no hay contra qué comparar el resultado.
+                  </p>
+                )}
+                {planned.hook || planned.angle ? (
+                  <dl className="grid gap-3 sm:grid-cols-2">
+                    {planned.hook ? (
+                      <div>
+                        <dt className="text-xs font-medium tracking-wide text-muted uppercase">Hook</dt>
+                        <dd className="mt-1 text-sm text-ink">{planned.hook}</dd>
+                      </div>
+                    ) : null}
+                    {planned.angle ? (
+                      <div>
+                        <dt className="text-xs font-medium tracking-wide text-muted uppercase">Ángulo</dt>
+                        <dd className="mt-1 text-sm text-ink">{planned.angle}</dd>
+                      </div>
+                    ) : null}
+                  </dl>
+                ) : null}
+                <Link href="/marca/planificador" className="inline-block text-sm text-cyan hover:underline">
+                  Ver en el planificador
+                </Link>
+              </CardBody>
+            </Card>
+          ) : null}
 
           {notes.length > 0 ? (
             <Card>

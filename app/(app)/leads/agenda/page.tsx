@@ -1,9 +1,10 @@
-import { ChevronLeft, ChevronRight, List, LayoutGrid, Rows3 } from "lucide-react";
-import Link from "next/link";
-
 import { AgendaView } from "@/components/leads/agenda/agenda-view";
+import {
+  PeriodNav as SharedPeriodNav,
+  ViewToggle as SharedViewToggle,
+  type CalendarView,
+} from "@/components/shell/calendar-nav";
 import { PageHeader } from "@/components/shell/page-header";
-import { ButtonLink } from "@/components/ui/button";
 import {
   addDaysIso,
   addMonthsIso,
@@ -20,7 +21,9 @@ import { listAppointmentsInRange, listLeadsLite, listUpcomingAppointmentsList } 
 
 export const metadata = { title: "Agenda · Awareness AI" };
 
-type View = "mes" | "semana" | "lista";
+type View = CalendarView;
+
+const BASE_PATH = "/leads/agenda";
 
 type SearchParams = { view?: string; date?: string };
 
@@ -115,53 +118,10 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
   );
 }
 
-function PeriodNav({ view, prev, next, today }: { view: View; prev: string; next: string; today: string }) {
-  return (
-    <div className="flex items-center gap-1 rounded-[12px] border border-line bg-surface/40 p-1">
-      <Link
-        href={`/leads/agenda?view=${view}&date=${prev}`}
-        aria-label="Período anterior"
-        className="flex size-8 items-center justify-center rounded-[10px] hover:bg-surface/60 hover:text-cyan"
-      >
-        <ChevronLeft className="size-4" />
-      </Link>
-      <Link
-        href={`/leads/agenda?view=${view}&date=${today}`}
-        className="rounded-[10px] px-2.5 py-1 text-xs text-muted hover:bg-surface/60 hover:text-ink"
-      >
-        Hoy
-      </Link>
-      <Link
-        href={`/leads/agenda?view=${view}&date=${next}`}
-        aria-label="Período siguiente"
-        className="flex size-8 items-center justify-center rounded-[10px] hover:bg-surface/60 hover:text-cyan"
-      >
-        <ChevronRight className="size-4" />
-      </Link>
-    </div>
-  );
+function PeriodNav(props: { view: View; prev: string; next: string; today: string }) {
+  return <SharedPeriodNav basePath={BASE_PATH} {...props} />;
 }
 
-function ViewToggle({ view, date }: { view: View; date: string }) {
-  const options: Array<{ value: View; label: string; icon: typeof LayoutGrid }> = [
-    { value: "mes", label: "Mes", icon: LayoutGrid },
-    { value: "semana", label: "Semana", icon: Rows3 },
-    { value: "lista", label: "Lista", icon: List },
-  ];
-
-  return (
-    <div className="flex items-center gap-1 rounded-[12px] border border-line bg-surface/40 p-1">
-      {options.map(({ value, label, icon: Icon }) => (
-        <ButtonLink
-          key={value}
-          href={`/leads/agenda?view=${value}&date=${date}`}
-          variant={view === value ? "secondary" : "ghost"}
-          size="sm"
-        >
-          <Icon className="size-3.5" />
-          {label}
-        </ButtonLink>
-      ))}
-    </div>
-  );
+function ViewToggle(props: { view: View; date: string }) {
+  return <SharedViewToggle basePath={BASE_PATH} {...props} />;
 }

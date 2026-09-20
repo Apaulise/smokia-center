@@ -5,6 +5,7 @@ import { createAnthropicClient } from "./client";
 import { getContentOS } from "./content-os";
 import { buildRecommendationsUserPrompt } from "./prompts";
 import type { BrandInsightsSummary } from "@/lib/brand/insights";
+import type { PublishedHypothesis } from "@/lib/brand/planner/queries";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
 
 const RecommendationItemSchema = z.object({
@@ -68,9 +69,13 @@ export async function generateBrandRecommendations(params: {
   apiKey: string;
   platform: BrandPlatform;
   insights: BrandInsightsSummary;
+  /** Piezas publicadas desde el planificador con hipótesis escrita (§3.7): lo que cierra el ciclo. */
+  hypotheses?: PublishedHypothesis[];
 }): Promise<GeneratedAnalysis> {
   const client = createAnthropicClient(params.apiKey);
   const knownPostIds = collectKnownPostIds(params.insights);
+  // Las piezas con hipótesis también se pueden citar como evidencia.
+  for (const test of params.hypotheses ?? []) if (test.post_id) knownPostIds.add(test.post_id);
 
   const response = await client.messages.parse({
     model: "claude-opus-5",
@@ -78,7 +83,7 @@ export async function generateBrandRecommendations(params: {
     thinking: { type: "adaptive" },
     output_config: { effort: "high", format: zodOutputFormat(RecommendationsOutputSchema) },
     system: [{ type: "text", text: getContentOS(), cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: buildRecommendationsUserPrompt(params.platform, params.insights) }],
+    messages: [{ role: "user", content: buildRecommendationsUserPrompt(params.platform, params.insights, params.hypotheses) }],
   });
 
   if (!response.parsed_output) {
