@@ -1,4 +1,4 @@
-import { Bot, KeyRound, MessageSquareText, Sparkles, Tags } from "lucide-react";
+import { Bot, KeyRound, MessageSquareText, Sparkles, Tags, UserRound } from "lucide-react";
 
 import { PageHeader } from "@/components/shell/page-header";
 import { ActorOverridesForm } from "@/components/settings/actor-overrides-form";
@@ -6,6 +6,7 @@ import { AnthropicKeyForm } from "@/components/settings/anthropic-key-form";
 import { ApifyKeyForm } from "@/components/settings/apify-key-form";
 import { GeminiKeyForm } from "@/components/settings/gemini-key-form";
 import { IndustriesManager } from "@/components/settings/industries-manager";
+import { SalesProfileForm } from "@/components/settings/sales-profile-form";
 import { TemplatesManager } from "@/components/settings/templates-manager";
 import { WindsorKeyForm } from "@/components/settings/windsor-key-form";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import {
   getAnthropicKeyStatus,
   getApifyKeyStatus,
   getGeminiKeyStatus,
+  getSalesProfile,
   getWindsorKeyStatus,
   listIndustries,
   listMessageTemplates,
@@ -22,22 +24,24 @@ import {
 export const metadata = { title: "Configuración · Awareness AI" };
 
 export default async function ConfiguracionPage() {
-  const [apifyStatus, windsorStatus, anthropicStatus, geminiStatus, industries, templates, actorOverrides] = await Promise.all([
-    getApifyKeyStatus(),
-    getWindsorKeyStatus(),
-    getAnthropicKeyStatus(),
-    getGeminiKeyStatus(),
-    listIndustries(),
-    listMessageTemplates(),
-    getActorOverrides(),
-  ]);
+  const [apifyStatus, windsorStatus, anthropicStatus, geminiStatus, salesProfile, industries, templates, actorOverrides] =
+    await Promise.all([
+      getApifyKeyStatus(),
+      getWindsorKeyStatus(),
+      getAnthropicKeyStatus(),
+      getGeminiKeyStatus(),
+      getSalesProfile(),
+      listIndustries(),
+      listMessageTemplates(),
+      getActorOverrides(),
+    ]);
 
   return (
     <>
       <PageHeader
         eyebrow="Configuración"
         title="Conexiones y preferencias"
-        description="API keys de Apify, Windsor.ai, Anthropic y Google AI Studio, rubros y plantillas de mensajes."
+        description="API keys de Apify, Windsor.ai, Anthropic y Google AI Studio, perfil del vendedor, rubros y plantillas de mensajes."
       />
       <div className="space-y-6 px-6 py-8 lg:px-10">
         <Card>
@@ -97,6 +101,21 @@ export default async function ConfiguracionPage() {
           />
           <CardBody>
             <GeminiKeyForm configured={geminiStatus.configured} masked={geminiStatus.masked} />
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title={
+              <span className="flex items-center gap-2">
+                <UserRound className="size-4 text-cyan" />
+                Perfil del vendedor
+              </span>
+            }
+            description="Lo único que el copiloto de prospección puede afirmar sobre tu experiencia. No va dentro del prompt canónico: se le manda en cada mensaje, así que se puede editar sin invalidar nada."
+          />
+          <CardBody>
+            <SalesProfileForm profile={salesProfile} />
           </CardBody>
         </Card>
 

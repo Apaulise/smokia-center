@@ -660,9 +660,9 @@ async function insertAppointmentAndAdvanceLead(params: {
 
   if (params.leadId) {
     const { data: lead } = await supabase.from("leads").select("status").eq("id", params.leadId).maybeSingle();
-    const advancesStatus = lead && lead.status !== "AGENDADO";
+    const advancesStatus = lead && lead.status !== "REUNION_AGENDADA";
     if (advancesStatus) {
-      await supabase.from("leads").update({ status: "AGENDADO" }).eq("id", params.leadId);
+      await supabase.from("leads").update({ status: "REUNION_AGENDADA" }).eq("id", params.leadId);
     }
     await supabase.from("lead_activities").insert({
       owner_id: params.userId,
@@ -670,7 +670,7 @@ async function insertAppointmentAndAdvanceLead(params: {
       type: "REUNION",
       content: `Reunión agendada: ${params.title}`,
       from_status: advancesStatus ? lead.status : null,
-      to_status: advancesStatus ? "AGENDADO" : null,
+      to_status: advancesStatus ? "REUNION_AGENDADA" : null,
     });
     revalidatePath(`/leads/${params.leadId}`);
   }

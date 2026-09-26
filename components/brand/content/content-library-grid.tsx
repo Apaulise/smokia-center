@@ -36,7 +36,7 @@ export function ContentLibraryGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {posts.map((post) => (
         <Link
           key={post.post_id}
@@ -49,6 +49,8 @@ export function ContentLibraryGrid({
               <img
                 src={post.thumbnail_url}
                 alt=""
+                loading="lazy"
+                decoding="async"
                 className="size-full object-cover transition-transform duration-200 group-hover:scale-105"
               />
             ) : (

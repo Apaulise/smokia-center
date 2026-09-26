@@ -5,13 +5,15 @@ import type { ReactNode } from "react";
 
 import { PageHeader } from "@/components/shell/page-header";
 import { ContactActions } from "@/components/leads/contact-actions";
+import { EnrichPanel } from "@/components/leads/enrich-panel";
 import { LeadNotesForm } from "@/components/leads/lead-notes-form";
 import { LeadTimeline } from "@/components/leads/lead-timeline";
 import { ScheduleDialog } from "@/components/leads/schedule-dialog";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { getLead, listLeadActivities, listUpcomingAppointmentsForLead } from "@/lib/leads/queries";
+import type { EnrichmentResult } from "@/lib/leads/ai/enrich";
+import { getLead, getLeadIntel, listLeadActivities, listUpcomingAppointmentsForLead } from "@/lib/leads/queries";
 import { STATUS_LABEL, STATUS_TONE } from "@/lib/leads/status";
 import { listMessageTemplates } from "@/lib/settings/queries";
 
@@ -26,11 +28,13 @@ export default async function LeadFichaPage({ params }: PageProps<"/leads/[id]">
   const lead = await getLead(id);
   if (!lead) notFound();
 
-  const [activities, appointments, templates] = await Promise.all([
+  const [activities, appointments, templates, intel] = await Promise.all([
     listLeadActivities(id),
     listUpcomingAppointmentsForLead(id),
     listMessageTemplates(),
+    getLeadIntel(id),
   ]);
+  const enrichment = (intel?.enrichment as EnrichmentResult | null) ?? null;
 
   return (
     <>
@@ -89,6 +93,13 @@ export default async function LeadFichaPage({ params }: PageProps<"/leads/[id]">
               <div className="border-t border-line/60 pt-4">
                 <ContactActions lead={lead} templates={templates} />
               </div>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader title="Enriquecimiento IA" description="Análisis comercial antes del primer contacto (SPA §4)." />
+            <CardBody>
+              <EnrichPanel leadId={lead.id} enrichment={enrichment} />
             </CardBody>
           </Card>
 

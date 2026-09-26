@@ -63,19 +63,6 @@ export function BrandSyncPanel({
   const supabaseRef = useRef(createClient());
   const router = useRouter();
 
-  // El contador se actualiza solo al abrir la pantalla (§3.13). El guard real está en el
-  // servidor (no sincroniza si hay una en curso o una reciente): esto sólo evita el doble
-  // disparo del montaje doble de React en desarrollo.
-  const autoSynced = useRef(false);
-  useEffect(() => {
-    if (autoSynced.current) return;
-    autoSynced.current = true;
-    startSync(async () => {
-      const result = await syncBrandNow(platform, { onlyIfStale: true });
-      if (!result.skipped) router.refresh();
-    });
-  }, [platform, router]);
-
   useEffect(() => {
     const supabase = supabaseRef.current;
     const channel = supabase

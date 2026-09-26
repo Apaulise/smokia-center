@@ -242,6 +242,271 @@ No se construye ahora. Queda un stub en `lib/leads/goals.ts` con la interfaz que
 
 ---
 
+## Fase 1 (continuación) — Prospección asistida por IA
+
+> **Por qué se reabre la Fase 1.** Los §1.1–§1.5 dejaron un gestor que genera listas y registra estados. Lo que **no** resuelve es la parte cara: analizar el negocio, escribir la apertura, leer la respuesta, decidir el próximo paso y saber cuándo pedir la llamada. Eso hoy se hace a mano con ChatGPT, fuera de la app. Estos pasos lo traen adentro.
+>
+> Sigue siendo Fase 1 (`CLAUDE.md` §2): no se adelanta nada de Facturación ni de Marca. El objetivo diario (§1.6) sigue diferido.
+
+La numeración **se agrega al final, nunca se inserta**: hay comentarios en el código que citan `§1.2` y `§1.4`, y correrlos rompería las referencias. Mismo criterio que `Plans/03 §3.10`.
+
+El diseño sigue el documento *Sistema de Prospección Asistida por IA*; sus secciones se citan acá como `SPA §N`.
+
+### Reparto de modelos
+
+Dos motores, y el corte no es por gusto: **enriquecer es buscar y leer, analizar es decidir.**
+
+| Tarea | Modelo | Por qué |
+|---|---|---|
+| Enriquecer un lead (§1.10) | `gemini-3.5-flash-lite` + `google_search` + `url_context` | Volumen, sin juicio, una vez por lead y queda cacheado en la base. Free tier |
+| Analizar una respuesta (§1.12) | `claude-opus-5`, `effort: high` | Es la decisión que mueve el CRM. Equivocarse cuesta un cliente |
+| Apertura, próximo mensaje, follow-up | `claude-opus-5` | Escriben con toda la memoria del lead delante |
+| Reescrituras de tono (§1.15) | `claude-sonnet-5` | Transformar un texto que ya existe no es decidir qué decir |
+
+Es el mismo criterio que `Plans/03 §3.14` ya fijó para la marca: Gemini clasifica, Claude escribe. Las dos keys ya viven cifradas en `settings` (`ANTHROPIC_KEY_SETTING`, `GEMINI_KEY_SETTING`) — **no hace falta ninguna variable de entorno nueva**.
+
+### 1.7 El prompt canónico de prospección
+
+> **Estado (2026-09-25): implementado, verificación manual PENDIENTE.** `npm run typecheck` y `npm run lint` limpios (los dos errores de lint que quedan son de `components/shell/sidebar.tsx`, previos a este paso).
+
+`Awareness_AI_Sistema_de_Prospeccion.md`, en la raíz del repo, al lado del manual de marca y del Sistema de Contenido.
+
+**El archivo es el prompt, no un documento sobre el prompt.** Todo lo que se escriba ahí se le manda al modelo en cada llamada. Sin notas al margen, sin TODOs, sin comentarios de implementación. El `SPA §28` es su esqueleto, pero se escribe completo: el rol, qué cuenta como dolor real, la separación hecho / inferencia / hipótesis, una pregunta por mensaje (`SPA §14`), cuándo presentarse (`SPA §15`), cuándo pedir la reunión (`SPA §16`), y qué nunca decir.
+
+`lib/leads/ai/sales-os.ts` lo lee del disco **una vez por proceso** y lo cachea a nivel de módulo — espejo exacto de `lib/brand/ai/content-os.ts`.
+
+> **Ningún `import` ata el archivo al bundle**, así que el trace de salida de Next no lo incluye solo y en producción el `readFileSync` tiraría `ENOENT`. Hay que sumarlo a `outputFileTracingIncludes` en `next.config.ts`, que hoy ya declara el Sistema de Contenido. Es un error que **no aparece en local**.
+
+**El perfil del vendedor va aparte, y esa es la decisión de diseño del paso.** El `SPA §28` es explícito: el modelo no puede afirmar experiencia, clientes ni resultados que no estén guardados. Hoy hay un solo caso real —una barbería—, y mañana hay tres. Si eso vive dentro del prompt cacheado, cada caso nuevo invalida el caché y reescribe un archivo que no debería moverse.
+
+Entonces: una fila en `settings` (`sales_profile`, **sin cifrar** — no es un secreto) editable desde `/configuracion`, que se inyecta en el bloque de estado del turno. Mismo reparto que `Plans/03 §3.10`:
+
+| Bloque | Dónde va | ¿Cachea? |
+|---|---|---|
+| El Sistema de Prospección completo | `system`, con `cache_control: { type: "ephemeral" }` | **Sí** — idéntico byte a byte |
+| Perfil del vendedor, estado del lead, memoria, conteo de ángulos | mensaje `{ role: "system" }` **dentro de `messages`**, después del turno del usuario | No hace falta |
+| La pregunta o la respuesta a analizar | el turno del usuario | — |
+
+> **Un system prompt no es documentación.** Todo lo computable —un promedio, un conteo de ángulos, una fecha— va en los datos del turno, no en el prompt. Cada línea de más compite por atención con las que importan.
+
+**Decisiones de implementación** que el plan no fijaba:
+
+- **El perfil se guarda cifrado**, no en texto plano como decía el plan. La columna de `settings` se llama `value_encrypted`; escribirle texto claro sería una trampa para el próximo que la lea, y cifrar cuatro mil caracteres no cuesta nada. `getSalesProfile()` lo devuelve descifrado y **sin enmascarar** — a diferencia de las keys, el usuario tiene que poder releerlo y editarlo.
+- **Guardar el campo vacío borra la fila** en vez de guardar `""`. Es la forma explícita de decirle al copiloto que no afirme ninguna experiencia, y deja la tabla sin filas fantasma.
+- **Tope de 4000 caracteres**, por el turno del modelo y no por la base: esto viaja en cada mensaje.
+- **El mínimo cacheable no es problema.** El doc quedó en ~14 KB (≈3.700 tokens) contra los ~20 KB del Sistema de Contenido. `Plans/03 §3.10` advierte que por debajo de 4.096 tokens el caché se cae en silencio, pero ese mínimo es el de Opus 4.6/4.5 y Haiku 4.5: **en `claude-opus-5` el mínimo es 512 tokens** y en `claude-sonnet-5`, 1.024. Los dos modelos que usa este módulo cachean holgado.
+
+**Verificación manual** (`CLAUDE.md` §13, ítem por ítem):
+
+1. Abrir `/configuracion`: aparece la tarjeta **Perfil del vendedor** entre "Google AI Studio (Gemini)" y "Actores de Apify", sin romper el resto de la pantalla.
+2. Escribir un perfil y guardar → "Perfil guardado.". Recargar la página: el texto sigue ahí.
+3. En el editor de Supabase, tabla `settings`, fila `key = 'sales_profile'`: `value_encrypted` tiene que estar **ilegible**, no el texto que escribiste.
+4. Vaciar el campo y guardar → "Perfil vacío. El copiloto no va a afirmar experiencia.", y la fila desaparece de `settings`.
+5. Pegar más de 4000 caracteres y guardar → error "El perfil no puede pasar de 4000 caracteres.", y no se guarda nada.
+6. Leer `Awareness_AI_Sistema_de_Prospeccion.md` de punta a punta: ninguna sección quedó cortada, y no hay adentro ningún TODO, nota al margen ni comentario de implementación. **El archivo es el prompt**, así que todo lo que esté ahí se le manda al modelo.
+7. ⚠ **Diferido a §1.11.** Que `getSalesOS()` no tire `ENOENT` en producción sólo se puede comprobar cuando exista una pantalla que lo llame. Hasta entonces `outputFileTracingIncludes` queda declarado pero sin probar, y este ítem se arrastra al checklist de §1.11.
+
+### 1.8 El pipeline de 17 estados
+
+El `SPA §17` pide 16 estados donde hoy hay 8. **Seis de los ocho actuales sobreviven con el mismo nombre; sólo `AGENDADO` se renombra.** Los valores van en español, como `job_status` y `appointment_status`: `CLAUDE.md` §7 pone la frontera del idioma en la pantalla, pero los enums de este proyecto ya están en español y mezclar sería peor que la regla.
+
+| `SPA §17` | Enum | |
+|---|---|---|
+| SCRAPED | `NUEVO` | se conserva — evita migrar el `default` |
+| CONTACT_READY | `LISTO` | enriquecido, con apertura lista |
+| CONTACTED | `CONTACTADO` | se conserva |
+| AUTO_REPLY | `AUTORESPUESTA` | **nunca cuenta como respuesta humana** |
+| HUMAN_REPLY | `RESPONDIO` | se conserva |
+| DISCOVERY | `DIAGNOSTICO` | |
+| QUALIFIED | `CALIFICADO` | |
+| INTERESTED | `INTERESADO` | |
+| MEETING_PROPOSED | `REUNION_PROPUESTA` | |
+| MEETING_BOOKED | `REUNION_AGENDADA` | **migra desde `AGENDADO`** |
+| MEETING_COMPLETED | `REUNION_REALIZADA` | |
+| PROPOSAL | `PROPUESTA_ENVIADA` | se conserva |
+| WON | `CERRADO_GANADO` | se conserva |
+| NOT_NOW | `AHORA_NO` | `SPA §18` — **no es** `CERRADO_PERDIDO` |
+| FOLLOW_UP | `SEGUIMIENTO` | |
+| LOST | `CERRADO_PERDIDO` | se conserva |
+| — | `DESCARTADO` | se conserva; es el `DISQUALIFY` del `SPA §13` |
+
+**El orden de declaración importa**, y no es cosmético: `leads_funnel_by_status()` usa `unnest(enum_range(...)) with ordinality`, así que el orden del enum *es* el orden del embudo. Por eso no alcanza con `ALTER TYPE ... ADD VALUE`: hay que recrear el tipo.
+
+La migración, en este orden exacto y en un solo archivo:
+
+1. `drop function public.leads_funnel_by_status()` — devuelve `lead_status` en su `RETURNS`, así que **crea una dependencia real** y sin esto el `drop type` falla.
+2. `create type lead_status_new as enum (...)` con los 17 valores en orden de pipeline.
+3. `alter table public.leads alter column status drop default` — un default no se puede castear.
+4. Castear las tres columnas (`leads.status`, `lead_activities.from_status`, `lead_activities.to_status`) con `using (case status::text when 'AGENDADO' then 'REUNION_AGENDADA' else status::text end)::lead_status_new`.
+5. `drop type lead_status` + `alter type lead_status_new rename to lead_status`.
+6. `set default 'NUEVO'`.
+7. **Recrear `leads_dashboard_summary()`.** Su cuerpo tiene `status = 'AGENDADO'` como literal. Es `language sql`, así que Postgres **no registra la dependencia**: el `drop type` pasa sin protestar y la función se rompe recién en runtime. Pasa a contar las tres etapas de reunión.
+8. Recrear `leads_funnel_by_status()` igual que estaba.
+9. `npm run db:types`.
+
+> **Esto corre contra la base real.** No hay Supabase local (`CLAUDE.md` §8), así que antes va `npm run db:diff`, y conviene confirmar que los estados que hay en la base son sólo los del enum viejo — el `case` del `using` se come en silencio cualquier valor inesperado.
+
+Del lado del código, `lib/leads/status.ts` suma dos cosas además de los 17 valores:
+
+- **`STAGE_GROUP`** — 17 columnas de Kanban son inusables. El Kanban agrupa en 6 (Sin contactar · Contactado · En conversación · Calificado · Reunión · Cierre); los `<select>` de la tabla y de la ficha siguen mostrando los 17. El estado fino es para el modelo y las métricas; el grueso es para arrastrar tarjetas.
+- **`lib/leads/stage-engine.ts`** — el `CRMStateEngine` del `SPA §30`. Dadas las señales de un análisis (`response_type`, `interest_level`, `pain_confirmed`) devuelve el estado que corresponde. **Nunca retrocede el pipeline por su cuenta**, y el humano puede seguir forzando cualquier estado a mano, como hoy. Una IA que mueve un lead a `CERRADO_PERDIDO` sola es una IA que borra trabajo.
+
+### 1.9 Esquema de datos del copiloto
+
+Cuatro tablas y cuatro enums nuevos. Todo con `owner_id`, RLS y las cuatro políticas — sumar los nombres al array del loop `DO $do$` de la migración inicial es todo lo que hace falta (`CLAUDE.md` §10).
+
+| Tabla | Cardinalidad | Qué guarda |
+|---|---|---|
+| `lead_intel` | 1:1 con `leads` | Enriquecimiento (`SPA §4`), memoria del lead (`SPA §25`), próxima acción (`SPA §13`) |
+| `lead_messages` | N por lead | La conversación (`SPA §7`) |
+| `lead_signals` | N por lead | Dolores, objeciones y señales de compra (`SPA §11`) |
+| `sales_knowledge` | global del usuario | Memoria global de ventas (`SPA §26`) |
+
+Enums: `lead_message_sender` (`VENDEDOR | LEAD`), `lead_signal_kind` (`DOLOR | OBJECION | SENAL_COMPRA`), `lead_signal_status` (`HIPOTESIS | SOSPECHADO | CONFIRMADO`) y `lead_sales_angle` con los nueve códigos del `SPA §6`.
+
+Dos columnas nuevas en `leads`: `interest_level smallint check (interest_level between 0 and 10)` y `sales_angle lead_sales_angle`. Van en `leads` y no en `lead_intel` para que la tabla y el Kanban puedan ordenar y filtrar sin un join — `listLeads` ya pagina del lado del servidor y meterle un join por fila sería pagarlo en cada pantalla. `next_action_at`, que ya existe, pasa a ser también la `follow_up_date` del `SPA §18`.
+
+**La temperatura no es una columna.** Frío / Tibio / Caliente / Muy caliente (`SPA §10`) se deriva de `interest_level` en TypeScript. Un valor derivado que se persiste es un valor que tarde o temprano queda desincronizado del que lo origina.
+
+`alter type message_channel add value 'INSTAGRAM'` va en **su propio archivo de migración**: un `ADD VALUE` no se puede usar en la misma transacción en que se declara.
+
+`lead_messages` lleva `angle` y `variant` desde el día 1, aunque §1.19 las use recién al final. Agregarlas después significaría no poder comparar nada de lo ya mandado, que es justamente lo que el `SPA §27` quiere medir.
+
+`sales_knowledge` copia de `brand_knowledge` las tres decisiones que lo hacen funcionar, porque ya se pagaron una vez:
+
+- **`origin` obligatorio** (`PROPIO | MERCADO | HIPOTESIS`), para que el modelo no lave una conjetura y la lea como hecho tres semanas después
+- **`search` como columna generada** `tsvector`, no un índice sobre expresión: PostgREST sólo filtra por columnas, así que `.textSearch()` de `supabase-js` necesita la columna
+- **ninguna herramienta de borrado** para el modelo; borrar es una decisión de pantalla
+
+### 1.10 Enriquecimiento del lead
+
+`lib/leads/ai/enrich.ts`. Convierte un lead scrapeado en el análisis comercial del `SPA §4`: `business_summary`, `detected_services`, `possible_decision_maker`, `operation_signals`, `technology_signals`, `possible_pains`, `recommended_sales_angle`, `confidence`.
+
+**Son dos pases contra Gemini, y la razón es concreta:**
+
+> **`google_search` y `responseSchema` no conviven.** Gemini desactiva el grounding **en silencio** cuando se le pide salida JSON en la misma llamada — el issue `google-gemini/cookbook#1274` lo mide en `gemini-3.5-flash`: 0 de 5 respuestas fundamentadas pidiendo JSON, 5 de 5 pidiendo prosa. No tira error. Devuelve un objeto perfectamente plausible sin haber buscado nada, que es el peor resultado posible.
+
+- **Pase A — evidencia.** `google_search` + `url_context`, con `website`, `instagram_url` y `source_url` del lead. Salida en prosa. Junta qué hace el negocio, qué servicios ofrece, cómo se reserva un turno y qué se ve de su operación.
+- **Pase B — estructura.** Sin herramientas, con `responseSchema`, sobre el texto del pase A. Devuelve el objeto.
+
+La salida se valida con Zod (`CLAUDE.md` §5) y el `recommended_sales_angle` se filtra contra los nueve códigos válidos: un ángulo inventado se descarta, no se guarda. Mismo criterio que `relevance.ts` con los ids que no estaban en el batch.
+
+**Hecho / inferencia / hipótesis** es la regla central del pase B. El ejemplo del `SPA §4` es el estándar: *"la web tiene botón de reserva por WhatsApp"* es un hecho; *"parte del seguimiento podría ser manual"* es una hipótesis; *"hacen todo manualmente"* es una invención y no se escribe. Por eso cada `possible_pain` nace en `lead_signals` con `status = 'HIPOTESIS'`: **el enriquecimiento no confirma dolores, nunca.** Sólo una cita textual del lead lo hace (§1.13).
+
+Al terminar escribe `lead_intel.enrichment`, `leads.sales_angle`, y mueve `NUEVO → LISTO`.
+
+**Los límites del free tier son reales**: ~15 RPM y 1.500 RPD en flash-lite, y el grounding tiene su propia cuota diaria, más chica. Entonces un botón **"Enriquecer"** por lead en la ficha y un **"Enriquecer lista"** con tope duro (`ENRICH_BATCH_MAX = 25`) y throttle entre llamadas. **Nunca automático al importar**: una lista de 500 leads quemaría la cuota del día en el primer minuto. Si Gemini falla, el lead queda sin enriquecer y se reintenta — la importación no se rompe.
+
+### 1.11 Biblioteca de ángulos y generador de apertura
+
+> **Estado (2026-09-26): en curso.** `angles.ts`, `schemas.ts` (Opening/Analyze/Rewrite/FollowUp) y `prompts.ts` (bloque de estado + bloque de ángulo) ya están. Falta: `opening.ts` (`chooseSalesAngle` + `generateOpening`), sumar la Server Action a `lib/leads/ai/actions.ts`, la migración de `lead_angle_counts_30d()` (ya aplicada), y la UI de la ficha. §1.8 y §1.9 y §1.10 están completos (migraciones aplicadas, `npm run typecheck`/`lint` limpios salvo los dos errores previos de `components/shell/sidebar.tsx`) — retomar desde acá.
+
+`lib/leads/ai/angles.ts` — los nueve ángulos del `SPA §6` con su regla de uso, **en TypeScript, no en el prompt**. El modelo recibe el ángulo ya elegido y el porqué, no la tabla entera para que elija. Una tabla de nueve opciones en el prompt es nueve veces la oportunidad de elegir la cómoda.
+
+`lib/leads/ai/opening.ts` — `generateOpening()`. Opus 5, salida estructurada con `zodOutputFormat`, el Sistema de Prospección en `system` con `cache_control: ephemeral`, y el estado en un mensaje `{ role: "system" }` después del turno del usuario.
+
+- **El objetivo del primer mensaje es obtener información, no vender.** El prompt lo dice y el esquema lo fuerza: el output lleva `objective` y `question`, y una apertura sin pregunta no valida. El `SPA §5` prohíbe además arrancar con "Somos una agencia de IA" o cualquier variante.
+- **Antisesgo de ángulo** (`SPA §6`, *"evitar usar siempre el mismo"*): se le pasa el conteo de aperturas por ángulo de los últimos 30 días, **calculado en SQL**. El modelo no hace aritmética — es la regla que `lib/brand/insights/` ya impone en todo el proyecto.
+- Se guarda como `lead_messages` con `sender = 'VENDEDOR'`, `generated_by = 'IA'`, `angle` y `variant`. **No se marca como enviado hasta que el usuario confirma**: el envío es un acto humano y el `SPA §24` no admite matices ahí.
+
+### 1.12 Conversación y analizador de respuestas
+
+`lib/leads/ai/analyze.ts` — `analyzeLeadResponse()`, el corazón del sistema. Opus 5, `effort: "high"`, salida estructurada con exactamente la forma del `SPA §29`: `analysis` / `crm_update` / `strategy` / `suggested_reply`.
+
+La interfaz es la del `SPA §23`: un campo *"Pegá la respuesta del lead"* y un botón **Analizar**. Pegar es lo correcto, no una limitación — la integración de WhatsApp es `SPA §33`, explícitamente segunda etapa.
+
+Una corrida escribe, en una sola server action:
+
+1. El `lead_messages` entrante (`sender = 'LEAD'`) con el `analysis jsonb` colgado de su propia fila
+2. `leads.interest_level` y el estado que devuelve el `CRMStateEngine`
+3. Las `lead_signals` nuevas o actualizadas (§1.13)
+4. `lead_intel.memory` reescrita (§1.14)
+5. Un `lead_activities` de `CAMBIO_ESTADO` si el estado se movió — **el timeline existente sigue siendo la fuente de verdad de la ficha**, no se lo reemplaza por la conversación
+
+**`AUTORESPUESTA` no es una respuesta**, y esa distinción es lo que hace que la tasa de respuesta signifique algo. El `response_type` la separa y las métricas del §1.17 la excluyen del numerador de respuesta humana. Un "gracias por tu mensaje, te responderemos a la brevedad" que cuenta como respuesta convierte el embudo en decoración.
+
+### 1.13 Dolores, señales y evidencia
+
+`lib/leads/signals.ts`. Un dolor tiene ciclo de vida, y subir de escalón cuesta:
+
+```
+HIPOTESIS     el enriquecimiento lo propuso
+    ↓         el lead dijo algo compatible
+SOSPECHADO
+    ↓         hay una cita textual
+CONFIRMADO
+```
+
+**`evidence` es obligatoria para llegar a `CONFIRMADO`.** Sin cita, el `status` no sube, y el modelo no tiene forma de saltearlo porque la validación está en TypeScript. Es la misma defensa que `recommendations.ts` hace filtrando `postIds` contra los posts que existen: una conclusión sin evidencia trazable es una opinión, y vale igual aunque el modelo se equivoque de buena fe.
+
+El ejemplo del `SPA §12` es el caso de prueba del paso. En *Definitivamente Bella*, "recordatorios a pacientes activos" **no es un dolor** —ya lo resuelven, con consentimiento, ficha técnica y recordatorio el día antes— y un sistema que lo marque como dolor está fabricando trabajo. "Consultas no convertidas sin seguimiento" **sí lo es**, y llega con la cita: *"no llegamos a hacer seguimiento debido a la cantidad de consultas"*.
+
+Por eso `lead_signals` lleva además `business_impact`, `trigger_event` y `timing`: la apertura del segundo local no es un dolor, es el disparador que vuelve accionable uno que ya existía.
+
+### 1.14 Memoria por lead y próxima acción
+
+**La IA no relee el chat entero cada vez.** `lead_intel.memory` tiene la forma del `SPA §25` (`business_context`, `current_process`, `pain_points`, `objections`, `buying_signals`, `tools_used`, `key_quotes`, `timing`, `next_action`), se reescribe después de cada análisis, y es lo que viaja en el turno siguiente. Un hilo de veinte mensajes reenviado entero es caro y, peor, entierra lo importante en ruido.
+
+`lib/leads/ai/next-action.ts` calcula la `next_best_action` del `SPA §13`: `ASK_QUESTION`, `EXPLAIN_SERVICE`, `ASK_FOR_MEETING`, `SEND_INFORMATION`, `FOLLOW_UP`, `WAIT`, `DISQUALIFY`, `CLOSE_LEAD`.
+
+> **La condición para pedir reunión se evalúa en TypeScript, no en el prompt.** El `SPA §16` la fija: `pain_confirmed && human_response && interest_level >= 5`. Un umbral que el modelo puede reinterpretar no es un umbral. Si no se cumple, `ASK_FOR_MEETING` ni siquiera entra en el conjunto de opciones que el esquema admite.
+
+La regla de no sobrepreguntar (`SPA §14`) se hace cumplir igual de literal: el esquema de salida admite **una** pregunta. Las cinco preguntas juntas del ejemplo no son un mensaje, son un formulario.
+
+### 1.15 La ficha reconstruida y el copiloto lateral
+
+`/leads/[id]` pasa a tres columnas, con la forma del `SPA §22`:
+
+- **Cabecera** — estado · temperatura · interés · dolor confirmado · oportunidad · próxima acción recomendada
+- **Conversación** al centro — `lead_messages` y `lead_activities` mezclados por tiempo en un solo hilo
+- **AI COPILOT** a la derecha — qué aprendimos, dolores, objeciones, señales de compra, información faltante, mensaje recomendado
+
+El mensaje sugerido sigue el patrón que `components/brand/planner/item-dialog.tsx` ya usa y que funcionó: **la server action devuelve el texto y no persiste nada**, el campo queda editable, y recién al confirmar se guarda. Que se lea, se corrija, y recién ahí se guarde.
+
+Botones del `SPA §24`: `COPIAR`, `EDITAR`, `REGENERAR`, `MÁS CORTO`, `MÁS INFORMAL`, `MÁS DIRECTO`. Las tres reescrituras van con `claude-sonnet-5`.
+
+Se reusan `components/ui/*`, `lead-timeline.tsx` (extendido para renderizar mensajes además de actividades), `resolveTemplate` y `buildWhatsappLink` de `lib/leads/templates.ts` para copiar y abrir WhatsApp en un paso, y `components/brand/markdown.tsx`.
+
+### 1.16 Seguimiento futuro
+
+`AHORA_NO` es el estado que más plata deja sobre la mesa si se trata mal. El `SPA §18` es terminante: *"no ahora porque estoy abriendo otro local, escribime en un mes"* **no es** `CERRADO_PERDIDO`.
+
+Se guarda con `next_action_at`, la razón, y la oportunidad que quedó identificada. Cuando llega la fecha el lead aparece en el panel de atención del dashboard — `listStaleLeads` ya existe y se extiende.
+
+`generateFollowup()` escribe **desde el contexto histórico**, no desde una plantilla. El prompt tiene prohibido "Hola, quería hacer seguimiento", y la regla que lo hace cumplible es dura: si no puede citar algo concreto de la conversación anterior, **no genera nada y lo dice**. Un follow-up genérico gasta el único intento que quedaba.
+
+### 1.17 Métricas de prospección
+
+RPC nueva `leads_prospecting_funnel()`, SQL, `SECURITY INVOKER` como las cinco que ya existen. Devuelve los siete escalones del `SPA §21` y las tasas del `SPA §20`.
+
+**Todo se calcula en SQL, nada se le pide al modelo.** `contacts_sent` = mensajes salientes que son el primero de su lead; `human_responses` = leads con al menos un entrante cuyo `analysis->>'response_type'` no es autorespuesta; `qualified`, `interested` y `meetings` salen del estado.
+
+La tasa de respuesta **total** se muestra pero va marcada como no evaluativa, tal como pide el `SPA §20`: mezcla autorespuestas y sirve para saber si los mensajes llegan, no para saber si son buenos. La que importa es la humana.
+
+El embudo se dibuja con la skill `dataviz` (`CLAUDE.md` §12) y la paleta de marca, extendiendo `components/leads/dashboard/leads-funnel.tsx`.
+
+### 1.18 Memoria global de ventas
+
+`sales_knowledge` más tres herramientas para el modelo — `buscar_conocimiento`, `guardar_conocimiento`, `actualizar_conocimiento` — calcadas de `lib/brand/ai/tools.ts` con sus mismos topes: preview del `body` a 1.500 caracteres y máximo 15 notas por resultado, porque 15 notas largas son ~30k tokens en un solo `tool_result`. **Sin herramienta de borrado.**
+
+Colecciones: `OBJECIONES`, `DOLORES`, `ANGULOS`, `SEGMENTOS`, `MENSAJES`, `APRENDIZAJES`.
+
+Pantalla `/leads/conocimiento`, reusando la grilla de la biblioteca de marca. No es opcional: **una memoria que sólo el modelo puede leer es una caja negra**, y el día que empiece a repetir una conclusión equivocada no habría dónde ir a corregirla.
+
+### 1.19 Experimentación de aperturas
+
+Sin tabla nueva: `angle` y `variant` ya están en `lead_messages` desde §1.9. Una RPC agrupa por ángulo y variante y devuelve tasa de respuesta humana, de calificación y de agenda — lo que el `SPA §27` quiere poder comparar.
+
+> **Con 184 contactos repartidos en nueve ángulos, ninguna diferencia es significativa.** La pantalla muestra el `n` al lado de cada porcentaje y no declara ganadores por debajo de `ANGLE_MIN_SAMPLE = 20`. Es la misma regla que `Plans/03 §3.11` fijó con `SIN_BASELINE`: clasificar contra tres datos es fabricar evidencia, y fabricar evidencia sobre qué mensaje funciona es peor que no medir.
+
+### Lo que estos pasos no hacen
+
+Queda explícitamente afuera, y es la segunda etapa del `SPA §33`: envío automático, API de WhatsApp, sincronización de conversaciones, integración de calendario, agentes autónomos y lead scoring predictivo. También queda afuera un chat libre con el copiloto — el `SPA §22` pide un panel que **renderiza** la memoria, no una conversación paralela a la del lead.
+
+Primero hay que validar que el copiloto tome buenas decisiones. Automatizar un criterio que todavía no se probó es multiplicar un error.
+
+---
+
 ## Fases siguientes (fuera de alcance ahora)
 
 - **Fase 2 — Gestor de Facturación.** Al terminarlo, se implementa §1.6 y se enciende la sección de objetivo diario en Leads
@@ -276,6 +541,24 @@ lib/apify/{client,reconcile}.ts
 lib/providers/{types,registry,google-maps,csv,instagram,linkedin}.ts
 lib/leads/{actions,queries,dedupe,goals}.ts
 components/ui/*
+
+Awareness_AI_Sistema_de_Prospeccion.md   ← el system prompt literal (§1.7)
+next.config.ts                           ← outputFileTracingIncludes (§1.7)
+app/(app)/leads/conocimiento/page.tsx    ← memoria global de ventas (§1.18)
+lib/leads/status.ts                      ← 17 estados + STAGE_GROUP (§1.8)
+lib/leads/stage-engine.ts                ← CRMStateEngine (§1.8)
+lib/leads/signals.ts                     ← ciclo de vida de dolores (§1.13)
+lib/leads/ai/sales-os.ts                 ← readFileSync cacheado (§1.7)
+lib/leads/ai/angles.ts                   ← los nueve ángulos (§1.11)
+lib/leads/ai/enrich.ts                   ← Gemini, dos pases (§1.10)
+lib/leads/ai/opening.ts                  ← Opus 5, apertura (§1.11)
+lib/leads/ai/analyze.ts                  ← Opus 5, el analizador (§1.12)
+lib/leads/ai/next-action.ts              ← próxima acción y condición de reunión (§1.14)
+lib/leads/ai/rewrite.ts                  ← Sonnet 5, reescrituras de tono (§1.15)
+lib/leads/ai/{prompts,schemas}.ts        ← composición y Zod de salida
+lib/leads/knowledge/*                    ← calco de lib/brand/knowledge/ (§1.18)
+components/leads/copilot/*               ← panel lateral y analizar-respuesta (§1.15)
+components/leads/conversation/*          ← hilo de mensajes (§1.15)
 ```
 
 ---

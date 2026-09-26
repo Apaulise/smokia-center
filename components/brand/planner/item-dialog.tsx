@@ -265,7 +265,7 @@ export function PlannerItemDialog({
       description={item ? `${KIND_LABEL[item.kind]} · ${STATUS_LABEL[item.status]}` : undefined}
       className="max-w-2xl"
     >
-      <div className="max-h-[calc(100vh-14rem)] space-y-5 overflow-y-auto pr-1">
+      <div className="space-y-5">
         {published ? (
           <div className="space-y-2 rounded-[12px] border border-positive/30 bg-positive/5 p-3 text-sm">
             <p className="flex items-center gap-1.5 text-positive">

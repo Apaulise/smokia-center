@@ -26,7 +26,7 @@ export function LatestPostsGrid({ posts }: { posts: LatestPost[] }) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
       {posts.map((post) => (
         <a
           key={post.post_id}
@@ -41,6 +41,8 @@ export function LatestPostsGrid({ posts }: { posts: LatestPost[] }) {
               <img
                 src={post.thumbnail_url}
                 alt=""
+                loading="lazy"
+                decoding="async"
                 className="size-full object-cover transition-transform duration-200 group-hover:scale-105"
               />
             ) : (

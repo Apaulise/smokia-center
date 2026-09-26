@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 
 import { PageHeader } from "@/components/shell/page-header";
 import { ButtonLink } from "@/components/ui/button";
+import { EnrichListButton } from "@/components/leads/enrich-list-button";
 import { LeadsFilters } from "@/components/leads/leads-filters";
 import { LeadsKanban } from "@/components/leads/leads-kanban";
 import { LeadsTable } from "@/components/leads/leads-table";
@@ -86,6 +87,7 @@ export default async function LeadListaDetallePage({
           action={
             <div className="flex items-center gap-3">
               {backAction}
+              <EnrichListButton leadListId={id} />
               <ViewToggle view={view} basePath={basePath} otherParams={otherParams} />
             </div>
           }
@@ -112,6 +114,7 @@ export default async function LeadListaDetallePage({
         action={
           <div className="flex items-center gap-3">
             {backAction}
+            <EnrichListButton leadListId={id} />
             <ViewToggle view={view} basePath={basePath} otherParams={otherParams} />
           </div>
         }

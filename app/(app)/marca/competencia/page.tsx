@@ -5,6 +5,8 @@ import { CompetitorPoller } from "@/components/brand/competitors/competitor-poll
 import { CompetitorRowActions } from "@/components/brand/competitors/competitor-row-actions";
 import { AddCompetitorButton, RefreshAllButton } from "@/components/brand/competitors/competitor-toolbar";
 import { OutlierBoard, type OutlierCardData } from "@/components/brand/competitors/outlier-board";
+import { TrendPoller } from "@/components/brand/trends/trend-poller";
+import { TrendSearchButton } from "@/components/brand/trends/trend-search-form";
 import { PageHeader } from "@/components/shell/page-header";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -23,6 +25,7 @@ import {
   OUTLIER_THRESHOLD,
   MIN_BASELINE_SAMPLE,
   RELEVANCE_MIN,
+  TREND_MIN_VIEWS,
 } from "@/lib/brand/competitors/insights";
 import {
   getCompetitorsWithInsights,
@@ -33,6 +36,12 @@ import {
 } from "@/lib/brand/competitors/queries";
 import { estimateRunCostUsd } from "@/lib/brand/competitors/schema";
 import { getBrandPostsForAnalysis } from "@/lib/brand/queries";
+import {
+  getIdeasFromTrendPosts,
+  getLastTrendSearch,
+  getPendingTrendSearchIds,
+  getTrendPostsWithInsights,
+} from "@/lib/brand/trends/queries";
 
 export const metadata = { title: "Competencia · Awareness AI" };
 
@@ -71,14 +80,18 @@ function StatusCell({ competitor }: { competitor: CompetitorWithInsights["compet
   );
 }
 
-/** /marca/competencia (Plans/03 §3.8): cuentas ajenas, siempre contra su propio rendimiento habitual. */
+/** /marca/competencia (Plans/03 §3.8, ampliado en §3.15): cuentas ajenas, siempre contra su propio rendimiento habitual, más lo que se descubre por hashtag sin haber seguido a nadie. */
 export default async function CompetenciaPage() {
-  const [competitors, apifyKey, geminiKey, ideas, ownPosts] = await Promise.all([
+  const [competitors, apifyKey, geminiKey, ideas, ownPosts, trend, trendIdeas, lastTrendSearch, pendingTrendSearchIds] = await Promise.all([
     getCompetitorsWithInsights(PLATFORM),
     hasApifyKey(),
     hasGeminiKey(),
     getIdeasFromOutliers(),
     getBrandPostsForAnalysis(PLATFORM),
+    getTrendPostsWithInsights(),
+    getIdeasFromTrendPosts(),
+    getLastTrendSearch(),
+    getPendingTrendSearchIds(),
   ]);
 
   const usernameById = new Map(competitors.map(({ competitor }) => [competitor.id, competitor.username]));
@@ -86,32 +99,57 @@ export default async function CompetenciaPage() {
   const totalResultsLimit = competitors.reduce((sum, { competitor }) => sum + competitor.results_limit, 0);
 
   // Se aplana acá: el tablero es un componente cliente y lo que cruza el límite
-  // tiene que ser serializable y no más de lo que la pantalla usa.
-  const allOutliers: OutlierCardData[] = competitors
-    .flatMap(({ insights }) => insights.outliers)
-    .sort((a, b) => b.multiple - a.multiple)
-    .map((outlier) => {
-      const idea = ideas.get(outlier.post.id);
-      return {
-        postId: outlier.post.id,
-        username: usernameById.get(outlier.post.competitorId) ?? "cuenta",
-        kind: outlier.post.kind,
-        caption: outlier.post.caption,
-        thumbnailUrl: outlier.post.thumbnailUrl,
-        permalink: outlier.post.permalink,
-        publishedAt: outlier.post.publishedAt,
-        signalLabel: GROUP_SIGNAL_LABEL[outlier.group],
-        value: outlier.value,
-        median: outlier.median,
-        multiple: outlier.multiple,
-        recent: outlier.recent,
-        dismissed: outlier.post.dismissedAt !== null,
-        relevanceScore: outlier.post.relevanceScore,
-        relevanceReason: outlier.post.relevanceReason,
-        ideaId: idea?.id ?? null,
-        ideaTitle: idea?.title ?? null,
-      };
-    });
+  // tiene que ser serializable y no más de lo que la pantalla usa. Dos fuentes,
+  // mezcladas en una sola lista (§3.15): cuentas seguidas y lo descubierto por hashtag.
+  const competitorOutliers: OutlierCardData[] = competitors.flatMap(({ insights }) => insights.outliers).map((outlier) => {
+    const idea = ideas.get(outlier.post.id);
+    return {
+      postId: outlier.post.id,
+      source: "competitor" as const,
+      username: usernameById.get(outlier.post.competitorId) ?? "cuenta",
+      kind: outlier.post.kind,
+      caption: outlier.post.caption,
+      thumbnailUrl: outlier.post.thumbnailUrl,
+      permalink: outlier.post.permalink,
+      publishedAt: outlier.post.publishedAt,
+      signalLabel: GROUP_SIGNAL_LABEL[outlier.group],
+      value: outlier.value,
+      median: outlier.median,
+      multiple: outlier.multiple,
+      recent: outlier.recent,
+      dismissed: outlier.post.dismissedAt !== null,
+      relevanceScore: outlier.post.relevanceScore,
+      relevanceReason: outlier.post.relevanceReason,
+      ideaId: idea?.id ?? null,
+      ideaTitle: idea?.title ?? null,
+    };
+  });
+
+  const trendOutliers: OutlierCardData[] = trend.outliers.map((outlier) => {
+    const idea = trendIdeas.get(outlier.post.id);
+    return {
+      postId: outlier.post.id,
+      source: "trend" as const,
+      username: outlier.post.username,
+      kind: outlier.post.kind,
+      caption: outlier.post.caption,
+      thumbnailUrl: outlier.post.thumbnailUrl,
+      permalink: outlier.post.permalink,
+      publishedAt: outlier.post.publishedAt,
+      signalLabel: GROUP_SIGNAL_LABEL[outlier.group],
+      value: outlier.value,
+      median: outlier.median,
+      multiple: outlier.multiple,
+      recent: outlier.recent,
+      dismissed: outlier.post.dismissedAt !== null,
+      relevanceScore: outlier.post.relevanceScore,
+      relevanceReason: outlier.post.relevanceReason,
+      ideaId: idea?.id ?? null,
+      ideaTitle: idea?.title ?? null,
+    };
+  });
+
+  const allOutliers: OutlierCardData[] = [...competitorOutliers, ...trendOutliers].sort((a, b) => b.multiple - a.multiple);
 
   // Lo que "Clasificar" tiene para hacer: lo mismo que mira el servidor.
   const pendingRelevance = allOutliers.filter(
@@ -127,18 +165,34 @@ export default async function CompetenciaPage() {
       <PageHeader
         eyebrow="Gestor de Marca Personal"
         title="Competencia"
-        description="Cuentas que seguís, medidas contra su propio rendimiento habitual: lo que importa es qué explotó respecto de lo normal para ellos, no quién tiene más views."
+        description="Cuentas que seguís, medidas contra su propio rendimiento habitual, más lo que se descubre por hashtag sin haber seguido a nadie: lo que importa es qué explotó, no quién tiene más views."
         action={
-          apifyKey && competitors.length > 0 ? (
+          apifyKey ? (
             <div className="flex flex-wrap items-center gap-2">
-              <RefreshAllButton competitorCount={competitors.length} totalResultsLimit={totalResultsLimit} />
+              {competitors.length > 0 ? (
+                <RefreshAllButton competitorCount={competitors.length} totalResultsLimit={totalResultsLimit} />
+              ) : null}
               <AddCompetitorButton />
+              <TrendSearchButton lastQuery={lastTrendSearch?.query ?? null} />
             </div>
           ) : undefined
         }
       />
 
+      {apifyKey && lastTrendSearch?.status === "FALLIDO" ? (
+        <p className="px-6 text-xs text-danger lg:px-10">
+          La última búsqueda de virales (&ldquo;{lastTrendSearch.query}&rdquo;) falló: {lastTrendSearch.lastError ?? "error desconocido"}.
+        </p>
+      ) : null}
+      {apifyKey && lastTrendSearch?.status === "EN_CURSO" ? (
+        <p className="flex items-center gap-1.5 px-6 text-xs text-violet lg:px-10">
+          <Loader2 className="size-3 animate-spin" />
+          Buscando virales para &ldquo;{lastTrendSearch.query}&rdquo;…
+        </p>
+      ) : null}
+
       <CompetitorPoller pendingIds={pendingIds} />
+      <TrendPoller pendingIds={pendingTrendSearchIds} />
 
       <div className="space-y-6 px-6 py-8 lg:px-10">
         {!apifyKey ? (
@@ -152,13 +206,6 @@ export default async function CompetenciaPage() {
               </ButtonLink>
             }
           />
-        ) : competitors.length === 0 ? (
-          <EmptyState
-            icon={<Swords className="size-5" />}
-            title="Todavía no seguís ninguna cuenta"
-            description="Sumá una y se traen sus publicaciones recientes. Para probar, empezá con pocas: Apify cobra por cada resultado."
-            action={<AddCompetitorButton />}
-          />
         ) : (
           <>
             <Card>
@@ -168,6 +215,9 @@ export default async function CompetenciaPage() {
                 con {OUTLIER_THRESHOLD}× o más la mediana de su propia cuenta, y sólo se marca con al menos {MIN_BASELINE_SAMPLE} publicaciones
                 del mismo tipo para comparar. De ésas se listan las de los últimos {OUTLIER_MAX_AGE_DAYS} días, y las que el clasificador puntúa
                 por debajo de {RELEVANCE_MIN} para tu nicho quedan afuera: lo que se busca es un mecanismo que puedas usar, no cualquier número grande.
+                Algunas tarjetas de abajo salen de &ldquo;Buscar virales&rdquo; — un hashtag del nicho, no una cuenta seguida — y se marcan
+                &ldquo;Descubierto&rdquo;: ahí el criterio es distinto, porque no hay cuenta propia contra la cual comparar. Entran sólo con{" "}
+                {TREND_MIN_VIEWS.toLocaleString("es-AR")} views o más, sin importar cuántas traiga la búsqueda — puede que ninguna llegue.
               </CardBody>
             </Card>
 
@@ -176,6 +226,12 @@ export default async function CompetenciaPage() {
                 title="Cuentas que seguís"
                 description="Métricas ajenas: todas públicas. Las tuyas están más abajo, en un bloque aparte."
               />
+              {competitors.length === 0 ? (
+                <CardBody className="text-sm text-muted">
+                  Todavía no seguís ninguna cuenta. Sumá una desde &ldquo;Agregar cuenta&rdquo; arriba para traer sus publicaciones recientes, o
+                  probá &ldquo;Buscar virales&rdquo; para encontrar reels sin haber seguido a nadie.
+                </CardBody>
+              ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[820px] text-left text-sm">
                   <thead>
@@ -241,13 +297,16 @@ export default async function CompetenciaPage() {
                   </tbody>
                 </table>
               </div>
+              )}
             </Card>
 
             {allOutliers.length === 0 ? (
               <section className="space-y-3">
                 <h2 className="text-lg text-ink">Lo que explotó</h2>
                 <p className="rounded-[16px] border border-line bg-elevated/50 p-4 text-sm text-muted">
-                  Todavía no hay ningún outlier. Puede ser que nada se haya separado de lo habitual, o que falten publicaciones: hacen falta al menos {MIN_BASELINE_SAMPLE} del mismo tipo por cuenta para saber qué es lo habitual.
+                  Todavía no hay ningún outlier. Puede ser que nada se haya separado de lo habitual, que falten publicaciones —hacen falta al
+                  menos {MIN_BASELINE_SAMPLE} del mismo tipo por cuenta para saber qué es lo habitual—, o que todavía no hayas probado
+                  &ldquo;Buscar virales&rdquo;.
                 </p>
               </section>
             ) : (

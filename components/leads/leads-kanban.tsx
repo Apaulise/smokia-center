@@ -8,16 +8,22 @@ import { useRef, useState, useTransition, type DragEvent } from "react";
 import { Badge } from "@/components/ui/badge";
 import { updateLeadStatus } from "@/lib/leads/actions";
 import type { LeadWithRelations } from "@/lib/leads/queries";
-import { LEAD_STATUSES, STATUS_LABEL, type LeadStatus } from "@/lib/leads/status";
+import { STAGE_GROUP, STAGE_GROUPS, STATUS_LABEL, stageGroupOf, type StageGroup } from "@/lib/leads/status";
 import { cn } from "@/lib/utils";
 
 const SCROLL_STEP = 320;
 
-/** Kanban con drag & drop nativo del navegador — sin librería aparte (Plan §1.3, "opcional"). */
+/**
+ * Kanban con drag & drop nativo del navegador — sin librería aparte (Plan
+ * §1.3, "opcional"). Desde §1.8 agrupa los 17 estados en las 6 columnas de
+ * STAGE_GROUP: 17 columnas son inusables para arrastrar. Soltar una tarjeta en
+ * una columna la mueve al primer estado del grupo (el punto de entrada); el
+ * control fino de los 17 sigue en el `<select>` de la tabla y de la ficha.
+ */
 export function LeadsKanban({ leads }: { leads: LeadWithRelations[] }) {
   const router = useRouter();
   const [items, setItems] = useState(leads);
-  const [dragOverStatus, setDragOverStatus] = useState<LeadStatus | null>(null);
+  const [dragOverGroup, setDragOverGroup] = useState<StageGroup | null>(null);
   const [, startTransition] = useTransition();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -32,12 +38,13 @@ export function LeadsKanban({ leads }: { leads: LeadWithRelations[] }) {
     scrollRef.current?.scrollBy({ left: amount, behavior: "smooth" });
   }
 
-  function handleDrop(status: LeadStatus, event: DragEvent<HTMLDivElement>) {
+  function handleDrop(group: StageGroup, event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
-    setDragOverStatus(null);
+    setDragOverGroup(null);
     const leadId = event.dataTransfer.getData("text/plain");
     if (!leadId) return;
 
+    const status = STAGE_GROUP[group][0];
     setItems((current) => current.map((lead) => (lead.id === leadId ? { ...lead, status } : lead)));
     startTransition(async () => {
       await updateLeadStatus(leadId, status);
@@ -65,24 +72,24 @@ export function LeadsKanban({ leads }: { leads: LeadWithRelations[] }) {
       </button>
 
       <div ref={scrollRef} className="scroll-smooth flex gap-4 overflow-x-auto pb-2">
-        {LEAD_STATUSES.map((status) => {
-          const column = items.filter((lead) => lead.status === status);
+        {STAGE_GROUPS.map((group) => {
+          const column = items.filter((lead) => stageGroupOf(lead.status) === group);
           return (
             <div
-              key={status}
+              key={group}
               onDragOver={(event) => {
                 event.preventDefault();
-                setDragOverStatus(status);
+                setDragOverGroup(group);
               }}
-              onDragLeave={() => setDragOverStatus((current) => (current === status ? null : current))}
-              onDrop={(event) => handleDrop(status, event)}
+              onDragLeave={() => setDragOverGroup((current) => (current === group ? null : current))}
+              onDrop={(event) => handleDrop(group, event)}
               className={cn(
                 "flex w-72 shrink-0 flex-col gap-2 rounded-[16px] border border-line bg-elevated/50 p-3",
-                dragOverStatus === status && "border-cyan/50 bg-cyan/5",
+                dragOverGroup === group && "border-cyan/50 bg-cyan/5",
               )}
             >
               <div className="flex items-center justify-between px-1">
-                <h4 className="text-sm font-medium text-ink">{STATUS_LABEL[status]}</h4>
+                <h4 className="text-sm font-medium text-ink">{group}</h4>
                 <span className="tabular text-xs text-muted">{column.length}</span>
               </div>
               <div className="flex min-h-16 flex-col gap-2">
@@ -95,6 +102,7 @@ export function LeadsKanban({ leads }: { leads: LeadWithRelations[] }) {
                     className="block cursor-grab rounded-[12px] border border-line bg-surface/60 p-3 text-sm hover:border-cyan/40 active:cursor-grabbing"
                   >
                     <p className="truncate font-medium text-ink">{lead.name}</p>
+                    <p className="mt-1 text-xs text-muted">{STATUS_LABEL[lead.status]}</p>
                     <p className="mt-1 truncate text-xs text-muted">{lead.city ?? lead.phone ?? lead.email ?? ""}</p>
                     {lead.industries ? (
                       <Badge color={lead.industries.color} className="mt-2">

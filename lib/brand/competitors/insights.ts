@@ -38,6 +38,28 @@ export const RELEVANCE_MIN = 50;
 /** La cadencia se mide sobre las últimas semanas, no sobre todo lo traído: una cuenta que cambió de ritmo tiene que verse. */
 export const CADENCE_WINDOW_DAYS = 28;
 
+/**
+ * Ventana de recencia para "Descubrir virales" (Plans/03 §3.15). Más chica que
+ * OUTLIER_MAX_AGE_DAYS: "tendencia ahora" es más exigente que el rendimiento
+ * de una cuenta que se sigue en el tiempo.
+ */
+export const TREND_MAX_AGE_DAYS = 30;
+
+/**
+ * Piso de views para que un reel descubierto cuente como viral (Plans/03
+ * §3.15). No hay cuenta propia contra la cual comparar, así que el criterio
+ * es absoluto y no relativo a un batch: por debajo de esto no entra, aunque
+ * eso signifique mostrar menos de lo que se pidió (incluso cero). Es una
+ * decisión editorial y se va a mover, igual que OUTLIER_THRESHOLD.
+ *
+ * Bajado de 1.000.000 el 2026-09-24: `apify/instagram-hashtag-scraper` (único
+ * actor viable — ver TREND_ACTOR_ID) trae el feed *reciente* del hashtag, no
+ * el "top", así que un reel recién posteado casi nunca llega al millón. Cinco
+ * búsquedas reales (#ai ×3, #inteligeciaartifical, #claudeai) tocaron como
+ * máximo ~306k views. 150k queda apenas por encima de ese máximo real.
+ */
+export const TREND_MIN_VIEWS = 150_000;
+
 const DAY_MS = 86_400_000;
 
 /** Los videos se comparan por views; las imágenes no tienen views, así que por likes. Nunca se mezclan en una misma mediana. */
@@ -63,7 +85,7 @@ function signalOf(post: InsightPost): number | null {
 }
 
 /** Mediana, no promedio: una publicación que explotó arrastra el promedio y esconde al resto (SOC §16). */
-function median(values: number[]): number {
+export function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
   return sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;

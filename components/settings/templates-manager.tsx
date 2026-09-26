@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Loader2, Mail, MessageCircle, XCircle } from "lucide-react";
+import { AtSign, CheckCircle2, Loader2, Mail, MessageCircle, XCircle } from "lucide-react";
 import { useActionState, useEffect, useRef } from "react";
 
 import { DeleteButton } from "@/components/settings/delete-button";
@@ -14,8 +14,11 @@ import { cn } from "@/lib/utils";
 
 type MessageTemplate = Database["public"]["Tables"]["message_templates"]["Row"];
 
-const CHANNEL_ICON = { WHATSAPP: MessageCircle, EMAIL: Mail } as const;
-const CHANNEL_LABEL = { WHATSAPP: "WhatsApp", EMAIL: "Email" } as const;
+// INSTAGRAM se agregó al enum en §1.9 (canal de lead_messages, Plan §1.15) —
+// esta pantalla sólo crea plantillas de WHATSAPP/EMAIL (lib/settings/actions.ts),
+// pero el tipo de la columna es el enum completo.
+const CHANNEL_ICON = { WHATSAPP: MessageCircle, EMAIL: Mail, INSTAGRAM: AtSign } as const;
+const CHANNEL_LABEL = { WHATSAPP: "WhatsApp", EMAIL: "Email", INSTAGRAM: "Instagram" } as const;
 
 export function TemplatesManager({ templates }: { templates: MessageTemplate[] }) {
   const [state, formAction, pending] = useActionState(createTemplate, null);

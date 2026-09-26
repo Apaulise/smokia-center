@@ -18,12 +18,15 @@ import { OUTLIER_MAX_AGE_DAYS, RELEVANCE_MIN } from "@/lib/brand/competitors/ins
 import { formatCount } from "@/lib/brand/competitors/format";
 import { formatMultiple } from "@/lib/brand/insights";
 import { KIND_LABEL, type ContentKind } from "@/lib/brand/planner/schema";
+import { classifyPendingTrendOutliers, createIdeaFromTrendPost, dismissTrendPost, restoreTrendPost } from "@/lib/brand/trends/actions";
 
 const dateFormat = new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short", year: "numeric" });
 
 /** Lo que la pantalla necesita de un outlier, ya aplanado por el Server Component. */
 export interface OutlierCardData {
   postId: string;
+  /** De una cuenta seguida (§3.8) o descubierto por hashtag, sin haberla seguido (§3.15). */
+  source: "competitor" | "trend";
   username: string;
   kind: ContentKind;
   caption: string | null;
@@ -68,6 +71,7 @@ function OutlierCard({
           {outlier.relevanceScore !== null ? (
             <Badge tone="violet">Relevancia {outlier.relevanceScore}</Badge>
           ) : null}
+          {outlier.source === "trend" ? <Badge tone="neutral">Descubierto</Badge> : null}
           <span className="text-xs text-muted">@{outlier.username}</span>
         </div>
         <p className="tabular text-sm text-ink">
@@ -197,7 +201,8 @@ export function OutlierBoard({
     setBusyId(outlier.postId);
     setError(null);
     setMessage(null);
-    const result = await createIdeaFromOutlier(outlier.postId);
+    const result =
+      outlier.source === "trend" ? await createIdeaFromTrendPost(outlier.postId) : await createIdeaFromOutlier(outlier.postId);
     setBusyId(null);
     if (!result.ok) {
       setError(result.message);
@@ -215,13 +220,15 @@ export function OutlierBoard({
     setClassifying(true);
     setError(null);
     setMessage(null);
-    const result = await classifyPendingOutliers();
+    // Las dos fuentes en paralelo: cada una clasifica su propia tabla, y una key sin cargar no bloquea a la otra.
+    const [competitorResult, trendResult] = await Promise.all([classifyPendingOutliers(), classifyPendingTrendOutliers()]);
     setClassifying(false);
-    if (!result.ok) {
-      setError(result.message);
+    if (!competitorResult.ok && !trendResult.ok) {
+      setError(competitorResult.message);
       return;
     }
-    setMessage(result.classified === 0 ? "No había nada pendiente de clasificar." : `Se clasificaron ${result.classified}.`);
+    const classified = (competitorResult.ok ? competitorResult.classified : 0) + (trendResult.ok ? trendResult.classified : 0);
+    setMessage(classified === 0 ? "No había nada pendiente de clasificar." : `Se clasificaron ${classified}.`);
     router.refresh();
   }
 
@@ -271,8 +278,12 @@ export function OutlierBoard({
               outlier={outlier}
               busy={busyId === outlier.postId}
               onUse={() => handleUse(outlier)}
-              onDismiss={() => run(outlier.postId, () => dismissCompetitorPost(outlier.postId))}
-              onRestore={() => run(outlier.postId, () => restoreCompetitorPost(outlier.postId))}
+              onDismiss={() =>
+                run(outlier.postId, () => (outlier.source === "trend" ? dismissTrendPost(outlier.postId) : dismissCompetitorPost(outlier.postId)))
+              }
+              onRestore={() =>
+                run(outlier.postId, () => (outlier.source === "trend" ? restoreTrendPost(outlier.postId) : restoreCompetitorPost(outlier.postId)))
+              }
             />
           ))}
         </div>

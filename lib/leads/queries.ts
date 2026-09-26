@@ -345,6 +345,44 @@ export async function listUpcomingAppointmentsList(limit = 100) {
   return (data ?? []) as AppointmentWithLead[];
 }
 
+// ── Copiloto de prospección (Plan §1.9 en adelante) ─────────────────────────
+
+export type LeadIntelRow = Database["public"]["Tables"]["lead_intel"]["Row"];
+
+/** `enrichment` y `memory` se guardan en camelCase tal como los devuelven lib/leads/ai/{enrich,analyze}.ts — son blobs opacos, no columnas que Postgres filtre. */
+export async function getLeadIntel(leadId: string): Promise<LeadIntelRow | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("lead_intel").select("*").eq("lead_id", leadId).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export type LeadSignalRow = Database["public"]["Tables"]["lead_signals"]["Row"];
+
+export async function listLeadSignals(leadId: string): Promise<LeadSignalRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("lead_signals")
+    .select("*")
+    .eq("lead_id", leadId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export type LeadMessageRow = Database["public"]["Tables"]["lead_messages"]["Row"];
+
+export async function listLeadMessages(leadId: string): Promise<LeadMessageRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("lead_messages")
+    .select("*")
+    .eq("lead_id", leadId)
+    .order("occurred_at", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
 /** Turnos futuros no cancelados, para la exportación .ics. */
 export async function listAppointmentsForIcs() {
   const supabase = await createClient();

@@ -11,11 +11,11 @@ Panel central del negocio de Awareness AI, una agencia de IA y automatización. 
 | Módulo | Qué hace | Estado |
 |---|---|---|
 | **Panel principal** | Agrega métricas de las tres patas | Fase 4 — placeholder |
-| **Gestor de Leads** | Genera listas por rubro y zona, seguimiento hasta el cierre | **Fase 1 — en construcción** |
+| **Gestor de Leads** | Genera listas por rubro y zona, seguimiento hasta el cierre, y —desde §1.7— prospección asistida por IA | **Fase 1 — en construcción.** §1.1–§1.5 en uso; §1.6 diferido; §1.7–§1.19 (copiloto comercial) recién arrancados: §1.7 implementado con checklist manual pendiente |
 | **Gestor de Facturación** | Ingresos, clientes, cobros | Fase 2 — no empezado |
-| **Gestor de Marca Personal** | Contenido y presencia | Fase 3 — reabierta para §3.13 (objetivo de seguidores, checklist manual hecho salvo 8 y 10, que piden publicar un reel real) y §3.14 (competencia accionable, cerrado el 2026-09-20 con checklist manual hecho); §3.7 sin verificar, §3.9 YouTube diferido |
+| **Gestor de Marca Personal** | Contenido y presencia | Fase 3 — reabierta para §3.13 (objetivo de seguidores, checklist manual hecho salvo 8 y 10, que piden publicar un reel real), §3.14 (competencia accionable, cerrado el 2026-09-20 con checklist manual hecho) y §3.15 (descubrir virales, implementado el 2026-09-23, checklist manual pendiente); §3.7 sin verificar, §3.9 YouTube diferido |
 
-Los planes viven en `Plans/`, numerados por fase: [01 — Gestor de Leads](Plans/01-gestor-de-leads.md) y [03 — Gestor de Marca Personal](Plans/03-gestor-de-marca-personal.md), este último escrito por adelantado y hoy **reabierto sólo para §3.13** (objetivo de seguidores, implementado el 2026-09-20; checklist manual hecho salvo los ítems 8 y 10, que piden publicar un reel real): §3.1–§3.8 y §3.10–§3.12 están construidos, §3.7 (planificador y publicación) sigue sin verificar en la app real y §3.9 (YouTube) queda diferido (ver §2). El manual de identidad visual, en [Awareness_AI_Manual_de_Marca.md](Awareness_AI_Manual_de_Marca.md).
+Los planes viven en `Plans/`, numerados por fase: [01 — Gestor de Leads](Plans/01-gestor-de-leads.md) —**reabierto en §1.7–§1.19** para el Sistema de Prospección Asistida por IA, cuyo prompt canónico es [Awareness_AI_Sistema_de_Prospeccion.md](Awareness_AI_Sistema_de_Prospeccion.md)— y [03 — Gestor de Marca Personal](Plans/03-gestor-de-marca-personal.md), este último escrito por adelantado y hoy **reabierto para §3.13, §3.14 y §3.15**: §3.1–§3.8 y §3.10–§3.12 están construidos, §3.7 (planificador y publicación) sigue sin verificar en la app real, §3.13 (objetivo de seguidores) tiene checklist manual pendiente en los ítems 8 y 10, §3.14 (competencia accionable) está cerrado, §3.15 (descubrir virales) está implementado con checklist manual pendiente, y §3.9 (YouTube) queda diferido (ver §2). El manual de identidad visual, en [Awareness_AI_Manual_de_Marca.md](Awareness_AI_Manual_de_Marca.md).
 
 ---
 
@@ -91,6 +91,8 @@ Tokens de color definidos en `app/globals.css`.
 - Espaciado 8/16/24/32/48/64; radios 16–24px en contenedores
 
 **El criterio editorial de la marca personal es otro documento y otra marca**: [Awareness_AI_Sistema_de_Contenido.md](Awareness_AI_Sistema_de_Contenido.md). Es el **system prompt literal** del agente de la Fase 3 ([Plans/03 §3.10](Plans/03-gestor-de-marca-personal.md)), no un documento sobre el prompt — todo lo que se escriba ahí se le manda al modelo en cada mensaje. El manual de arriba es identidad visual de la agencia; no sirve para deducir una voz de escritura.
+
+**Hay un segundo prompt literal, y es de otro módulo**: [Awareness_AI_Sistema_de_Prospeccion.md](Awareness_AI_Sistema_de_Prospeccion.md), el del copiloto comercial de la Fase 1 ([Plans/01 §1.7](Plans/01-gestor-de-leads.md)). Misma regla: el archivo **es** el prompt. Los dos se leen del disco en runtime y por eso los dos están declarados en `outputFileTracingIncludes` de `next.config.ts` — agregar un tercero y olvidarse de esa línea es un `ENOENT` que sólo aparece en producción.
 
 ---
 

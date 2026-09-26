@@ -491,6 +491,7 @@ export type Database = {
           script: string | null
           source_competitor_post_id: string | null
           source_thread_id: string | null
+          source_trend_post_id: string | null
           source_url: string | null
           status: Database["public"]["Enums"]["brand_content_status"]
           title: string
@@ -523,6 +524,7 @@ export type Database = {
           script?: string | null
           source_competitor_post_id?: string | null
           source_thread_id?: string | null
+          source_trend_post_id?: string | null
           source_url?: string | null
           status?: Database["public"]["Enums"]["brand_content_status"]
           title: string
@@ -555,6 +557,7 @@ export type Database = {
           script?: string | null
           source_competitor_post_id?: string | null
           source_thread_id?: string | null
+          source_trend_post_id?: string | null
           source_url?: string | null
           status?: Database["public"]["Enums"]["brand_content_status"]
           title?: string
@@ -594,6 +597,13 @@ export type Database = {
             columns: ["source_thread_id"]
             isOneToOne: false
             referencedRelation: "brand_chat_threads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_content_items_source_trend_post_id_fkey"
+            columns: ["source_trend_post_id"]
+            isOneToOne: false
+            referencedRelation: "brand_trend_posts"
             referencedColumns: ["id"]
           },
         ]
@@ -967,6 +977,134 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_trend_posts: {
+        Row: {
+          caption: string | null
+          comments: number | null
+          created_at: string
+          dismissed_at: string | null
+          display_name: string | null
+          external_id: string
+          id: string
+          kind: Database["public"]["Enums"]["brand_post_kind"]
+          likes: number | null
+          owner_id: string
+          permalink: string | null
+          profile_pic_url: string | null
+          published_at: string | null
+          raw: Json | null
+          relevance_checked_at: string | null
+          relevance_reason: string | null
+          relevance_score: number | null
+          search_id: string | null
+          thumbnail_url: string | null
+          updated_at: string
+          username: string
+          views: number | null
+        }
+        Insert: {
+          caption?: string | null
+          comments?: number | null
+          created_at?: string
+          dismissed_at?: string | null
+          display_name?: string | null
+          external_id: string
+          id?: string
+          kind: Database["public"]["Enums"]["brand_post_kind"]
+          likes?: number | null
+          owner_id: string
+          permalink?: string | null
+          profile_pic_url?: string | null
+          published_at?: string | null
+          raw?: Json | null
+          relevance_checked_at?: string | null
+          relevance_reason?: string | null
+          relevance_score?: number | null
+          search_id?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          username: string
+          views?: number | null
+        }
+        Update: {
+          caption?: string | null
+          comments?: number | null
+          created_at?: string
+          dismissed_at?: string | null
+          display_name?: string | null
+          external_id?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["brand_post_kind"]
+          likes?: number | null
+          owner_id?: string
+          permalink?: string | null
+          profile_pic_url?: string | null
+          published_at?: string | null
+          raw?: Json | null
+          relevance_checked_at?: string | null
+          relevance_reason?: string | null
+          relevance_score?: number | null
+          search_id?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          username?: string
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_trend_posts_search_id_fkey"
+            columns: ["search_id"]
+            isOneToOne: false
+            referencedRelation: "brand_trend_searches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_trend_searches: {
+        Row: {
+          apify_run_id: string | null
+          created_at: string
+          id: string
+          last_cost_usd: number | null
+          last_error: string | null
+          last_run_started_at: string | null
+          last_synced_at: string | null
+          owner_id: string
+          query: string
+          results_limit: number
+          status: Database["public"]["Enums"]["job_status"]
+          updated_at: string
+        }
+        Insert: {
+          apify_run_id?: string | null
+          created_at?: string
+          id?: string
+          last_cost_usd?: number | null
+          last_error?: string | null
+          last_run_started_at?: string | null
+          last_synced_at?: string | null
+          owner_id: string
+          query: string
+          results_limit: number
+          status?: Database["public"]["Enums"]["job_status"]
+          updated_at?: string
+        }
+        Update: {
+          apify_run_id?: string | null
+          created_at?: string
+          id?: string
+          last_cost_usd?: number | null
+          last_error?: string | null
+          last_run_started_at?: string | null
+          last_synced_at?: string | null
+          owner_id?: string
+          query?: string
+          results_limit?: number
+          status?: Database["public"]["Enums"]["job_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       industries: {
         Row: {
           color: string
@@ -1041,6 +1179,59 @@ export type Database = {
           },
         ]
       }
+      lead_intel: {
+        Row: {
+          created_at: string
+          enriched_at: string | null
+          enrichment: Json | null
+          id: string
+          lead_id: string
+          memory: Json | null
+          next_best_action:
+            | Database["public"]["Enums"]["lead_next_action"]
+            | null
+          next_best_action_reason: string | null
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enriched_at?: string | null
+          enrichment?: Json | null
+          id?: string
+          lead_id: string
+          memory?: Json | null
+          next_best_action?:
+            | Database["public"]["Enums"]["lead_next_action"]
+            | null
+          next_best_action_reason?: string | null
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enriched_at?: string | null
+          enrichment?: Json | null
+          id?: string
+          lead_id?: string
+          memory?: Json | null
+          next_best_action?:
+            | Database["public"]["Enums"]["lead_next_action"]
+            | null
+          next_best_action_reason?: string | null
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_intel_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_lists: {
         Row: {
           created_at: string
@@ -1088,6 +1279,130 @@ export type Database = {
           },
         ]
       }
+      lead_messages: {
+        Row: {
+          analysis: Json | null
+          angle: Database["public"]["Enums"]["lead_sales_angle"] | null
+          channel: Database["public"]["Enums"]["message_channel"]
+          confirmed: boolean
+          confirmed_at: string | null
+          content: string
+          created_at: string
+          generated_by:
+            | Database["public"]["Enums"]["lead_message_generator"]
+            | null
+          id: string
+          lead_id: string
+          occurred_at: string
+          owner_id: string
+          sender: Database["public"]["Enums"]["lead_message_sender"]
+          variant: number | null
+        }
+        Insert: {
+          analysis?: Json | null
+          angle?: Database["public"]["Enums"]["lead_sales_angle"] | null
+          channel?: Database["public"]["Enums"]["message_channel"]
+          confirmed?: boolean
+          confirmed_at?: string | null
+          content: string
+          created_at?: string
+          generated_by?:
+            | Database["public"]["Enums"]["lead_message_generator"]
+            | null
+          id?: string
+          lead_id: string
+          occurred_at?: string
+          owner_id: string
+          sender: Database["public"]["Enums"]["lead_message_sender"]
+          variant?: number | null
+        }
+        Update: {
+          analysis?: Json | null
+          angle?: Database["public"]["Enums"]["lead_sales_angle"] | null
+          channel?: Database["public"]["Enums"]["message_channel"]
+          confirmed?: boolean
+          confirmed_at?: string | null
+          content?: string
+          created_at?: string
+          generated_by?:
+            | Database["public"]["Enums"]["lead_message_generator"]
+            | null
+          id?: string
+          lead_id?: string
+          occurred_at?: string
+          owner_id?: string
+          sender?: Database["public"]["Enums"]["lead_message_sender"]
+          variant?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_messages_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_signals: {
+        Row: {
+          already_solved: boolean
+          business_impact: string | null
+          created_at: string
+          description: string | null
+          evidence: string | null
+          id: string
+          kind: Database["public"]["Enums"]["lead_signal_kind"]
+          lead_id: string
+          owner_id: string
+          status: Database["public"]["Enums"]["lead_signal_status"]
+          timing: string | null
+          title: string
+          trigger_event: string | null
+          updated_at: string
+        }
+        Insert: {
+          already_solved?: boolean
+          business_impact?: string | null
+          created_at?: string
+          description?: string | null
+          evidence?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["lead_signal_kind"]
+          lead_id: string
+          owner_id: string
+          status?: Database["public"]["Enums"]["lead_signal_status"]
+          timing?: string | null
+          title: string
+          trigger_event?: string | null
+          updated_at?: string
+        }
+        Update: {
+          already_solved?: boolean
+          business_impact?: string | null
+          created_at?: string
+          description?: string | null
+          evidence?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["lead_signal_kind"]
+          lead_id?: string
+          owner_id?: string
+          status?: Database["public"]["Enums"]["lead_signal_status"]
+          timing?: string | null
+          title?: string
+          trigger_event?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_signals_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           address: string | null
@@ -1100,6 +1415,7 @@ export type Database = {
           id: string
           industry_id: string | null
           instagram_url: string | null
+          interest_level: number | null
           last_contacted_at: string | null
           latitude: number | null
           lead_list_id: string | null
@@ -1114,6 +1430,7 @@ export type Database = {
           raw: Json | null
           region: string | null
           reviews_count: number | null
+          sales_angle: Database["public"]["Enums"]["lead_sales_angle"] | null
           source_url: string | null
           status: Database["public"]["Enums"]["lead_status"]
           updated_at: string
@@ -1130,6 +1447,7 @@ export type Database = {
           id?: string
           industry_id?: string | null
           instagram_url?: string | null
+          interest_level?: number | null
           last_contacted_at?: string | null
           latitude?: number | null
           lead_list_id?: string | null
@@ -1144,6 +1462,7 @@ export type Database = {
           raw?: Json | null
           region?: string | null
           reviews_count?: number | null
+          sales_angle?: Database["public"]["Enums"]["lead_sales_angle"] | null
           source_url?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
           updated_at?: string
@@ -1160,6 +1479,7 @@ export type Database = {
           id?: string
           industry_id?: string | null
           instagram_url?: string | null
+          interest_level?: number | null
           last_contacted_at?: string | null
           latitude?: number | null
           lead_list_id?: string | null
@@ -1174,6 +1494,7 @@ export type Database = {
           raw?: Json | null
           region?: string | null
           reviews_count?: number | null
+          sales_angle?: Database["public"]["Enums"]["lead_sales_angle"] | null
           source_url?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
           updated_at?: string
@@ -1225,6 +1546,59 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      sales_knowledge: {
+        Row: {
+          body: string | null
+          collection: Database["public"]["Enums"]["lead_knowledge_collection"]
+          created_at: string
+          data: Json
+          id: string
+          lead_id: string | null
+          origin: Database["public"]["Enums"]["lead_knowledge_origin"]
+          owner_id: string
+          search: unknown
+          tags: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          collection: Database["public"]["Enums"]["lead_knowledge_collection"]
+          created_at?: string
+          data?: Json
+          id?: string
+          lead_id?: string | null
+          origin: Database["public"]["Enums"]["lead_knowledge_origin"]
+          owner_id: string
+          search?: unknown
+          tags?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          collection?: Database["public"]["Enums"]["lead_knowledge_collection"]
+          created_at?: string
+          data?: Json
+          id?: string
+          lead_id?: string | null
+          origin?: Database["public"]["Enums"]["lead_knowledge_origin"]
+          owner_id?: string
+          search?: unknown
+          tags?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_knowledge_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scrape_jobs: {
         Row: {
@@ -1399,6 +1773,13 @@ export type Database = {
           total_interactions: number
         }[]
       }
+      lead_angle_counts_30d: {
+        Args: never
+        Returns: {
+          angle: Database["public"]["Enums"]["lead_sales_angle"]
+          message_count: number
+        }[]
+      }
       leads_activity_timeline: {
         Args: { days?: number }
         Returns: {
@@ -1496,17 +1877,57 @@ export type Database = {
         | "LLAMADA"
         | "CAMBIO_ESTADO"
         | "REUNION"
+      lead_knowledge_collection:
+        | "OBJECIONES"
+        | "DOLORES"
+        | "ANGULOS"
+        | "SEGMENTOS"
+        | "MENSAJES"
+        | "APRENDIZAJES"
+      lead_knowledge_origin: "PROPIO" | "MERCADO" | "HIPOTESIS"
+      lead_message_generator: "IA" | "HUMANO"
+      lead_message_sender: "VENDEDOR" | "LEAD"
+      lead_next_action:
+        | "ASK_QUESTION"
+        | "EXPLAIN_SERVICE"
+        | "ASK_FOR_MEETING"
+        | "SEND_INFORMATION"
+        | "FOLLOW_UP"
+        | "WAIT"
+        | "DISQUALIFY"
+        | "CLOSE_LEAD"
+      lead_sales_angle:
+        | "FOLLOWUP"
+        | "BOOKING"
+        | "NOSHOW"
+        | "REBOOKING"
+        | "REACTIVATION"
+        | "RESPONSE_TIME"
+        | "OPERATIONS"
+        | "CRM"
+        | "REVIEWS"
+      lead_signal_kind: "DOLOR" | "OBJECION" | "SENAL_COMPRA"
+      lead_signal_status: "HIPOTESIS" | "SOSPECHADO" | "CONFIRMADO"
       lead_source: "GOOGLE_MAPS" | "INSTAGRAM" | "LINKEDIN" | "CSV" | "MANUAL"
       lead_status:
         | "NUEVO"
+        | "LISTO"
         | "CONTACTADO"
+        | "AUTORESPUESTA"
         | "RESPONDIO"
-        | "AGENDADO"
+        | "DIAGNOSTICO"
+        | "CALIFICADO"
+        | "INTERESADO"
+        | "REUNION_PROPUESTA"
+        | "REUNION_AGENDADA"
+        | "REUNION_REALIZADA"
         | "PROPUESTA_ENVIADA"
         | "CERRADO_GANADO"
+        | "AHORA_NO"
+        | "SEGUIMIENTO"
         | "CERRADO_PERDIDO"
         | "DESCARTADO"
-      message_channel: "WHATSAPP" | "EMAIL"
+      message_channel: "WHATSAPP" | "EMAIL" | "INSTAGRAM"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1689,18 +2110,61 @@ export const Constants = {
         "CAMBIO_ESTADO",
         "REUNION",
       ],
+      lead_knowledge_collection: [
+        "OBJECIONES",
+        "DOLORES",
+        "ANGULOS",
+        "SEGMENTOS",
+        "MENSAJES",
+        "APRENDIZAJES",
+      ],
+      lead_knowledge_origin: ["PROPIO", "MERCADO", "HIPOTESIS"],
+      lead_message_generator: ["IA", "HUMANO"],
+      lead_message_sender: ["VENDEDOR", "LEAD"],
+      lead_next_action: [
+        "ASK_QUESTION",
+        "EXPLAIN_SERVICE",
+        "ASK_FOR_MEETING",
+        "SEND_INFORMATION",
+        "FOLLOW_UP",
+        "WAIT",
+        "DISQUALIFY",
+        "CLOSE_LEAD",
+      ],
+      lead_sales_angle: [
+        "FOLLOWUP",
+        "BOOKING",
+        "NOSHOW",
+        "REBOOKING",
+        "REACTIVATION",
+        "RESPONSE_TIME",
+        "OPERATIONS",
+        "CRM",
+        "REVIEWS",
+      ],
+      lead_signal_kind: ["DOLOR", "OBJECION", "SENAL_COMPRA"],
+      lead_signal_status: ["HIPOTESIS", "SOSPECHADO", "CONFIRMADO"],
       lead_source: ["GOOGLE_MAPS", "INSTAGRAM", "LINKEDIN", "CSV", "MANUAL"],
       lead_status: [
         "NUEVO",
+        "LISTO",
         "CONTACTADO",
+        "AUTORESPUESTA",
         "RESPONDIO",
-        "AGENDADO",
+        "DIAGNOSTICO",
+        "CALIFICADO",
+        "INTERESADO",
+        "REUNION_PROPUESTA",
+        "REUNION_AGENDADA",
+        "REUNION_REALIZADA",
         "PROPUESTA_ENVIADA",
         "CERRADO_GANADO",
+        "AHORA_NO",
+        "SEGUIMIENTO",
         "CERRADO_PERDIDO",
         "DESCARTADO",
       ],
-      message_channel: ["WHATSAPP", "EMAIL"],
+      message_channel: ["WHATSAPP", "EMAIL", "INSTAGRAM"],
     },
   },
 } as const

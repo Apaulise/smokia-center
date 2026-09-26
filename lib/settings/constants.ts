@@ -17,6 +17,19 @@ export const ANTHROPIC_KEY_SETTING = "anthropic_api_key";
 export const GEMINI_KEY_SETTING = "gemini_api_key";
 
 /**
+ * Perfil del vendedor (Plan §1.7). No es una key: es el texto que le dice al
+ * copiloto qué experiencia y qué casos reales puede afirmar. Vive acá y no
+ * dentro del Sistema de Prospección porque cambia —un caso hoy, tres en tres
+ * meses— y el prompt canónico va cacheado byte a byte: moverlo invalidaría el
+ * caché en cada edición. Se inyecta en el bloque de estado del turno.
+ *
+ * Se guarda cifrado como todo lo demás de `settings`, no porque sea secreto
+ * sino porque la columna se llama `value_encrypted` y meterle texto plano
+ * sería mentirle al próximo que la lea.
+ */
+export const SALES_PROFILE_SETTING = "sales_profile";
+
+/**
  * Clave en `settings` para el actor de Apify configurado por el usuario para
  * una fuente puntual. Sobreescribe el `defaultActorId` del proveedor
  * (lib/providers/*) — necesario en LinkedIn, donde no hay un actor por default.

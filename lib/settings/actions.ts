@@ -17,6 +17,7 @@ import {
   APIFY_KEY_SETTING,
   DEFAULT_INDUSTRIES,
   GEMINI_KEY_SETTING,
+  SALES_PROFILE_SETTING,
   WINDSOR_KEY_SETTING,
   actorOverrideKey,
 } from "./constants";
@@ -330,6 +331,48 @@ export async function testGeminiConnection(_prevState: ActionState, _formData: F
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "No se pudo contactar a Gemini." };
   }
+}
+
+// ── Perfil del vendedor (Plan §1.7) ──────────────────────────────────────
+
+const salesProfileSchema = z.object({
+  // Vacío es válido: borrar el perfil es la forma de decirle al copiloto que
+  // no afirme ninguna experiencia. El tope existe porque esto viaja en cada
+  // turno del modelo, no por la base.
+  profile: z.string().trim().max(4000, "El perfil no puede pasar de 4000 caracteres."),
+});
+
+export async function saveSalesProfile(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const user = await requireUser();
+  const parsed = salesProfileSchema.safeParse({ profile: formData.get("profile") });
+  if (!parsed.success) {
+    return { ok: false, message: firstIssue(parsed.error, "Perfil inválido.") };
+  }
+
+  const supabase = await createClient();
+
+  if (!parsed.data.profile) {
+    await supabase.from("settings").delete().eq("key", SALES_PROFILE_SETTING);
+    revalidatePath("/configuracion");
+    return { ok: true, message: "Perfil vacío. El copiloto no va a afirmar experiencia." };
+  }
+
+  const { error } = await supabase.from("settings").upsert(
+    {
+      owner_id: user.id,
+      key: SALES_PROFILE_SETTING,
+      value_encrypted: encrypt(parsed.data.profile),
+    },
+    { onConflict: "owner_id,key" },
+  );
+
+  if (error) return { ok: false, message: "No se pudo guardar el perfil." };
+
+  revalidatePath("/configuracion");
+  return { ok: true, message: "Perfil guardado." };
 }
 
 // ── Rubros (industries) ──────────────────────────────────────────────────

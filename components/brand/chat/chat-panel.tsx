@@ -20,6 +20,18 @@ function userTurnContent(text: string): Json {
   return [{ role: "user", content: text }] as unknown as Json;
 }
 
+/**
+ * `runBrandChatTurn` (lib/brand/ai/chat.ts) corre en un after() acotado por el
+ * maxDuration=60 de la página (app/(app)/marca/generar/page.tsx). Un turno con
+ * varias vueltas de herramientas + búsqueda web + thinking en "high" puede
+ * superarlo: la plataforma mata el proceso a mitad de stream, sin que el
+ * catch de chat.ts llegue a correr, y la fila queda en EN_CURSO para siempre
+ * (ni Realtime ni un F5 la mueven — no hay nada más que la escriba). Este
+ * margen es mayor al maxDuration para no pisar un turno que todavía sigue vivo.
+ */
+const STALE_TURN_MS = 65_000;
+const STALE_TURN_ERROR = "El servidor cortó la respuesta por tardar demasiado. Probá de nuevo, quizás con un pedido más acotado.";
+
 /** Deja `?hilo=<id>` en la barra para que F5 vuelva a la misma conversación, sin pedirle nada al servidor. */
 function syncUrl(threadId: string | null) {
   window.history.replaceState(null, "", threadId ? `?hilo=${threadId}` : window.location.pathname);
@@ -93,6 +105,34 @@ export function BrandChatPanel({
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Detecta un turno que quedó EN_CURSO sin que nada lo mueva (ver STALE_TURN_MS
+  // arriba) y lo cierra localmente. Se reprograma en cada cambio de `messages`,
+  // así que un flush real de texto (llega por Realtime) lo corre para adelante.
+  useEffect(() => {
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== "ASISTENTE" || last.status !== "EN_CURSO") return;
+
+    const markStale = () => {
+      void supabaseRef.current
+        .from("brand_chat_messages")
+        .update({ status: "FALLIDO", error: STALE_TURN_ERROR })
+        .eq("id", last.id)
+        .eq("status", "EN_CURSO")
+        .then(({ error }) => {
+          if (error) return;
+          setMessages((prev) => prev.map((m) => (m.id === last.id ? { ...m, status: "FALLIDO", error: STALE_TURN_ERROR } : m)));
+        });
+    };
+
+    const remaining = STALE_TURN_MS - (Date.now() - new Date(last.updated_at).getTime());
+    if (remaining <= 0) {
+      markStale();
+      return;
+    }
+    const timer = setTimeout(markStale, remaining);
+    return () => clearTimeout(timer);
   }, [messages]);
 
   // El input crece con el texto hasta el tope del max-h-40 (160px), como en el diseño.

@@ -77,3 +77,50 @@ export async function generateGeminiJson(params: GeminiJsonParams): Promise<stri
   if (!text.trim()) throw new Error("Gemini devolvió una respuesta vacía.");
   return text;
 }
+
+export interface GeminiGroundedParams {
+  apiKey: string;
+  system: string;
+  prompt: string;
+  model?: string;
+  maxOutputTokens?: number;
+}
+
+/**
+ * Pase A del enriquecimiento (Plan §1.10): `google_search` + `url_context`,
+ * salida en prosa. **`google_search` y `responseSchema` no conviven** —
+ * Gemini apaga el grounding en silencio si se le pide JSON en la misma
+ * llamada (el issue google-gemini/cookbook#1274 lo mide en gemini-3.5-flash:
+ * 0 de 5 respuestas fundamentadas pidiendo JSON, 5 de 5 pidiendo prosa; no
+ * tira error, devuelve un objeto plausible sin haber buscado nada). Por eso
+ * esta función nunca acepta un `schema`: la estructura sale en un segundo
+ * pase, sin herramientas, sobre el texto que esto devuelve.
+ */
+export async function generateGeminiGrounded(params: GeminiGroundedParams): Promise<string> {
+  const model = params.model ?? GEMINI_MODEL;
+
+  const response = await fetch(`${GEMINI_BASE}/models/${encodeURIComponent(model)}:generateContent`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-goog-api-key": params.apiKey },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: params.system }] },
+      contents: [{ role: "user", parts: [{ text: params.prompt }] }],
+      tools: [{ google_search: {} }, { url_context: {} }],
+      generationConfig: {
+        maxOutputTokens: params.maxOutputTokens ?? 4096,
+        temperature: 0.3,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Gemini rechazó la consulta (${await geminiErrorMessage(response)})`);
+  }
+
+  const body = (await response.json()) as {
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
+  };
+  const text = body.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
+  if (!text.trim()) throw new Error("Gemini devolvió una respuesta vacía (¿no encontró nada de este negocio?).");
+  return text;
+}

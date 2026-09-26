@@ -28,6 +28,23 @@ import type { BrandPlatform } from "@/lib/brand/sources/types";
 
 const PLATFORM_LABEL: Record<BrandPlatform, string> = { INSTAGRAM: "Instagram", YOUTUBE: "YouTube" };
 
+/**
+ * Windsor no es en vivo: el cron sincroniza una vez por día (plan Hobby de
+ * Vercel) y abrir /marca/generar dispara como mucho una sincronización si la
+ * última completada tiene más de AUTO_SYNC_MIN_HOURS. Sin esta línea el
+ * modelo lee `brand_post_metrics` como si fuera el conteo de Instagram en
+ * vivo y lo afirma así — sobre todo desastroso en una pieza de las últimas
+ * horas, que es justo la que más está moviéndose.
+ */
+function formatSyncFreshness(lastSyncedAt: string | null): string {
+  if (!lastSyncedAt) {
+    return "Última sincronización de métricas con Windsor: nunca. Los números de abajo pueden no existir todavía o estar muy desactualizados — no los presentes como el estado actual de la cuenta.";
+  }
+  const minutes = Math.round((Date.now() - new Date(lastSyncedAt).getTime()) / 60000);
+  const relative = minutes < 60 ? `hace ${minutes} min` : minutes < 1440 ? `hace ${Math.round(minutes / 60)} h` : `hace ${Math.round(minutes / 1440)} d`;
+  return `Última sincronización de métricas con Windsor: ${relative}. Los números de reach/views/likes/guardados de abajo son de esa foto, no en vivo — pueden haber subido bastante desde entonces, sobre todo en piezas publicadas en las últimas horas o días. Si Agus dice que un número ya cambió, confiá en lo que dice en vez de insistir con el dato viejo, y aclará que tu lectura es "a la última sincronización" cuando cites una cifra de una pieza reciente.`;
+}
+
 function formatRows(rows: PatternRow[]): string {
   if (rows.length === 0) return "  (sin datos suficientes todavía)";
   return rows
@@ -121,7 +138,9 @@ export function buildRecommendationsUserPrompt(
 ## Hipótesis testeadas (piezas publicadas desde el planificador, con la hipótesis que se escribió ANTES de grabar)
 ${formatHypothesisTests(hypotheses, insights.results)}
 
-Cerrá el ciclo del SOC §12: para cada pieza con clasificación, decí si la hipótesis se sostuvo o no, citándola. Si se sostuvo, va en "knowns"; si el resultado es ambiguo, en "hypotheses". Una pieza sin empalmar, MADURANDO o SIN_BASELINE no permite concluir nada todavía: decilo en "unknowns" en vez de forzar una conclusión.`
+Cerrá el ciclo del SOC §12: para cada pieza con clasificación, decí si la hipótesis se sostuvo o no, citándola. Si se sostuvo, va en "knowns"; si el resultado es ambiguo, en "hypotheses". Una pieza sin empalmar, MADURANDO o SIN_BASELINE no permite concluir nada todavía: decilo en "unknowns" en vez de forzar una conclusión.
+
+Si hay más piezas para cerrar que las que entran en el límite de viñetas de abajo, priorizá las de evidencia más fuerte y agrupá el resto en una sola viñeta ("y N piezas más sin sorpresas") en vez de listarlas todas.`
       : "";
 
   return `Cuenta: ${PLATFORM_LABEL[platform]}
@@ -160,7 +179,7 @@ Analizá esto siguiendo el §29 del SOC: qué sabemos, qué sospechamos, qué no
 La "clasificación" de cada pieza (GANADOR_ALCANCE, GANADOR_AUTORIDAD, NEUTRO, EXPERIMENTO_FALLIDO) ya está calculada contra el baseline propio: usala tal cual. SIN_BASELINE y MADURANDO significan que de esa pieza todavía no se puede afirmar nada. La conversión no se mide en este sistema: no clasifiques nada como ganador de conversión.
 
 Reglas de esquema, no de criterio editorial:
-- "knowns", "hypotheses" y "unknowns" van en markdown: una lista de viñetas (3 a 6 cada una), cada viñeta una sola oración. Esto se muestra en una card compacta, no en un informe — nada de párrafos largos ni de repetir el mismo punto con otras palabras.
+- "knowns", "hypotheses" y "unknowns" van en markdown: una lista de viñetas (3 a 6 cada una, nunca más de 6 aunque haya más para decir), cada viñeta una sola oración corta. Esto se muestra en una card compacta, no en un informe — nada de párrafos largos ni de repetir el mismo punto con otras palabras. Cada sección entera (las viñetas juntas) tiene que entrar en 900 caracteres: si al escribirla se pasa, cortá viñetas o acortalas, no la mandes larga.
 - Cada recomendación lleva un "objective" (§16 del SOC): ALCANCE, AUTORIDAD o CONVERSION — para qué objetivo sirve, no todo se optimiza para lo mismo.
 - Un REPETIR sobre un ganador no es "hacé más de esto": traé el cluster de variaciones concretas (hook, ángulo, ejemplo distintos — §13–14 del SOC) en el cuerpo de la recomendación.
 - En "postIds" sólo pueden ir ids que aparecen en los datos de arriba. Si no tenés un post concreto para citar, dejá el array vacío.
@@ -277,7 +296,9 @@ export function buildContentOSStateBlock(
   knowledge: KnowledgeSnapshot,
   hypotheses: PublishedHypothesis[] = [],
   goal?: GoalSnapshot,
+  lastSyncedAt?: string | null,
 ): string {
+  const freshnessBlock = formatSyncFreshness(lastSyncedAt ?? null);
   const knowledgeBlock = formatKnowledge(knowledge);
   const goalBlock = formatGoal(goal, posts);
   const hypothesesBlock =
@@ -286,7 +307,9 @@ export function buildContentOSStateBlock(
       : "";
 
   if (!insights) {
-    return `Estado del sistema: todavía no hay suficiente contenido propio sincronizado con métricas. Si hace falta, usá buscar_mis_posts para ver qué hay disponible.
+    return `${freshnessBlock}
+
+Estado del sistema: todavía no hay suficiente contenido propio sincronizado con métricas. Si hace falta, usá buscar_mis_posts para ver qué hay disponible.
 
 ${knowledgeBlock}
 
@@ -313,6 +336,7 @@ ${goalBlock}${hypothesesBlock}`;
   const unclassified = withClass("MADURANDO", "SIN_BASELINE");
 
   return `Estado del sistema (se recalcula en cada turno, no forma parte del prompt cacheado):
+${freshnessBlock}
 Cuenta: ${PLATFORM_LABEL[platform]}
 Período con métricas: ${insights.periodFrom ?? "?"} a ${insights.periodTo ?? "?"} (${insights.totalPosts} posts)
 

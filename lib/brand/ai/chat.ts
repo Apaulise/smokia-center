@@ -12,7 +12,7 @@ import { computeBrandInsights } from "@/lib/brand/insights";
 import { todayIso } from "@/lib/leads/calendar";
 import { getKnowledgeCounts, getOpenExperiments } from "@/lib/brand/knowledge/queries";
 import { getPublishedHypotheses } from "@/lib/brand/planner/queries";
-import { getBrandPostsForAnalysis } from "@/lib/brand/queries";
+import { getBrandPostsForAnalysis, getLatestBrandSyncJob } from "@/lib/brand/queries";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
 import { createClient } from "@/lib/supabase/server";
 import type { Database, Json } from "@/lib/supabase/database.types";
@@ -68,14 +68,16 @@ export async function runBrandChatTurn(params: {
   const priorTurns = (historyRows ?? []).flatMap((row) => row.content as unknown as BrandChatWireTurn[]);
   const messages: Anthropic.MessageParam[] = priorTurns.map((turn) => ({ role: turn.role, content: turn.content }));
 
-  const [posts, knowledgeCounts, openExperiments, hypotheses, currentGoal, snapshots] = await Promise.all([
+  const [posts, knowledgeCounts, openExperiments, hypotheses, currentGoal, snapshots, latestSyncJob] = await Promise.all([
     getBrandPostsForAnalysis(params.platform),
     getKnowledgeCounts(),
     getOpenExperiments(),
     getPublishedHypotheses(params.platform),
     getCurrentGoal(params.platform),
     getFollowerSnapshots(params.platform),
+    getLatestBrandSyncJob(params.platform),
   ]);
+  const lastSyncedAt = latestSyncJob?.status === "COMPLETADO" ? latestSyncJob.finished_at : null;
   const insights = computeBrandInsights(posts);
   // La meta y las sorpresas de seguidores (§3.13) van como dato del turno, calculadas acá:
   // el modelo las cita, no las recalcula.
@@ -118,6 +120,7 @@ export async function runBrandChatTurn(params: {
     { counts: knowledgeCounts, openExperiments },
     hypotheses,
     goal,
+    lastSyncedAt,
   );
 
   const client = createAnthropicClient(params.apiKey);

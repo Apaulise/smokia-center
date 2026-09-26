@@ -2,7 +2,13 @@ import { decrypt, maskSecret } from "@/lib/crypto";
 import type { LeadSource } from "@/lib/providers/types";
 import { createClient } from "@/lib/supabase/server";
 
-import { ANTHROPIC_KEY_SETTING, APIFY_KEY_SETTING, GEMINI_KEY_SETTING, WINDSOR_KEY_SETTING } from "./constants";
+import {
+  ANTHROPIC_KEY_SETTING,
+  APIFY_KEY_SETTING,
+  GEMINI_KEY_SETTING,
+  SALES_PROFILE_SETTING,
+  WINDSOR_KEY_SETTING,
+} from "./constants";
 
 const ACTOR_KEY_PREFIX = "apify_actor_";
 
@@ -43,6 +49,33 @@ export async function getAnthropicKeyStatus() {
 
 export async function getGeminiKeyStatus() {
   return getKeyStatus(GEMINI_KEY_SETTING);
+}
+
+/**
+ * El perfil del vendedor (Plan §1.7), en claro. A diferencia de las keys acá
+ * no se enmascara: el usuario tiene que poder releerlo y editarlo, y el
+ * copiloto necesita el texto entero para no afirmar experiencia que no tiene.
+ *
+ * Devuelve `""` si no está configurado — el prompt ya sabe qué hacer con un
+ * perfil vacío (§13 del Sistema de Prospección: no afirmar nada).
+ */
+export async function getSalesProfile(): Promise<string> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("settings")
+    .select("value_encrypted")
+    .eq("key", SALES_PROFILE_SETTING)
+    .maybeSingle();
+
+  if (!data) return "";
+
+  try {
+    return decrypt(data.value_encrypted);
+  } catch {
+    // Cifrado con otra APP_ENCRYPTION_KEY: se trata como vacío. Es preferible
+    // que el copiloto no afirme nada a que la pantalla se rompa.
+    return "";
+  }
 }
 
 export async function listIndustries() {
