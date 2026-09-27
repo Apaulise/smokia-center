@@ -11,7 +11,7 @@ import { decrypt } from "@/lib/crypto";
 import type { AppointmentStatus } from "@/lib/leads/appointments";
 import { computeDedupeKey } from "@/lib/leads/dedupe";
 import { buildIcsCalendar } from "@/lib/leads/ics";
-import { listAppointmentsForIcs } from "@/lib/leads/queries";
+import { type CommandPaletteResults, listAppointmentsForIcs, searchCommandPalette } from "@/lib/leads/queries";
 import { STATUS_LABEL, type LeadStatus } from "@/lib/leads/status";
 import { mapCsvRow, parseCsv } from "@/lib/providers/csv";
 import { getProvider } from "@/lib/providers/registry";
@@ -915,4 +915,10 @@ export async function exportAgendaIcs(): Promise<IcsExportState> {
   );
 
   return { ok: true, ics, filename: `agenda-${new Date().toISOString().slice(0, 10)}.ics` };
+}
+
+/** Búsqueda del ⌘K (Sidebar §01.B). Sólo lectura, pero vive acá porque la dispara un client component. */
+export async function searchCommandPaletteAction(query: string): Promise<CommandPaletteResults> {
+  await requireUser();
+  return searchCommandPalette(query);
 }

@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
-import { Select } from "@/components/ui/select";
+import { Button } from "@/components/leads/ui/button";
+import { Dialog } from "@/components/leads/ui/dialog";
+import { Select } from "@/components/leads/ui/field";
 import { markAppointmentDone, updateAppointmentStatus } from "@/lib/leads/actions";
 import { APPOINTMENT_STATUSES, APPOINTMENT_STATUS_LABEL, type AppointmentStatus } from "@/lib/leads/appointments";
 import type { AppointmentWithLead } from "@/lib/leads/queries";
@@ -90,15 +90,10 @@ function MarkDoneDialog({
   }
 
   return (
-    <Dialog
-      open
-      onClose={onClose}
-      title="Marcar reunión como realizada"
-      description={appointment.leads?.name}
-    >
-      <div className="space-y-4">
+    <Dialog open onClose={onClose} title="Marcar reunión como realizada" description={appointment.leads?.name}>
+      <div className="flex flex-col gap-4">
         <div>
-          <label className="mb-1.5 block text-xs text-muted" htmlFor="newLeadStatus">
+          <label className="mb-1.5 block text-xs text-lm-ink-3" htmlFor="newLeadStatus">
             Avanzar estado de {appointment.leads?.name} (opcional)
           </label>
           <Select
@@ -114,7 +109,7 @@ function MarkDoneDialog({
           </Select>
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-line/60 pt-4">
+        <div className="flex justify-end gap-2 border-t border-lm-line pt-4">
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancelar
           </Button>

@@ -1,21 +1,20 @@
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 
+import { resolveStructuredJson } from "@/lib/ai/structured-output";
+import { generateGeminiJson, type GeminiSchema } from "@/lib/gemini/client";
 import { CONTENT_KINDS, CONTENT_OBJECTIVES, CAPTION_MAX_CHARS } from "@/lib/brand/planner/schema";
 
-import { createAnthropicClient } from "./client";
 import { getContentOS } from "./content-os";
 import { buildOutlierIdeaPrompt } from "./prompts";
 
 /*
  * El botón "Usar" de competencia (Plans/03 §3.14): un outlier ajeno → una
- * pieza propia lista para arrastrar a un día del planificador.
- *
- * Es Claude y no el modelo gratuito porque esto es lo que después se graba: la
- * hipótesis y el ángulo se notan. Pero no es Opus: una pieza por clic, a
- * pedido, no justifica el modelo más caro, así que corre en Sonnet.
+ * pieza propia lista para arrastrar a un día del planificador. Desde
+ * Plans/migracion-fuera-de-anthropic.md (Etapa 1), Gemini en vez de Claude
+ * Sonnet: una pieza por clic, a pedido, no justifica el modelo de mayor
+ * criterio, y esto transforma un outlier ya identificado, no decide una
+ * estrategia (Plan §1.7 / Plans/03, "Reparto de modelos").
  */
-const MODEL = "claude-sonnet-5";
 
 /** Los campos son exactamente los que el diálogo del planificador ya sabe editar (planner/schema.ts). */
 const OutlierIdeaSchema = z.object({
@@ -29,6 +28,22 @@ const OutlierIdeaSchema = z.object({
   caption: z.string().max(CAPTION_MAX_CHARS),
   hashtags: z.array(z.string()).max(30),
 });
+
+const OUTLIER_IDEA_GEMINI_SCHEMA: GeminiSchema = {
+  type: "object",
+  properties: {
+    title: { type: "string" },
+    kind: { type: "string", enum: CONTENT_KINDS },
+    objective: { type: "string", enum: CONTENT_OBJECTIVES },
+    hook: { type: "string" },
+    angle: { type: "string" },
+    hypothesis: { type: "string" },
+    idea: { type: "string" },
+    caption: { type: "string" },
+    hashtags: { type: "array", items: { type: "string" } },
+  },
+  required: ["title", "kind", "objective", "hook", "angle", "hypothesis", "idea", "caption", "hashtags"],
+};
 
 export type GeneratedOutlierIdea = z.infer<typeof OutlierIdeaSchema>;
 
@@ -48,19 +63,15 @@ export interface OutlierIdeaInput {
 }
 
 export async function generateIdeaFromOutlier(input: OutlierIdeaInput): Promise<GeneratedOutlierIdea> {
-  const client = createAnthropicClient(input.apiKey);
+  const basePrompt = buildOutlierIdeaPrompt(input);
 
-  const response = await client.messages.parse({
-    model: MODEL,
-    max_tokens: 8000,
-    thinking: { type: "adaptive" },
-    output_config: { effort: "high", format: zodOutputFormat(OutlierIdeaSchema) },
-    system: [{ type: "text", text: getContentOS(), cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: buildOutlierIdeaPrompt(input) }],
-  });
-
-  if (!response.parsed_output) {
-    throw new Error("Claude no devolvió una respuesta estructurada válida.");
-  }
-  return response.parsed_output;
+  return resolveStructuredJson(OutlierIdeaSchema, (repairNote) =>
+    generateGeminiJson({
+      apiKey: input.apiKey,
+      system: getContentOS(),
+      prompt: repairNote ? `${basePrompt}\n\n${repairNote}` : basePrompt,
+      schema: OUTLIER_IDEA_GEMINI_SCHEMA,
+      maxOutputTokens: 8000,
+    }),
+  );
 }

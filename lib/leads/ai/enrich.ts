@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { isSalesAngle, SALES_ANGLES, type SalesAngle } from "@/lib/leads/ai/angles";
 import { getSalesOS } from "@/lib/leads/ai/sales-os";
+import { formatAddress } from "@/lib/leads/address";
 import { generateGeminiGrounded, generateGeminiJson, type GeminiSchema } from "@/lib/gemini/client";
 
 /**
@@ -84,7 +85,7 @@ function buildEvidencePrompt(lead: EnrichmentInput): string {
 
 Negocio: ${lead.name}
 ${lead.industryName ? `Rubro: ${lead.industryName}` : ""}
-${lead.city || lead.address ? `Ubicación: ${[lead.address, lead.city].filter(Boolean).join(", ")}` : ""}
+${lead.city || lead.address ? `Ubicación: ${formatAddress(lead)}` : ""}
 
 Fuentes disponibles:
 ${references.length > 0 ? references.join("\n") : "(ninguna — buscá por nombre y ubicación)"}

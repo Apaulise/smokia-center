@@ -1,6 +1,7 @@
 import Link from "next/link";
 
-import { Badge } from "@/components/ui/badge";
+import { Chip } from "@/components/leads/ui/status-badge";
+import { MiniBar, Table, Td, TdSub, Th, Tr } from "@/components/leads/ui/table";
 import { CSV_PROVIDER_META, getProvider } from "@/lib/providers/registry";
 import type { ListPerformance } from "@/lib/leads/queries";
 
@@ -18,56 +19,51 @@ function criteriaSummary(criteria: ListPerformance["criteria"]) {
   return `${rubro} · ${zona}`;
 }
 
-/**
- * Rendimiento por lista de origen (Plan §1.4): qué combinación de rubro y
- * zona cierra mejor, para justificar en qué gastar crédito de Apify.
- */
+/** Rendimiento por lista de origen: qué combinación de rubro y zona cierra mejor, para saber en qué gastar crédito de Apify. */
 export function ListPerformanceTable({ lists }: { lists: ListPerformance[] }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[560px] text-left text-sm">
-        <thead>
-          <tr className="border-b border-line/60 text-xs text-muted uppercase">
-            <th className="px-2 py-3">Lista</th>
-            <th className="px-2 py-3">Leads</th>
-            <th className="px-2 py-3">Cerrados</th>
-            <th className="px-2 py-3">Tasa de cierre</th>
-          </tr>
-        </thead>
-        <tbody>
-          {lists.map((list) => {
-            const criteria = criteriaSummary(list.criteria);
-            const rate = list.win_rate ?? 0;
-            return (
-              <tr key={list.list_id} className="border-b border-line/40 last:border-0 hover:bg-surface/30">
-                <td className="px-2 py-3">
-                  <Link href={`/leads/lista/${list.list_id}`} className="text-ink hover:text-cyan">
-                    {list.name}
-                  </Link>
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                    <Badge tone="neutral">{sourceLabel(list.source)}</Badge>
-                    {criteria ? (
-                      <span className="text-xs text-muted">{criteria}</span>
-                    ) : list.industry_name ? (
-                      <Badge color={list.industry_color ?? undefined}>{list.industry_name}</Badge>
-                    ) : null}
-                  </div>
-                </td>
-                <td className="tabular px-2 py-3 text-muted">{list.lead_count}</td>
-                <td className="tabular px-2 py-3 text-muted">{list.won_count}</td>
-                <td className="px-2 py-3">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-24 overflow-hidden rounded-full bg-surface/60">
-                      <div className="h-full rounded-full bg-cyan" style={{ width: `${rate}%` }} />
-                    </div>
-                    <span className="tabular text-ink">{rate}%</span>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <Table>
+      <thead>
+        <tr>
+          <Th>Lista</Th>
+          <Th>Fuente</Th>
+          <Th>Rubro · zona</Th>
+          <Th align="right">Leads</Th>
+          <Th align="right">Cerr.</Th>
+          <Th>Tasa de cierre</Th>
+        </tr>
+      </thead>
+      <tbody>
+        {lists.map((list) => {
+          const criteria = criteriaSummary(list.criteria);
+          const rate = list.win_rate ?? 0;
+          return (
+            <Tr key={list.list_id}>
+              <Td>
+                <Link href={`/leads/lista/${list.list_id}`} className="text-lm-ink hover:text-lm-signal-text">
+                  {list.name}
+                </Link>
+              </Td>
+              <Td className="text-lm-ink-2">{sourceLabel(list.source)}</Td>
+              <Td>
+                {criteria ? (
+                  <TdSub>{criteria}</TdSub>
+                ) : list.industry_name ? (
+                  <Chip color={list.industry_color ?? undefined}>{list.industry_name}</Chip>
+                ) : (
+                  <span className="text-lm-ink-3">—</span>
+                )}
+              </Td>
+              <Td numeric>{list.lead_count}</Td>
+              <Td numeric>{list.won_count}</Td>
+              <Td>
+                <MiniBar percent={rate} />
+                <span className="font-mono text-xs tabular-nums text-lm-ink">{rate} %</span>
+              </Td>
+            </Tr>
+          );
+        })}
+      </tbody>
+    </Table>
   );
 }

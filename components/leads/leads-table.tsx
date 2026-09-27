@@ -1,13 +1,15 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Loader2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Loader2, Sparkles, Star } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
+import { Button } from "@/components/leads/ui/button";
+import { Select } from "@/components/leads/ui/field";
+import { EmptyState } from "@/components/leads/ui/feedback";
+import { Chip } from "@/components/leads/ui/status-badge";
+import { Table, Td, Th, Tr } from "@/components/leads/ui/table";
 import {
   bulkAssignIndustry,
   bulkDeleteLeads,
@@ -15,9 +17,12 @@ import {
   exportLeadsCsv,
   updateLeadStatus,
 } from "@/lib/leads/actions";
+import { enrichSelectedLeads } from "@/lib/leads/ai/actions";
+import { describeNextAction } from "@/lib/leads/next-action-label";
 import type { LeadWithRelations } from "@/lib/leads/queries";
 import { LEAD_STATUSES, STATUS_LABEL, type LeadStatus } from "@/lib/leads/status";
 import type { Database } from "@/lib/supabase/database.types";
+import { cn } from "@/lib/utils";
 
 type Industry = Database["public"]["Tables"]["industries"]["Row"];
 
@@ -45,15 +50,9 @@ function SortHeader({ field, label }: { field: string; label: string }) {
   params.delete("page");
 
   return (
-    <Link href={`${pathname}?${params.toString()}`} className="inline-flex items-center gap-1 hover:text-ink">
+    <Link href={`${pathname}?${params.toString()}`} className="inline-flex items-center gap-1 hover:text-lm-ink">
       {label}
-      {isActive ? (
-        activeDir === "desc" ? (
-          <ArrowDown className="size-3" />
-        ) : (
-          <ArrowUp className="size-3" />
-        )
-      ) : null}
+      {isActive ? activeDir === "desc" ? <ArrowDown className="size-3" /> : <ArrowUp className="size-3" /> : null}
     </Link>
   );
 }
@@ -62,8 +61,9 @@ function SortHeader({ field, label }: { field: string; label: string }) {
  * `leads` se copia a estado local y se actualiza de forma optimista en cada
  * mutación: esperar a que `router.refresh()` traiga la respuesta del servidor
  * antes de reflejar el cambio deja la pantalla "colgada" mientras tanto, sobre
- * todo al eliminar. `useEffect` resincroniza cuando llega una página nueva del
- * servidor (filtro, orden, paginación, o el refresh de fondo ya resuelto).
+ * todo al eliminar. El bloque `if (initialLeads !== syncedLeads)` resincroniza
+ * durante el render cuando llega una página nueva del servidor (filtro,
+ * orden, paginación, o el refresh de fondo ya resuelto).
  */
 export function LeadsTable({
   leads: initialLeads,
@@ -78,11 +78,8 @@ export function LeadsTable({
   const [pending, startTransition] = useTransition();
   const [bulkIndustry, setBulkIndustry] = useState("");
   const [bulkStatus, setBulkStatus] = useState<LeadStatus | "">("");
+  const [enrichMessage, setEnrichMessage] = useState<string | null>(null);
 
-  // Resincroniza con la página que llega del servidor (filtro, orden,
-  // paginación, o el refresh de fondo ya resuelto) sin pasar por un efecto:
-  // ajustar estado derivado de un prop se hace durante el render (React docs,
-  // "Adjusting state when a prop changes"), no en un useEffect.
   const [syncedLeads, setSyncedLeads] = useState(initialLeads);
   if (initialLeads !== syncedLeads) {
     setSyncedLeads(initialLeads);
@@ -107,6 +104,7 @@ export function LeadsTable({
 
   function clearSelection() {
     setSelected(new Set());
+    setEnrichMessage(null);
   }
 
   function updateLocalStatus(ids: string[], status: LeadStatus) {
@@ -132,9 +130,7 @@ export function LeadsTable({
     const industry = industries.find((i) => i.id === industryId) ?? null;
     const idSet = new Set(ids);
     setLeads((current) =>
-      current.map((lead) =>
-        idSet.has(lead.id) ? { ...lead, industry_id: industryId, industries: industry } : lead,
-      ),
+      current.map((lead) => (idSet.has(lead.id) ? { ...lead, industry_id: industryId, industries: industry } : lead)),
     );
     setBulkIndustry("");
     startTransition(async () => {
@@ -155,6 +151,15 @@ export function LeadsTable({
     });
   }
 
+  function handleEnrich() {
+    const ids = selectedIds;
+    setEnrichMessage(null);
+    startTransition(async () => {
+      const result = await enrichSelectedLeads(ids);
+      setEnrichMessage(result?.message ?? null);
+    });
+  }
+
   function handleExport() {
     const ids = selectedIds;
     startTransition(async () => {
@@ -172,25 +177,17 @@ export function LeadsTable({
   }
 
   if (leads.length === 0) {
-    return (
-      <div className="rounded-[20px] border border-line bg-elevated/70 px-6 py-16 text-center text-sm text-muted">
-        Ningún lead coincide con estos filtros.
-      </div>
-    );
+    return <EmptyState title="Ningún lead coincide con estos filtros." />;
   }
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3">
       {selected.size > 0 ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-[16px] border border-cyan/30 bg-cyan/5 px-4 py-3">
-          <span className="text-sm text-ink">{selected.size} seleccionados</span>
+        <div className="flex flex-wrap items-center gap-3 rounded-lm-md border border-lm-line-strong bg-lm-raised px-4 py-3">
+          <span className="font-mono text-[13px] tabular-nums text-lm-ink">{selected.size} seleccionados</span>
 
           <div className="flex items-center gap-1.5">
-            <Select
-              className="h-8 w-40 text-xs"
-              value={bulkIndustry}
-              onChange={(event) => setBulkIndustry(event.target.value)}
-            >
+            <Select className="h-8 w-40 text-xs" value={bulkIndustry} onChange={(event) => setBulkIndustry(event.target.value)}>
               <option value="">Asignar rubro…</option>
               <option value="__none__">Sin rubro</option>
               {industries.map((industry) => (
@@ -205,11 +202,7 @@ export function LeadsTable({
           </div>
 
           <div className="flex items-center gap-1.5">
-            <Select
-              className="h-8 w-40 text-xs"
-              value={bulkStatus}
-              onChange={(event) => setBulkStatus(event.target.value as LeadStatus)}
-            >
+            <Select className="h-8 w-40 text-xs" value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value as LeadStatus)}>
               <option value="">Cambiar estado…</option>
               {LEAD_STATUSES.map((status) => (
                 <option key={status} value={status}>
@@ -222,6 +215,11 @@ export function LeadsTable({
             </Button>
           </div>
 
+          <Button type="button" size="sm" variant="secondary" onClick={handleEnrich}>
+            <Sparkles className="size-3.5" strokeWidth={1.5} />
+            Enriquecer
+          </Button>
+
           <Button type="button" size="sm" variant="secondary" onClick={handleExport}>
             Exportar CSV
           </Button>
@@ -230,55 +228,56 @@ export function LeadsTable({
             Eliminar
           </Button>
 
-          {pending ? <Loader2 className="size-4 animate-spin text-cyan" /> : null}
+          {pending ? <Loader2 className="size-4 animate-spin text-lm-signal-text" /> : null}
+          {enrichMessage ? <span className="text-xs text-lm-ink-3">{enrichMessage}</span> : null}
 
-          <button type="button" onClick={clearSelection} className="ml-auto text-xs text-muted hover:text-ink">
+          <button type="button" onClick={clearSelection} className="ml-auto text-xs text-lm-ink-3 hover:text-lm-ink">
             Cancelar selección
           </button>
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-[20px] border border-line bg-elevated/70">
-        <table className="w-full min-w-[900px] text-left text-sm">
-          <thead>
-            <tr className="border-b border-line/60 text-xs text-muted uppercase">
-              <th className="w-10 px-4 py-3">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={toggleAll}
-                  aria-label="Seleccionar todos"
-                  className="size-4 rounded border-line accent-cyan"
-                />
-              </th>
-              <th className="px-2 py-3">
-                <SortHeader field="name" label="Nombre" />
-              </th>
-              <th className="px-2 py-3">Rubro</th>
-              <th className="px-2 py-3">Contacto</th>
-              <th className="px-2 py-3">Ciudad</th>
-              <th className="px-2 py-3">
-                <SortHeader field="status" label="Estado" />
-              </th>
-              <th className="px-2 py-3">Lista</th>
-              <th className="px-2 py-3">
-                <SortHeader field="last_contacted_at" label="Últ. contacto" />
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {leads.map((lead) => (
-              <LeadRowView
-                key={lead.id}
-                lead={lead}
-                selected={selected.has(lead.id)}
-                onToggle={() => toggleOne(lead.id)}
-                onStatusChange={(status) => handleRowStatusChange(lead.id, status)}
+      <Table>
+        <thead>
+          <tr>
+            <Th className="w-10">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleAll}
+                aria-label="Seleccionar todos"
+                className="size-3.5 rounded-xs border-lm-line-strong accent-[#f2c14e]"
               />
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </Th>
+            <Th>
+              <SortHeader field="name" label="Nombre" />
+            </Th>
+            <Th>Rubro</Th>
+            <Th>Contacto</Th>
+            <Th>Ciudad</Th>
+            <Th>Rating</Th>
+            <Th>
+              <SortHeader field="status" label="Estado" />
+            </Th>
+            <Th>Lista</Th>
+            <Th>
+              <SortHeader field="last_contacted_at" label="Últ. contacto" />
+            </Th>
+            <Th>Próxima acción</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {leads.map((lead) => (
+            <LeadRowView
+              key={lead.id}
+              lead={lead}
+              selected={selected.has(lead.id)}
+              onToggle={() => toggleOne(lead.id)}
+              onStatusChange={(status) => handleRowStatusChange(lead.id, status)}
+            />
+          ))}
+        </tbody>
+      </Table>
     </div>
   );
 }
@@ -295,53 +294,92 @@ function LeadRowView({
   onStatusChange: (status: LeadStatus) => void;
 }) {
   return (
-    <tr className="border-b border-line/40 last:border-0 hover:bg-surface/30">
-      <td className="px-4 py-3">
+    <Tr selected={selected}>
+      <Td>
         <input
           type="checkbox"
           checked={selected}
           onChange={onToggle}
           aria-label={`Seleccionar ${lead.name}`}
-          className="size-4 rounded border-line accent-cyan"
+          className="size-3.5 rounded-xs border-lm-line-strong accent-[#f2c14e]"
         />
-      </td>
-      <td className="px-2 py-3">
-        <Link href={`/leads/${lead.id}`} className="font-medium text-ink hover:text-cyan">
+      </Td>
+      <Td>
+        <Link href={`/leads/${lead.id}`} className="font-medium text-lm-ink hover:text-lm-signal-text">
           {lead.name}
         </Link>
-      </td>
-      <td className="px-2 py-3">
-        {lead.industries ? (
-          <Badge color={lead.industries.color}>{lead.industries.name}</Badge>
-        ) : (
-          <span className="text-muted">—</span>
-        )}
-      </td>
-      <td className="px-2 py-3 text-muted">
+      </Td>
+      <Td>
+        {lead.industries ? <Chip color={lead.industries.color}>{lead.industries.name}</Chip> : <span className="text-lm-ink-3">—</span>}
+      </Td>
+      <Td className="text-lm-ink-2">
         <div className="flex flex-col text-xs">
           {lead.phone ? <span>{lead.phone}</span> : null}
           {lead.email ? <span>{lead.email}</span> : null}
           {!lead.phone && !lead.email ? "—" : null}
         </div>
-      </td>
-      <td className="px-2 py-3 text-muted">{lead.city ?? "—"}</td>
-      <td className="px-2 py-3">
-        <Select
-          className="h-8 w-40 text-xs"
-          value={lead.status}
-          onChange={(event) => onStatusChange(event.target.value as LeadStatus)}
-        >
-          {LEAD_STATUSES.map((status) => (
-            <option key={status} value={status}>
-              {STATUS_LABEL[status]}
-            </option>
-          ))}
-        </Select>
-      </td>
-      <td className="px-2 py-3 text-muted">{lead.lead_lists?.name ?? "—"}</td>
-      <td className="px-2 py-3 text-muted">
+      </Td>
+      <Td className="text-lm-ink-2">{lead.city ?? "—"}</Td>
+      <Td className="font-mono text-xs text-lm-ink-2">
+        {lead.rating != null ? (
+          <span className="inline-flex items-center gap-1">
+            <Star className="size-3 fill-current text-lm-signal-text" strokeWidth={0} />
+            {lead.rating.toFixed(1)}
+          </span>
+        ) : (
+          "—"
+        )}
+      </Td>
+      <Td>
+        <div className="flex items-center gap-2">
+          <InterestBars value={lead.interest_level} />
+          <Select className="h-8 w-40 text-xs" value={lead.status} onChange={(event) => onStatusChange(event.target.value as LeadStatus)}>
+            {LEAD_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {STATUS_LABEL[status]}
+              </option>
+            ))}
+          </Select>
+        </div>
+      </Td>
+      <Td className="text-lm-ink-2">{lead.lead_lists?.name ?? "—"}</Td>
+      <Td className="font-mono text-xs text-lm-ink-3">
         {lead.last_contacted_at ? new Date(lead.last_contacted_at).toLocaleDateString("es-AR") : "—"}
-      </td>
-    </tr>
+      </Td>
+      <NextActionCell lead={lead} />
+    </Tr>
+  );
+}
+
+/**
+ * Indicador de prioridad (Design System §04 "Detalle de lista", ícono de
+ * barras junto al estado): 4 barras de altura creciente, tantas llenas como
+ * cuartos de `interest_level` (0–10, escrito por `analyzeLeadResponse`
+ * §1.12). Sin análisis todavía, no se dibuja nada — no hay prioridad que
+ * mostrar, y una barra "vacía" por default insinuaría una lectura que no
+ * existe.
+ */
+function InterestBars({ value }: { value: number | null }) {
+  if (value == null) return <span className="inline-block w-[18px]" aria-hidden />;
+  const filled = Math.ceil((value / 10) * 4);
+  return (
+    <span className="inline-flex items-end gap-px" title={`Interés ${value}/10`} aria-label={`Interés ${value} de 10`}>
+      {[3, 5, 7, 9].map((height, index) => (
+        <span
+          key={height}
+          className={cn("w-[3px] rounded-[1px]", index < filled ? "bg-lm-signal-text" : "bg-lm-line-strong")}
+          style={{ height }}
+        />
+      ))}
+    </span>
+  );
+}
+
+function NextActionCell({ lead }: { lead: LeadWithRelations }) {
+  const { label, reason, urgent } = describeNextAction(lead);
+  return (
+    <Td className={cn("text-xs", urgent ? "text-lm-danger" : "text-lm-ink-2")} title={reason ?? undefined}>
+      {label}
+    </Td>
   );
 }

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono, Sora } from "next/font/google";
+import { Host_Grotesk, Inter, JetBrains_Mono, Sora } from "next/font/google";
 
 import "./globals.css";
 
 // §4 del manual: Sora en titulares, Inter en cuerpo/UI, JetBrains Mono en datos.
+// Vigente para el Gestor de Marca Personal, que no se toca en este rediseño.
 const sora = Sora({
   variable: "--font-sora",
   subsets: ["latin"],
@@ -22,6 +23,15 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500"],
 });
 
+// Sistema "Señal y humo" del Gestor de Leads: Host Grotesk en vez de
+// Sora/Inter (Design System, tokens de tipografía). Se suma sin sacar los
+// anteriores (Marca sigue usándolos).
+const hostGrotesk = Host_Grotesk({
+  variable: "--font-host-grotesk",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+});
+
 export const metadata: Metadata = {
   title: "Awareness AI",
   description: "Panel de gestión de Awareness AI",
@@ -31,7 +41,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="es"
-      className={`${sora.variable} ${inter.variable} ${jetbrainsMono.variable} h-full`}
+      className={`${sora.variable} ${inter.variable} ${jetbrainsMono.variable} ${hostGrotesk.variable} h-full`}
     >
       <body className="min-h-full">{children}</body>
     </html>

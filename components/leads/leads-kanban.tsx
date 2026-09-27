@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useRef, useState, useTransition, type DragEvent } from "react";
 
-import { Badge } from "@/components/ui/badge";
+import { Chip } from "@/components/leads/ui/status-badge";
 import { updateLeadStatus } from "@/lib/leads/actions";
 import type { LeadWithRelations } from "@/lib/leads/queries";
 import { STAGE_GROUP, STAGE_GROUPS, STATUS_LABEL, stageGroupOf, type StageGroup } from "@/lib/leads/status";
@@ -58,20 +58,20 @@ export function LeadsKanban({ leads }: { leads: LeadWithRelations[] }) {
         type="button"
         aria-label="Desplazar a la izquierda"
         onClick={() => scrollBy(-SCROLL_STEP)}
-        className="absolute top-1/2 -left-3 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-elevated shadow-lg hover:border-cyan/40 hover:text-cyan"
+        className="lm-shadow-pop absolute top-1/2 -left-3 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full border border-lm-line-strong bg-lm-raised text-lm-ink-2 hover:text-lm-ink"
       >
-        <ChevronLeft className="size-4" />
+        <ChevronLeft className="size-4" strokeWidth={1.5} />
       </button>
       <button
         type="button"
         aria-label="Desplazar a la derecha"
         onClick={() => scrollBy(SCROLL_STEP)}
-        className="absolute top-1/2 -right-3 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-elevated shadow-lg hover:border-cyan/40 hover:text-cyan"
+        className="lm-shadow-pop absolute top-1/2 -right-3 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full border border-lm-line-strong bg-lm-raised text-lm-ink-2 hover:text-lm-ink"
       >
-        <ChevronRight className="size-4" />
+        <ChevronRight className="size-4" strokeWidth={1.5} />
       </button>
 
-      <div ref={scrollRef} className="scroll-smooth flex gap-4 overflow-x-auto pb-2">
+      <div ref={scrollRef} className="scroll-smooth flex gap-3 overflow-x-auto pb-2">
         {STAGE_GROUPS.map((group) => {
           const column = items.filter((lead) => stageGroupOf(lead.status) === group);
           return (
@@ -84,13 +84,13 @@ export function LeadsKanban({ leads }: { leads: LeadWithRelations[] }) {
               onDragLeave={() => setDragOverGroup((current) => (current === group ? null : current))}
               onDrop={(event) => handleDrop(group, event)}
               className={cn(
-                "flex w-72 shrink-0 flex-col gap-2 rounded-[16px] border border-line bg-elevated/50 p-3",
-                dragOverGroup === group && "border-cyan/50 bg-cyan/5",
+                "flex w-72 shrink-0 flex-col gap-2 rounded-lm-lg border border-lm-line bg-lm-surface p-3 transition-colors",
+                dragOverGroup === group && "border-lm-signal bg-lm-signal-soft",
               )}
             >
               <div className="flex items-center justify-between px-1">
-                <h4 className="text-sm font-medium text-ink">{group}</h4>
-                <span className="tabular text-xs text-muted">{column.length}</span>
+                <h4 className="font-lm-sans text-[13px] font-semibold text-lm-ink">{group}</h4>
+                <span className="font-mono text-xs tabular-nums text-lm-ink-3">{column.length}</span>
               </div>
               <div className="flex min-h-16 flex-col gap-2">
                 {column.map((lead) => (
@@ -99,15 +99,15 @@ export function LeadsKanban({ leads }: { leads: LeadWithRelations[] }) {
                     href={`/leads/${lead.id}`}
                     draggable
                     onDragStart={(event) => event.dataTransfer.setData("text/plain", lead.id)}
-                    className="block cursor-grab rounded-[12px] border border-line bg-surface/60 p-3 text-sm hover:border-cyan/40 active:cursor-grabbing"
+                    className="block cursor-grab rounded-lm-md border border-lm-line-strong bg-lm-raised p-3 text-[13px] transition-colors hover:bg-lm-overlay active:cursor-grabbing"
                   >
-                    <p className="truncate font-medium text-ink">{lead.name}</p>
-                    <p className="mt-1 text-xs text-muted">{STATUS_LABEL[lead.status]}</p>
-                    <p className="mt-1 truncate text-xs text-muted">{lead.city ?? lead.phone ?? lead.email ?? ""}</p>
+                    <p className="truncate font-medium text-lm-ink">{lead.name}</p>
+                    <p className="mt-1 text-xs text-lm-ink-3">{STATUS_LABEL[lead.status]}</p>
+                    <p className="mt-1 truncate text-xs text-lm-ink-3">{lead.city ?? lead.phone ?? lead.email ?? ""}</p>
                     {lead.industries ? (
-                      <Badge color={lead.industries.color} className="mt-2">
+                      <Chip color={lead.industries.color} className="mt-2">
                         {lead.industries.name}
-                      </Badge>
+                      </Chip>
                     ) : null}
                   </Link>
                 ))}

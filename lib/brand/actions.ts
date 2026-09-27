@@ -1,12 +1,11 @@
 "use server";
 
-import Anthropic from "@anthropic-ai/sdk";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 
 import { runBrandChatTurn } from "@/lib/brand/ai/chat";
 import type { BrandChatWireTurn } from "@/lib/brand/ai/chat-types";
-import { getAnthropicApiKey } from "@/lib/brand/ai/key";
+import { getAnthropicApiKey, getGroqApiKey } from "@/lib/brand/ai/key";
 import { generateBrandRecommendations } from "@/lib/brand/ai/recommendations";
 import { computeBrandInsights, MIN_POSTS_FOR_ANALYSIS } from "@/lib/brand/insights";
 import { getPublishedHypotheses } from "@/lib/brand/planner/queries";
@@ -51,7 +50,7 @@ export async function generateBrandAnalysis(platform: BrandPlatform): Promise<Ge
   const user = await requireUser();
   const supabase = await createClient();
 
-  const keyResult = await getAnthropicApiKey();
+  const keyResult = await getGroqApiKey();
   if (!keyResult.ok) return { ok: false, message: keyResult.message };
   const apiKey = keyResult.apiKey;
 
@@ -82,12 +81,6 @@ export async function generateBrandAnalysis(platform: BrandPlatform): Promise<Ge
       hypotheses: await getPublishedHypotheses(platform),
     });
   } catch (error) {
-    if (error instanceof Anthropic.AuthenticationError) {
-      return { ok: false, message: "Anthropic rechazó la key. Revisala en Configuración." };
-    }
-    if (error instanceof Anthropic.APIError) {
-      return { ok: false, message: `Anthropic respondió ${error.status}: ${error.message}` };
-    }
     return { ok: false, message: error instanceof Error ? error.message : "No se pudo generar el análisis." };
   }
 

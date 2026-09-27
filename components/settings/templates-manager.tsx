@@ -4,10 +4,8 @@ import { AtSign, CheckCircle2, Loader2, Mail, MessageCircle, XCircle } from "luc
 import { useActionState, useEffect, useRef } from "react";
 
 import { DeleteButton } from "@/components/settings/delete-button";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/leads/ui/button";
+import { Field, Input, Select, Textarea } from "@/components/leads/ui/field";
 import { createTemplate, deleteTemplate } from "@/lib/settings/actions";
 import type { Database } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";
@@ -29,25 +27,22 @@ export function TemplatesManager({ templates }: { templates: MessageTemplate[] }
   }, [state]);
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {templates.length === 0 ? (
-        <p className="text-sm text-muted">Todavía no cargaste ninguna plantilla.</p>
+        <p className="text-[13px] text-lm-ink-2">Todavía no cargaste ninguna plantilla.</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="flex flex-col gap-2">
           {templates.map((template) => {
             const Icon = CHANNEL_ICON[template.channel];
             return (
-              <li
-                key={template.id}
-                className="flex items-start justify-between gap-3 rounded-[12px] border border-line bg-surface/40 px-4 py-3"
-              >
+              <li key={template.id} className="flex items-start justify-between gap-3 rounded-lm-sm border border-lm-line-strong bg-lm-raised px-4 py-3">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-sm text-ink">
-                    <Icon className="size-3.5 text-muted" />
+                  <div className="flex items-center gap-2 text-[13px] text-lm-ink">
+                    <Icon className="size-3.5 text-lm-ink-3" strokeWidth={1.5} />
                     <span className="font-medium">{template.name}</span>
-                    <span className="text-xs text-muted">{CHANNEL_LABEL[template.channel]}</span>
+                    <span className="text-xs text-lm-ink-3">{CHANNEL_LABEL[template.channel]}</span>
                   </div>
-                  <p className="mt-1 line-clamp-2 text-sm text-muted">{template.body}</p>
+                  <p className="mt-1 line-clamp-2 text-[13px] text-lm-ink-2">{template.body}</p>
                 </div>
                 <DeleteButton
                   action={deleteTemplate.bind(null, template.id)}
@@ -60,51 +55,42 @@ export function TemplatesManager({ templates }: { templates: MessageTemplate[] }
         </ul>
       )}
 
-      <form ref={formRef} action={formAction} className="space-y-3">
+      <form ref={formRef} action={formAction} className="flex flex-col gap-3">
         <div className="flex flex-wrap gap-3">
           <div className="min-w-[200px] flex-1">
-            <label htmlFor="template-name" className="mb-1.5 block text-xs text-muted">
-              Nombre
-            </label>
-            <Input id="template-name" name="name" placeholder="Ej: Primer contacto" required />
+            <Field label="Nombre" htmlFor="template-name">
+              <Input id="template-name" name="name" placeholder="Ej: Primer contacto" required />
+            </Field>
           </div>
           <div className="w-40">
-            <label htmlFor="template-channel" className="mb-1.5 block text-xs text-muted">
-              Canal
-            </label>
-            <Select id="template-channel" name="channel" defaultValue="WHATSAPP">
-              <option value="WHATSAPP">WhatsApp</option>
-              <option value="EMAIL">Email</option>
-            </Select>
+            <Field label="Canal" htmlFor="template-channel">
+              <Select id="template-channel" name="channel" defaultValue="WHATSAPP">
+                <option value="WHATSAPP">WhatsApp</option>
+                <option value="EMAIL">Email</option>
+              </Select>
+            </Field>
           </div>
         </div>
-        <div>
-          <label htmlFor="template-body" className="mb-1.5 block text-xs text-muted">
-            Mensaje — variables: <code className="text-cyan">{"{{nombre}}"}</code>{" "}
-            <code className="text-cyan">{"{{rubro}}"}</code>{" "}
-            <code className="text-cyan">{"{{ciudad}}"}</code>
-          </label>
-          <Textarea
-            id="template-body"
-            name="body"
-            placeholder="Hola {{nombre}}, te escribo de Awareness AI..."
-            required
-          />
-        </div>
-        <Button type="submit" variant="secondary" disabled={pending}>
+        <Field
+          label={
+            <>
+              Mensaje — variables: <code className="text-lm-signal-text">{"{{nombre}}"}</code>{" "}
+              <code className="text-lm-signal-text">{"{{rubro}}"}</code> <code className="text-lm-signal-text">{"{{ciudad}}"}</code>
+            </>
+          }
+          htmlFor="template-body"
+        >
+          <Textarea id="template-body" name="body" placeholder="Hola {{nombre}}, te escribo de Awareness AI..." required />
+        </Field>
+        <Button type="submit" variant="secondary" disabled={pending} className="w-max">
           {pending ? <Loader2 className="size-3.5 animate-spin" /> : null}
           Agregar plantilla
         </Button>
       </form>
 
       {state ? (
-        <p
-          className={cn(
-            "flex items-center gap-1.5 text-sm",
-            state.ok ? "text-positive" : "text-danger",
-          )}
-        >
-          {state.ok ? <CheckCircle2 className="size-4" /> : <XCircle className="size-4" />}
+        <p className={cn("flex items-center gap-1.5 text-[13px]", state.ok ? "text-lm-success" : "text-lm-danger")}>
+          {state.ok ? <CheckCircle2 className="size-4" strokeWidth={1.5} /> : <XCircle className="size-4" strokeWidth={1.5} />}
           {state.message}
         </p>
       ) : null}

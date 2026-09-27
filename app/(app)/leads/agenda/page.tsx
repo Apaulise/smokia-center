@@ -1,10 +1,11 @@
 import { AgendaView } from "@/components/leads/agenda/agenda-view";
+import { NextAppointmentPanel } from "@/components/leads/agenda/next-appointment-panel";
 import {
   PeriodNav as SharedPeriodNav,
   ViewToggle as SharedViewToggle,
   type CalendarView,
 } from "@/components/shell/calendar-nav";
-import { PageHeader } from "@/components/shell/page-header";
+import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
 import {
   addDaysIso,
   addMonthsIso,
@@ -17,7 +18,12 @@ import {
   weekDays,
   weekLabel,
 } from "@/lib/leads/calendar";
-import { listAppointmentsInRange, listLeadsLite, listUpcomingAppointmentsList } from "@/lib/leads/queries";
+import {
+  getNextAppointmentBriefing,
+  listAppointmentsInRange,
+  listLeadsLite,
+  listUpcomingAppointmentsList,
+} from "@/lib/leads/queries";
 
 export const metadata = { title: "Agenda · Awareness AI" };
 
@@ -27,27 +33,28 @@ const BASE_PATH = "/leads/agenda";
 
 type SearchParams = { view?: string; date?: string };
 
-/** /leads/agenda (Plan §1.5): calendario propio, sin dependencia de Google Calendar. */
+/** /leads/agenda (Plan §1.5, Design System §05 "Agenda"): calendario propio, sin dependencia de Google Calendar. */
 export default async function AgendaPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams;
   const view: View = params.view === "semana" ? "semana" : params.view === "lista" ? "lista" : "mes";
   const today = todayIso();
   const anchor = params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date) ? params.date : today;
 
-  const [leads] = await Promise.all([listLeadsLite()]);
+  const [leads, briefing] = await Promise.all([listLeadsLite(), getNextAppointmentBriefing()]);
 
   if (view === "lista") {
     const appointments = await listUpcomingAppointmentsList();
     return (
       <>
-        <PageHeader
-          eyebrow="Gestor de Leads"
-          title="Agenda"
-          description="Próximos turnos, sin salir de la app."
-          action={<ViewToggle view={view} date={anchor} />}
-        />
-        <div className="px-6 py-8 lg:px-10">
-          <AgendaView view={view} days={[]} today={today} appointments={appointments} leads={leads} />
+        <HeaderBar breadcrumb="Gestor de Leads / Agenda" />
+        <div className="flex">
+          <div className="flex-1 px-6 py-8 lg:px-8">
+            <PageHeading title="Agenda" description="Próximos turnos, sin salir de la app." action={<ViewToggle view={view} date={anchor} />} />
+            <div className="mt-8">
+              <AgendaView view={view} days={[]} today={today} appointments={appointments} leads={leads} />
+            </div>
+          </div>
+          <NextAppointmentPanel briefing={briefing} />
         </div>
       </>
     );
@@ -62,19 +69,23 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
 
     return (
       <>
-        <PageHeader
-          eyebrow="Gestor de Leads"
-          title="Agenda"
-          description={weekLabel(days)}
-          action={
-            <div className="flex items-center gap-2">
-              <PeriodNav view={view} prev={addDaysIso(weekStart, -7)} next={addDaysIso(weekStart, 7)} today={today} />
-              <ViewToggle view={view} date={anchor} />
+        <HeaderBar breadcrumb="Gestor de Leads / Agenda" />
+        <div className="flex">
+          <div className="flex-1 px-6 py-8 lg:px-8">
+            <PageHeading
+              title={weekLabel(days)}
+              action={
+                <div className="flex items-center gap-2">
+                  <PeriodNav view={view} prev={addDaysIso(weekStart, -7)} next={addDaysIso(weekStart, 7)} today={today} />
+                  <ViewToggle view={view} date={anchor} />
+                </div>
+              }
+            />
+            <div className="mt-8">
+              <AgendaView view={view} days={days} today={today} appointments={appointments} leads={leads} />
             </div>
-          }
-        />
-        <div className="px-6 py-8 lg:px-10">
-          <AgendaView view={view} days={days} today={today} appointments={appointments} leads={leads} />
+          </div>
+          <NextAppointmentPanel briefing={briefing} />
         </div>
       </>
     );
@@ -88,40 +99,39 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
 
   return (
     <>
-      <PageHeader
-        eyebrow="Gestor de Leads"
-        title="Agenda"
-        description={monthLabel(monthStart)}
-        action={
-          <div className="flex items-center gap-2">
-            <PeriodNav
+      <HeaderBar breadcrumb="Gestor de Leads / Agenda" />
+      <div className="flex">
+        <div className="flex-1 px-6 py-8 lg:px-8">
+          <PageHeading
+            title={monthLabel(monthStart)}
+            action={
+              <div className="flex items-center gap-2">
+                <PeriodNav view={view} prev={addMonthsIso(monthStart, -1)} next={addMonthsIso(monthStart, 1)} today={today} />
+                <ViewToggle view={view} date={anchor} />
+              </div>
+            }
+          />
+          <div className="mt-8">
+            <AgendaView
               view={view}
-              prev={addMonthsIso(monthStart, -1)}
-              next={addMonthsIso(monthStart, 1)}
+              days={days}
+              currentMonth={monthStart.slice(0, 7)}
               today={today}
+              appointments={appointments}
+              leads={leads}
             />
-            <ViewToggle view={view} date={anchor} />
           </div>
-        }
-      />
-      <div className="px-6 py-8 lg:px-10">
-        <AgendaView
-          view={view}
-          days={days}
-          currentMonth={monthStart.slice(0, 7)}
-          today={today}
-          appointments={appointments}
-          leads={leads}
-        />
+        </div>
+        <NextAppointmentPanel briefing={briefing} />
       </div>
     </>
   );
 }
 
 function PeriodNav(props: { view: View; prev: string; next: string; today: string }) {
-  return <SharedPeriodNav basePath={BASE_PATH} {...props} />;
+  return <SharedPeriodNav basePath={BASE_PATH} variant="signal" {...props} />;
 }
 
 function ViewToggle(props: { view: View; date: string }) {
-  return <SharedViewToggle basePath={BASE_PATH} {...props} />;
+  return <SharedViewToggle basePath={BASE_PATH} variant="signal" {...props} />;
 }

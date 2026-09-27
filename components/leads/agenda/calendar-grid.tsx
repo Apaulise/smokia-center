@@ -18,11 +18,42 @@ export interface CalendarMove {
   time: string | null;
 }
 
+type Variant = "brand" | "signal";
+
+/** Clases por variante: "brand" (Marca, default, sin tocar) y "signal" (Leads, "Señal y humo"). */
+const V: Record<Variant, Record<string, string>> = {
+  brand: {
+    container: "overflow-hidden rounded-[20px] border border-line bg-elevated/70",
+    head: "border-b border-line/60 text-xs font-medium text-muted uppercase",
+    cell: "border-r border-b border-line/40 p-1.5 last:border-r-0",
+    outsideMonth: "bg-base/40",
+    dragOver: "bg-cyan/5",
+    todayCircle: "bg-cyan text-base font-semibold",
+    dayNumber: "text-muted hover:text-ink",
+    chip: "border-line/60 bg-surface/60 hover:border-cyan/40",
+    more: "text-cyan hover:underline",
+    less: "text-muted hover:underline",
+  },
+  signal: {
+    container: "overflow-hidden rounded-lm-lg border border-lm-line-strong bg-lm-surface",
+    head: "border-b border-lm-line font-lm-sans text-[11px] font-semibold tracking-[0.1em] text-lm-ink-3 uppercase",
+    cell: "border-r border-b border-lm-line p-1.5 last:border-r-0",
+    outsideMonth: "bg-black/[0.18]",
+    dragOver: "bg-lm-signal-soft",
+    todayCircle: "bg-lm-signal text-lm-on-signal font-semibold",
+    dayNumber: "text-lm-ink-3 hover:text-lm-ink",
+    chip: "border-lm-line bg-lm-raised hover:border-lm-line-strong",
+    more: "text-lm-signal-text hover:underline",
+    less: "text-lm-ink-3 hover:underline",
+  },
+};
+
 /**
  * Grilla de mes o semana con drag & drop nativo (mismo patrón que LeadsKanban).
  * No sabe qué es lo que muestra: la agenda de Leads le pasa turnos y el
  * planificador de Marca le pasa piezas de contenido (Plans/03 §3.7). Quien la
- * usa decide qué dibuja dentro de cada tarjeta y qué pasa al soltarla.
+ * usa decide qué dibuja dentro de cada tarjeta y qué pasa al soltarla;
+ * `variant` sólo cambia el tema (CLAUDE.md §2: Marca sigue con el suyo).
  */
 export function CalendarGrid<T extends { id: string }>({
   mode,
@@ -37,6 +68,7 @@ export function CalendarGrid<T extends { id: string }>({
   onCreateAt,
   onEdit,
   onMove,
+  variant = "brand",
 }: {
   mode: "mes" | "semana";
   days: string[];
@@ -55,7 +87,9 @@ export function CalendarGrid<T extends { id: string }>({
   onCreateAt: (dateIso: string) => void;
   onEdit: (item: T) => void;
   onMove: (move: CalendarMove) => void;
+  variant?: Variant;
 }) {
+  const v = V[variant];
   const [dragOverDay, setDragOverDay] = useState<string | null>(null);
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
 
@@ -89,8 +123,8 @@ export function CalendarGrid<T extends { id: string }>({
   }
 
   return (
-    <div className="overflow-hidden rounded-[20px] border border-line bg-elevated/70">
-      <div className="grid grid-cols-7 border-b border-line/60 text-xs font-medium text-muted uppercase">
+    <div className={v.container}>
+      <div className={cn("grid grid-cols-7", v.head)}>
         {days.slice(0, 7).map((day) => (
           <div key={day} className="px-2 py-2 text-center">
             {dayLabelShort(day)}
@@ -117,10 +151,11 @@ export function CalendarGrid<T extends { id: string }>({
               onDragLeave={() => setDragOverDay((current) => (current === dateIso ? null : current))}
               onDrop={(event) => handleDrop(dateIso, event)}
               className={cn(
-                "min-h-24 border-r border-b border-line/40 p-1.5 last:border-r-0",
+                "min-h-24",
+                v.cell,
                 mode === "semana" && "min-h-[420px]",
-                outsideMonth && "bg-base/40",
-                dragOverDay === dateIso && "bg-cyan/5",
+                outsideMonth && v.outsideMonth,
+                dragOverDay === dateIso && v.dragOver,
               )}
             >
               <button
@@ -128,7 +163,7 @@ export function CalendarGrid<T extends { id: string }>({
                 onClick={() => onCreateAt(dateIso)}
                 className={cn(
                   "mb-1.5 flex size-6 items-center justify-center rounded-full text-xs",
-                  isToday ? "bg-cyan text-base font-semibold" : "text-muted hover:text-ink",
+                  isToday ? v.todayCircle : v.dayNumber,
                   outsideMonth && "opacity-40",
                 )}
               >
@@ -149,7 +184,8 @@ export function CalendarGrid<T extends { id: string }>({
                       }}
                       onClick={() => onEdit(item)}
                       className={cn(
-                        "flex items-start gap-1.5 truncate rounded-[8px] border border-line/60 bg-surface/60 px-1.5 py-1 text-left text-xs hover:border-cyan/40",
+                        "flex items-start gap-1.5 truncate rounded-[8px] border px-1.5 py-1 text-left text-xs",
+                        v.chip,
                         draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
                       )}
                     >
@@ -158,20 +194,12 @@ export function CalendarGrid<T extends { id: string }>({
                   );
                 })}
                 {hiddenCount > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => toggleExpanded(dateIso)}
-                    className="px-1.5 text-xs text-cyan hover:underline"
-                  >
+                  <button type="button" onClick={() => toggleExpanded(dateIso)} className={cn("px-1.5 text-xs", v.more)}>
                     +{hiddenCount} más
                   </button>
                 ) : null}
                 {expanded && dayItems.length > MONTH_CHIPS_VISIBLE && mode === "mes" ? (
-                  <button
-                    type="button"
-                    onClick={() => toggleExpanded(dateIso)}
-                    className="px-1.5 text-xs text-muted hover:underline"
-                  >
+                  <button type="button" onClick={() => toggleExpanded(dateIso)} className={cn("px-1.5 text-xs", v.less)}>
                     Ver menos
                   </button>
                 ) : null}

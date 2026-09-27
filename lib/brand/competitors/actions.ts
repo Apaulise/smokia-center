@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { APIFY_TERMINAL_STATUSES, getAllApifyDatasetItems, getApifyRun, startApifyRun } from "@/lib/apify/client";
-import { getAnthropicApiKey } from "@/lib/brand/ai/key";
+import { getGeminiApiKey } from "@/lib/brand/ai/key";
 import { generateIdeaFromOutlier } from "@/lib/brand/ai/outlier-idea";
 import { buildOwnContext } from "@/lib/brand/ai/script-context";
 import { computeCompetitorInsights, GROUP_SIGNAL_LABEL } from "@/lib/brand/competitors/insights";
@@ -523,7 +523,7 @@ export async function createIdeaFromOutlier(postId: string): Promise<CreateIdeaR
     .maybeSingle();
   if (!competitor) return { ok: false, message: "La cuenta de esa publicación ya no está." };
 
-  const keyResult = await getAnthropicApiKey();
+  const keyResult = await getGeminiApiKey();
   if (!keyResult.ok) return { ok: false, message: keyResult.message };
 
   // El múltiplo y la mediana se recalculan sobre las publicaciones de esa cuenta:

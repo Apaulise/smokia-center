@@ -1,12 +1,12 @@
 "use client";
 
-import { Loader2, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
+import { Button } from "@/components/leads/ui/button";
+import { CopilotLabel, SmokeLines } from "@/components/leads/ui/copilot";
 import { ANGLE_LABEL, type SalesAngle } from "@/lib/leads/ai/angles";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { enrichOneLead } from "@/lib/leads/ai/actions";
 import type { EnrichmentResult } from "@/lib/leads/ai/enrich";
 
@@ -20,8 +20,8 @@ function List({ title, items }: { title: string; items: string[] }) {
   if (items.length === 0) return null;
   return (
     <div>
-      <p className="mb-1 text-xs text-muted">{title}</p>
-      <ul className="list-inside list-disc space-y-0.5 text-sm text-ink">
+      <CopilotLabel>{title}</CopilotLabel>
+      <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-[13px] text-lm-ink">
         {items.map((item, index) => (
           <li key={index}>{item}</li>
         ))}
@@ -31,8 +31,8 @@ function List({ title, items }: { title: string; items: string[] }) {
 }
 
 /**
- * Enriquecimiento del lead (Plan §1.10): el análisis comercial de Gemini
- * (SPA §4) antes del primer contacto. Sin resultado todavía, sólo el botón.
+ * Enriquecimiento del lead (Plan §1.10, Design System Copilot §ENRIQUECIMIENTO):
+ * el análisis comercial de Gemini (SPA §4) antes del primer contacto.
  */
 export function EnrichPanel({ leadId, enrichment }: { leadId: string; enrichment: EnrichmentResult | null }) {
   const router = useRouter();
@@ -51,32 +51,39 @@ export function EnrichPanel({ leadId, enrichment }: { leadId: string; enrichment
     });
   }
 
+  if (pending) {
+    return (
+      <div className="flex flex-col gap-2">
+        <CopilotLabel>Enriqueciendo…</CopilotLabel>
+        <SmokeLines count={3} />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-3 text-sm">
+    <div className="flex flex-col gap-3">
       {enrichment ? (
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge tone={enrichment.confidence === "ALTA" ? "positive" : enrichment.confidence === "MEDIA" ? "cyan" : "neutral"}>
-              {CONFIDENCE_LABEL[enrichment.confidence]}
-            </Badge>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-lm-ink-3">
+            <span>{CONFIDENCE_LABEL[enrichment.confidence]}</span>
             {enrichment.recommendedSalesAngle ? (
-              <Badge tone="violet">{ANGLE_LABEL[enrichment.recommendedSalesAngle as SalesAngle]}</Badge>
+              <span className="text-lm-signal-text">{ANGLE_LABEL[enrichment.recommendedSalesAngle as SalesAngle]}</span>
             ) : null}
           </div>
-          <p className="text-ink">{enrichment.businessSummary}</p>
+          <p className="text-[13px] text-lm-ink">{enrichment.businessSummary}</p>
           <List title="Servicios detectados" items={enrichment.detectedServices} />
           {enrichment.possibleDecisionMaker ? (
             <div>
-              <p className="mb-1 text-xs text-muted">Posible decisor</p>
-              <p className="text-ink">{enrichment.possibleDecisionMaker}</p>
+              <CopilotLabel>Posible decisor</CopilotLabel>
+              <p className="mt-1 text-[13px] text-lm-ink">{enrichment.possibleDecisionMaker}</p>
             </div>
           ) : null}
           <List title="Señales de operación" items={enrichment.operationSignals} />
           <List title="Señales de tecnología" items={enrichment.technologySignals} />
           {enrichment.possiblePains.length > 0 ? (
             <div>
-              <p className="mb-1 text-xs text-muted">Posibles dolores (hipótesis, sin confirmar)</p>
-              <ul className="list-inside list-disc space-y-0.5 text-sm text-ink">
+              <CopilotLabel>Posibles dolores (hipótesis, sin confirmar)</CopilotLabel>
+              <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-[13px] text-lm-ink">
                 {enrichment.possiblePains.map((pain, index) => (
                   <li key={index}>{pain.description}</li>
                 ))}
@@ -85,13 +92,13 @@ export function EnrichPanel({ leadId, enrichment }: { leadId: string; enrichment
           ) : null}
         </div>
       ) : (
-        <p className="text-muted">Todavía no se enriqueció este lead.</p>
+        <p className="text-[13px] text-lm-ink-2">Sin análisis todavía. Enriquecé el lead para empezar.</p>
       )}
 
-      {error ? <p className="text-danger">{error}</p> : null}
+      {error ? <p className="text-[13px] text-lm-danger">{error}</p> : null}
 
-      <Button type="button" variant="secondary" size="sm" disabled={pending} onClick={handleEnrich}>
-        {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+      <Button type="button" variant="secondary" size="sm" className="w-max" onClick={handleEnrich}>
+        <Sparkles className="size-3.5" strokeWidth={1.5} />
         {enrichment ? "Volver a enriquecer" : "Enriquecer"}
       </Button>
     </div>

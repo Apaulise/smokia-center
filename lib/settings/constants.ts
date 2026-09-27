@@ -17,6 +17,14 @@ export const ANTHROPIC_KEY_SETTING = "anthropic_api_key";
 export const GEMINI_KEY_SETTING = "gemini_api_key";
 
 /**
+ * Clave en `settings` para la API key de Groq (Plans/migracion-fuera-de-anthropic.md,
+ * Etapa 1). Es el modelo gratuito de mayor criterio del reparto: reemplaza a
+ * Claude Opus en lo que antes decidía qué escribirle a un lead o qué
+ * recomendar sobre un período de contenido.
+ */
+export const GROQ_KEY_SETTING = "groq_api_key";
+
+/**
  * Perfil del vendedor (Plan §1.7). No es una key: es el texto que le dice al
  * copiloto qué experiencia y qué casos reales puede afirmar. Vive acá y no
  * dentro del Sistema de Prospección porque cambia —un caso hoy, tres en tres

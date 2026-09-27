@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { APIFY_TERMINAL_STATUSES, getAllApifyDatasetItems, getApifyRun, startApifyRun } from "@/lib/apify/client";
-import { getAnthropicApiKey } from "@/lib/brand/ai/key";
+import { getGeminiApiKey } from "@/lib/brand/ai/key";
 import { generateIdeaFromOutlier } from "@/lib/brand/ai/outlier-idea";
 import { buildOwnContext } from "@/lib/brand/ai/script-context";
 import { classifyRelevance, RELEVANCE_BATCH_MAX, type RelevanceCandidate } from "@/lib/brand/competitors/relevance";
@@ -333,7 +333,7 @@ export async function createIdeaFromTrendPost(postId: string): Promise<CreateTre
   const { data: post } = await supabase.from("brand_trend_posts").select("*").eq("id", postId).maybeSingle();
   if (!post) return { ok: false, message: "El reel no existe." };
 
-  const keyResult = await getAnthropicApiKey();
+  const keyResult = await getGeminiApiKey();
   if (!keyResult.ok) return { ok: false, message: keyResult.message };
 
   // El multiplicador se recalcula sobre el batch actual: citar un número que no salió del código sería inventarlo.

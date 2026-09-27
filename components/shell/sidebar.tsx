@@ -5,26 +5,35 @@ import {
   ChevronRight,
   LayoutGrid,
   LogOut,
+  Megaphone,
   Menu,
   Receipt,
   Settings,
-  Sparkles,
   Users,
   X,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { CommandPalette } from "@/components/shell/command-palette";
 import { MODULES, type NavModule } from "@/components/shell/nav";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
+/*
+ * Shell de navegación (Design System Sidebar, "Señal y humo"): 240px
+ * expandida / 64px colapsada (sólo íconos), marca vertical de 2px en
+ * `signal` para el ítem activo. Es infraestructura compartida por todos los
+ * módulos —incluida Marca personal—, no contenido de un módulo puntual, así
+ * que se redibuja acá aunque Marca siga fuera de alcance (CLAUDE.md §2).
+ */
 const ICONS = {
   panel: LayoutGrid,
   leads: Users,
   facturacion: Receipt,
-  marca: Sparkles,
+  marca: Megaphone,
 } as const;
 
 const COLLAPSE_STORAGE_KEY = "awareness-ai:sidebar-collapsed";
@@ -33,21 +42,32 @@ function isModuleActive(pathname: string, module: NavModule) {
   return pathname === module.href || pathname.startsWith(`${module.href}/`);
 }
 
-export function Sidebar({ email }: { email?: string }) {
+export function Sidebar({ email, badges }: { email?: string; badges?: Record<string, number> }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   // Arranca sin colapsar en el primer render (server y cliente deben coincidir
   // para no romper hydration) y se ajusta a lo persistido recién en el efecto.
   const [collapsed, setCollapsed] = useState(false);
 
-  // Cerrar el menú al navegar en mobile.
   useEffect(() => setOpen(false), [pathname]);
 
   useEffect(() => {
     if (localStorage.getItem(COLLAPSE_STORAGE_KEY) === "true") {
       setCollapsed(true);
     }
+  }, []);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen(true);
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
   function toggleCollapsed() {
@@ -67,15 +87,16 @@ export function Sidebar({ email }: { email?: string }) {
 
   return (
     <>
-      {/* Barra superior — sólo mobile */}
-      <header className="flex items-center justify-between border-b border-line px-4 py-3 lg:hidden">
-        <span className="font-display text-sm font-semibold tracking-wide">
-          Awareness AI
+      {/* Barra superior — sólo mobile/tablet (<1280). En mobile puro (<768) el
+          shell la reemplaza por el tab bar inferior, ver AppShellMobileNav. */}
+      <header className="flex items-center justify-between border-b border-lm-line bg-lm-surface px-4 py-3 lg:hidden">
+        <span className="font-lm-sans text-sm font-semibold text-lm-ink">
+          Awareness <span className="text-lm-ink-2">AI</span>
         </span>
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          className="rounded-[12px] border border-line p-2 text-muted"
+          className="rounded-lm-sm border border-lm-line-strong p-2 text-lm-ink-2"
           aria-label={open ? "Cerrar menú" : "Abrir menú"}
           aria-expanded={open}
         >
@@ -85,44 +106,49 @@ export function Sidebar({ email }: { email?: string }) {
 
       <aside
         className={cn(
-          "flex-col border-line bg-elevated/40 backdrop-blur-sm",
-          "lg:sticky lg:top-0 lg:flex lg:h-dvh lg:shrink-0 lg:border-r lg:transition-[width] lg:duration-200",
-          collapsed ? "lg:w-[76px]" : "lg:w-72",
+          "flex-col border-lm-line bg-lm-surface font-lm-sans",
+          "lg:sticky lg:top-0 lg:flex lg:h-dvh lg:shrink-0 lg:border-r lg:transition-[width] lg:duration-150",
+          collapsed ? "lg:w-16" : "lg:w-60",
           open ? "flex border-b" : "hidden",
         )}
       >
         <div
           className={cn(
-            "hidden items-center px-6 py-6 lg:flex",
-            collapsed ? "lg:justify-center lg:px-3" : "lg:justify-between",
+            "hidden h-14 items-center gap-2 px-4",
+            collapsed ? "lg:flex lg:justify-center lg:px-0" : "lg:flex lg:justify-between",
           )}
         >
           {collapsed ? null : (
-            <Link href="/leads" className="font-display text-lg font-semibold">
-              Awareness <span className="text-cyan">AI</span>
+            <Link href="/leads" className="flex items-center gap-2 text-[15px] font-semibold text-lm-ink">
+              <Image src="/logo-mark.png" alt="" width={26} height={26} className="h-[26px] w-auto shrink-0" priority />
+              Awareness AI
             </Link>
           )}
           <button
             type="button"
             onClick={toggleCollapsed}
-            className="flex shrink-0 items-center justify-center rounded-[10px] border border-line p-1.5 text-muted transition-colors hover:bg-surface/60 hover:text-ink"
+            className="flex shrink-0 items-center justify-center rounded-lm-sm p-1.5 text-lm-ink-3 transition-colors hover:bg-lm-raised hover:text-lm-ink"
             aria-label={collapsed ? "Expandir barra lateral" : "Colapsar barra lateral"}
             title={collapsed ? "Expandir barra lateral" : "Colapsar barra lateral"}
           >
-            {collapsed ? (
-              <ChevronRight className="size-4" />
-            ) : (
-              <ChevronLeft className="size-4" />
-            )}
+            {collapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
           </button>
         </div>
 
-        <nav
-          className={cn(
-            "flex-1 space-y-1 overflow-y-auto px-3 py-4 lg:py-0",
-            collapsed && "lg:px-2",
-          )}
-        >
+        <div className={cn("px-2 pb-2", collapsed && "lg:hidden")}>
+          <button
+            type="button"
+            onClick={() => setPaletteOpen(true)}
+            className="flex h-8 w-full items-center gap-2 rounded-lm-sm border border-lm-line-strong bg-lm-raised px-2.5 text-left text-[13px] text-lm-ink-3 transition-colors hover:text-lm-ink-2"
+          >
+            <span className="flex-1 truncate">Buscar o ejecutar…</span>
+            <span className="rounded-lm-xs border border-lm-line px-1 py-px font-mono text-[10.5px] text-lm-ink-3">
+              ⌘K
+            </span>
+          </button>
+        </div>
+
+        <nav className={cn("flex-1 space-y-0.5 overflow-y-auto px-2 py-1", collapsed && "lg:px-2")}>
           {MODULES.map((module) => {
             const Icon = ICONS[module.icon];
             const active = isModuleActive(pathname, module);
@@ -132,27 +158,14 @@ export function Sidebar({ email }: { email?: string }) {
                 <div
                   key={module.href}
                   className={cn(
-                    "flex cursor-not-allowed items-center gap-3 rounded-[12px] px-3 py-2.5 opacity-40",
+                    "flex h-8 cursor-not-allowed items-center gap-2 rounded-lm-sm px-2 text-lm-ink-3",
                     collapsed && "lg:justify-center lg:px-0",
                   )}
-                  title={
-                    collapsed
-                      ? `${module.label} — Pronto`
-                      : "Todavía no construido"
-                  }
+                  title={collapsed ? `${module.label} — pronto` : "Todavía no construido"}
                 >
-                  <Icon className="size-4 shrink-0" />
-                  <span className={cn("truncate text-sm", collapsed && "lg:hidden")}>
-                    {module.label}
-                  </span>
-                  <span
-                    className={cn(
-                      "ml-auto shrink-0 text-[10px] tracking-wide text-muted uppercase",
-                      collapsed && "lg:hidden",
-                    )}
-                  >
-                    Pronto
-                  </span>
+                  <Icon className="size-3.5 shrink-0" strokeWidth={1.5} />
+                  <span className={cn("truncate text-sm", collapsed && "lg:hidden")}>{module.label}</span>
+                  <span className={cn("ml-auto shrink-0 text-xs", collapsed && "lg:hidden")}>pronto</span>
                 </div>
               );
             }
@@ -163,44 +176,37 @@ export function Sidebar({ email }: { email?: string }) {
                   href={module.href}
                   title={collapsed ? module.label : undefined}
                   className={cn(
-                    "flex items-center gap-3 rounded-[12px] px-3 py-2.5 text-sm transition-colors",
+                    "relative flex h-8 items-center gap-2.5 rounded-lm-sm px-2 text-sm text-lm-ink-2 transition-colors",
                     collapsed && "lg:justify-center lg:px-0",
-                    active
-                      ? "bg-cyan/10 text-cyan"
-                      : "text-muted hover:bg-surface/60 hover:text-ink",
+                    active ? "text-lm-ink" : "hover:bg-lm-raised hover:text-lm-ink",
+                    active &&
+                      "before:absolute before:top-1.5 before:bottom-1.5 before:left-[-8px] before:w-0.5 before:rounded-lm-xs before:bg-lm-signal",
                   )}
                 >
-                  <Icon className="size-4 shrink-0" />
-                  <span className={cn("truncate", collapsed && "lg:hidden")}>
-                    {module.label}
-                  </span>
+                  <Icon className={cn("size-4 shrink-0", active && "text-lm-signal-text")} strokeWidth={1.5} />
+                  <span className={cn("truncate", collapsed && "lg:hidden")}>{module.label}</span>
                 </Link>
 
                 {active && module.children ? (
-                  <div
-                    className={cn(
-                      "mt-1 ml-4 space-y-0.5 border-l border-line pl-3",
-                      collapsed && "lg:hidden",
-                    )}
-                  >
+                  <div className={cn("mt-0.5 ml-[13px] space-y-0.5 border-l border-lm-line pl-[21px]", collapsed && "lg:hidden")}>
                     {module.children.map((child) => {
                       const childActive = child.exact
                         ? pathname === child.href
-                        : pathname === child.href ||
-                          pathname.startsWith(`${child.href}/`);
+                        : pathname === child.href || pathname.startsWith(`${child.href}/`);
+
+                      const badge = badges?.[child.href];
 
                       return (
                         <Link
                           key={child.href}
                           href={child.href}
                           className={cn(
-                            "block rounded-[10px] px-3 py-1.5 text-sm transition-colors",
-                            childActive
-                              ? "text-ink"
-                              : "text-muted hover:text-ink",
+                            "flex h-7 items-center justify-between gap-2 rounded-lm-sm px-2 py-1.5 text-[13px] transition-colors",
+                            childActive ? "text-lm-ink" : "text-lm-ink-2 hover:text-lm-ink",
                           )}
                         >
-                          {child.label}
+                          <span className="truncate">{child.label}</span>
+                          {badge ? <span className="shrink-0 font-mono text-xs text-lm-ink-3">{badge}</span> : null}
                         </Link>
                       );
                     })}
@@ -211,24 +217,17 @@ export function Sidebar({ email }: { email?: string }) {
           })}
         </nav>
 
-        <div
-          className={cn(
-            "space-y-1 border-t border-line px-3 py-4",
-            collapsed && "lg:px-2",
-          )}
-        >
+        <div className={cn("space-y-0.5 border-t border-lm-line px-2 py-2", collapsed && "lg:px-2")}>
           <Link
             href="/configuracion"
             title={collapsed ? "Configuración" : undefined}
             className={cn(
-              "flex items-center gap-3 rounded-[12px] px-3 py-2.5 text-sm transition-colors",
+              "flex h-8 items-center gap-2.5 rounded-lm-sm px-2 text-sm text-lm-ink-2 transition-colors",
               collapsed && "lg:justify-center lg:px-0",
-              pathname.startsWith("/configuracion")
-                ? "bg-cyan/10 text-cyan"
-                : "text-muted hover:bg-surface/60 hover:text-ink",
+              pathname.startsWith("/configuracion") ? "text-lm-ink" : "hover:bg-lm-raised hover:text-lm-ink",
             )}
           >
-            <Settings className="size-4 shrink-0" />
+            <Settings className="size-4 shrink-0" strokeWidth={1.5} />
             <span className={cn(collapsed && "lg:hidden")}>Configuración</span>
           </Link>
 
@@ -237,27 +236,23 @@ export function Sidebar({ email }: { email?: string }) {
             onClick={signOut}
             title={collapsed ? "Salir" : undefined}
             className={cn(
-              "flex w-full cursor-pointer items-center gap-3 rounded-[12px] px-3 py-2.5 text-sm text-muted transition-colors hover:bg-surface/60 hover:text-ink",
+              "flex h-8 w-full cursor-pointer items-center gap-2.5 rounded-lm-sm px-2 text-sm text-lm-ink-2 transition-colors hover:bg-lm-raised hover:text-lm-ink",
               collapsed && "lg:justify-center lg:px-0",
             )}
           >
-            <LogOut className="size-4 shrink-0" />
+            <LogOut className="size-4 shrink-0" strokeWidth={1.5} />
             <span className={cn(collapsed && "lg:hidden")}>Salir</span>
           </button>
 
           {email ? (
-            <p
-              className={cn(
-                "truncate px-3 pt-1 text-xs text-muted/70",
-                collapsed && "lg:hidden",
-              )}
-              title={email}
-            >
+            <p className={cn("truncate px-2 pt-1.5 text-xs text-lm-ink-3", collapsed && "lg:hidden")} title={email}>
               {email}
             </p>
           ) : null}
         </div>
       </aside>
+
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </>
   );
 }

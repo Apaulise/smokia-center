@@ -1,3 +1,4 @@
+import { getApifyAccountLimits, type ApifyAccountLimits } from "@/lib/apify/client";
 import { decrypt, maskSecret } from "@/lib/crypto";
 import type { LeadSource } from "@/lib/providers/types";
 import { createClient } from "@/lib/supabase/server";
@@ -6,6 +7,7 @@ import {
   ANTHROPIC_KEY_SETTING,
   APIFY_KEY_SETTING,
   GEMINI_KEY_SETTING,
+  GROQ_KEY_SETTING,
   SALES_PROFILE_SETTING,
   WINDSOR_KEY_SETTING,
 } from "./constants";
@@ -39,6 +41,23 @@ export async function getApifyKeyStatus() {
   return getKeyStatus(APIFY_KEY_SETTING);
 }
 
+/** Crédito Apify restante del mes (Design System §04) — null sin key configurada o si Apify no responde con el shape esperado. */
+export async function getApifyCredit(): Promise<ApifyAccountLimits | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("settings")
+    .select("value_encrypted")
+    .eq("key", APIFY_KEY_SETTING)
+    .maybeSingle();
+  if (!data) return null;
+
+  try {
+    return await getApifyAccountLimits(decrypt(data.value_encrypted));
+  } catch {
+    return null;
+  }
+}
+
 export async function getWindsorKeyStatus() {
   return getKeyStatus(WINDSOR_KEY_SETTING);
 }
@@ -49,6 +68,10 @@ export async function getAnthropicKeyStatus() {
 
 export async function getGeminiKeyStatus() {
   return getKeyStatus(GEMINI_KEY_SETTING);
+}
+
+export async function getGroqKeyStatus() {
+  return getKeyStatus(GROQ_KEY_SETTING);
 }
 
 /**

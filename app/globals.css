@@ -34,6 +34,53 @@
   /* §6: radios 16–24px en contenedores */
   --radius-card: 20px;
   --radius-control: 12px;
+
+  /*
+   * Sistema "Señal y humo" — Gestor de Leads (Design System artifact
+   * "Awareness AI — Señal y Humo", 2026-09-26). Namespace `lm-` a propósito:
+   * el Gestor de Marca Personal sigue con los tokens de arriba mientras no se
+   * rediseñe (CLAUDE.md §2, un gestor por vez); nombres nuevos evitan pisar
+   * --color-surface/--color-line/--color-ink existentes. Sólo tema oscuro:
+   * la app sigue siendo dark-only, el claro del sistema queda sin usar por
+   * ahora.
+   */
+  --color-lm-bg: #131315;
+  --color-lm-surface: #1b1b1e;
+  --color-lm-raised: #242428;
+  --color-lm-overlay: #2d2d32;
+  --color-lm-line: #ffffff14;
+  --color-lm-line-strong: #ffffff29;
+
+  --color-lm-ink: #eceae5;
+  --color-lm-ink-2: #a3a19c;
+  --color-lm-ink-3: #908e89;
+
+  --color-lm-signal: #f2c14e;
+  --color-lm-signal-hover: #f6cf6e;
+  --color-lm-signal-soft: #f2c14e1f;
+  --color-lm-signal-text: #f2c14e;
+  --color-lm-on-signal: #151515;
+  --color-lm-focus-ring: #f2c14e;
+
+  --color-lm-success: #8fb39a;
+  --color-lm-success-soft: #8fb39a1f;
+  --color-lm-danger: #e0907f;
+  --color-lm-danger-soft: #e0907f1f;
+  --color-lm-info: #98a9bd;
+
+  --color-lm-smoke-1: #2e2f33;
+  --color-lm-smoke-2: #45474c;
+  --color-lm-smoke-3: #62656b;
+  --color-lm-smoke-4: #8a8d92;
+  --color-lm-smoke-5: #b9bbbe;
+
+  /* Host Grotesk para UI, JetBrains Mono para datos (ya existe --font-mono) */
+  --font-lm-sans: var(--font-host-grotesk), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-lm-xs: 2px;
+  --radius-lm-sm: 4px;
+  --radius-lm-md: 6px;
+  --radius-lm-lg: 8px;
 }
 
 @layer base {
@@ -125,5 +172,49 @@
   .tabular {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
+  }
+
+  /* --- Sistema "Señal y humo" (Gestor de Leads) --- */
+
+  /* Popover/modal/⌘K/toast: la única sombra del sistema. */
+  .lm-shadow-pop {
+    box-shadow:
+      0 12px 32px rgb(0 0 0 / 0.5),
+      0 0 0 1px var(--color-lm-line);
+  }
+
+  /* Foco de teclado: anillo amarillo con separación, sin depender del ring de shadcn. */
+  .lm-focus {
+    outline: 2px solid var(--color-lm-focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* Único gesto de movimiento del sistema: humo que se desplaza y se disipa. */
+  @keyframes lm-smoke {
+    0% {
+      background-position: 100% 0;
+    }
+    100% {
+      background-position: -100% 0;
+    }
+  }
+
+  .lm-smoke {
+    height: 12px;
+    border-radius: var(--radius-lm-xs);
+    background: linear-gradient(
+      90deg,
+      var(--color-lm-overlay) 0%,
+      var(--color-lm-smoke-2) 50%,
+      var(--color-lm-overlay) 100%
+    );
+    background-size: 200% 100%;
+    animation: lm-smoke 1.6s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lm-smoke {
+      animation: none;
+    }
   }
 }

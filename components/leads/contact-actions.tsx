@@ -4,10 +4,9 @@ import { CheckCircle2, Globe, Loader2, Mail, MapPin, Phone, PhoneCall, XCircle }
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
-import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/leads/ui/button";
+import { Dialog } from "@/components/leads/ui/dialog";
+import { Field, Input, Select, Textarea } from "@/components/leads/ui/field";
 import { logContactActivity } from "@/lib/leads/actions";
 import type { LeadWithRelations } from "@/lib/leads/queries";
 import { LEAD_STATUSES, STATUS_LABEL, type LeadActivityType, type LeadStatus } from "@/lib/leads/status";
@@ -24,6 +23,7 @@ const CONTACT_LABEL: Record<"WHATSAPP" | "EMAIL" | "LLAMADA", string> = {
   LLAMADA: "Llamada",
 };
 
+/** Acciones rápidas del header del lead (Design System §07): 32px, secundarias. */
 export function ContactActions({ lead, templates }: { lead: LeadWithRelations; templates: Template[] }) {
   const [dialogType, setDialogType] = useState<"WHATSAPP" | "EMAIL" | "LLAMADA" | null>(null);
 
@@ -39,11 +39,7 @@ export function ContactActions({ lead, templates }: { lead: LeadWithRelations; t
 
   function openEmail() {
     if (!lead.email) return;
-    window.location.href = buildMailtoLink(
-      lead.email,
-      "Contacto — Awareness AI",
-      resolveTemplate(emailTemplate, vars),
-    );
+    window.location.href = buildMailtoLink(lead.email, "Contacto — Awareness AI", resolveTemplate(emailTemplate, vars));
     setDialogType("EMAIL");
   }
 
@@ -54,41 +50,34 @@ export function ContactActions({ lead, templates }: { lead: LeadWithRelations; t
       : null;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="secondary" disabled={!lead.phone} onClick={openWhatsapp}>
-          <Phone className="size-3.5" />
-          WhatsApp
+    <div className="flex flex-wrap items-center gap-2">
+      <Button type="button" variant="secondary" disabled={!lead.phone} onClick={openWhatsapp}>
+        <Phone className="size-3.5" strokeWidth={1.5} />
+        WhatsApp
+      </Button>
+      <Button type="button" variant="secondary" disabled={!lead.email} onClick={openEmail}>
+        <Mail className="size-3.5" strokeWidth={1.5} />
+        Email
+      </Button>
+      <Button type="button" variant="secondary" onClick={() => setDialogType("LLAMADA")}>
+        <PhoneCall className="size-3.5" strokeWidth={1.5} />
+        Llamada
+      </Button>
+      {lead.website ? (
+        <Button type="button" variant="ghost" onClick={() => window.open(lead.website!, "_blank")}>
+          <Globe className="size-3.5" strokeWidth={1.5} />
+          Sitio web
         </Button>
-        <Button type="button" variant="secondary" disabled={!lead.email} onClick={openEmail}>
-          <Mail className="size-3.5" />
-          Email
+      ) : null}
+      {mapsUrl ? (
+        <Button type="button" variant="ghost" onClick={() => window.open(mapsUrl, "_blank")}>
+          <MapPin className="size-3.5" strokeWidth={1.5} />
+          Maps
         </Button>
-        {lead.website ? (
-          <Button type="button" variant="ghost" onClick={() => window.open(lead.website!, "_blank")}>
-            <Globe className="size-3.5" />
-            Sitio web
-          </Button>
-        ) : null}
-        {mapsUrl ? (
-          <Button type="button" variant="ghost" onClick={() => window.open(mapsUrl, "_blank")}>
-            <MapPin className="size-3.5" />
-            Google Maps
-          </Button>
-        ) : null}
-        <Button type="button" variant="ghost" onClick={() => setDialogType("LLAMADA")}>
-          <PhoneCall className="size-3.5" />
-          Registrar llamada
-        </Button>
-      </div>
+      ) : null}
 
       {dialogType ? (
-        <ContactLogDialog
-          leadId={lead.id}
-          type={dialogType}
-          currentStatus={lead.status}
-          onClose={() => setDialogType(null)}
-        />
+        <ContactLogDialog leadId={lead.id} type={dialogType} currentStatus={lead.status} onClose={() => setDialogType(null)} />
       ) : null}
     </div>
   );
@@ -117,28 +106,17 @@ function ContactLogDialog({
   }, [state]);
 
   return (
-    <Dialog
-      open
-      onClose={onClose}
-      title={`Registrar ${CONTACT_LABEL[type].toLowerCase()}`}
-      description="Un clic y queda en el historial del lead."
-    >
-      <form action={formAction} className="space-y-4">
+    <Dialog open onClose={onClose} title={`Registrar ${CONTACT_LABEL[type].toLowerCase()}`} description="Un clic y queda en el historial del lead.">
+      <form action={formAction} className="flex flex-col gap-4">
         <input type="hidden" name="leadId" value={leadId} />
         <input type="hidden" name="type" value={type as LeadActivityType} />
 
-        <div>
-          <label className="mb-1.5 block text-xs text-muted" htmlFor="content">
-            Qué pasó
-          </label>
+        <Field label="Qué pasó" htmlFor="content">
           <Textarea id="content" name="content" placeholder="Ej: atendió, pidió que lo llame mañana…" />
-        </div>
+        </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="mb-1.5 block text-xs text-muted" htmlFor="newStatus">
-              Avanzar estado
-            </label>
+          <Field label="Avanzar estado" htmlFor="newStatus">
             <Select id="newStatus" name="newStatus" defaultValue={currentStatus}>
               {LEAD_STATUSES.map((status) => (
                 <option key={status} value={status}>
@@ -146,33 +124,25 @@ function ContactLogDialog({
                 </option>
               ))}
             </Select>
-          </div>
-          <div>
-            <label className="mb-1.5 block text-xs text-muted" htmlFor="nextActionAt">
-              Próxima acción
-            </label>
-            <input
-              id="nextActionAt"
-              name="nextActionAt"
-              type="datetime-local"
-              className="h-10 w-full rounded-[12px] border border-line bg-surface/60 px-3 text-sm text-ink"
-            />
-          </div>
+          </Field>
+          <Field label="Próxima acción" htmlFor="nextActionAt">
+            <Input id="nextActionAt" name="nextActionAt" type="datetime-local" mono />
+          </Field>
         </div>
 
         {state && !state.ok ? (
-          <p className="flex items-center gap-1.5 text-sm text-danger">
-            <XCircle className="size-4" />
+          <p className="flex items-center gap-1.5 text-[13px] text-lm-danger">
+            <XCircle className="size-4" strokeWidth={1.5} />
             {state.message}
           </p>
         ) : null}
 
-        <div className="flex justify-end gap-2 border-t border-line/60 pt-4">
+        <div className="flex justify-end gap-2 border-t border-lm-line pt-4">
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancelar
           </Button>
           <Button type="submit" variant="primary" disabled={pending}>
-            {pending ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" />}
+            {pending ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" strokeWidth={1.5} />}
             Registrar
           </Button>
         </div>

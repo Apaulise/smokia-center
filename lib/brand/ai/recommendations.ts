@@ -1,8 +1,7 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 
-import { createAnthropicClient } from "./client";
+import { resolveStructuredJson } from "@/lib/ai/structured-output";
+import { generateGroqJson, type GroqJsonSchema } from "@/lib/groq/client";
 import { getContentOS } from "./content-os";
 import { buildRecommendationsUserPrompt } from "./prompts";
 import type { BrandInsightsSummary } from "@/lib/brand/insights";
@@ -29,6 +28,37 @@ const RecommendationsOutputSchema = z.object({
   unknowns: z.string().min(1).max(1400),
   recommendations: z.array(RecommendationItemSchema).min(1).max(10),
 });
+
+/**
+ * `metrics` es un diccionario de claves abiertas: no entra en el modo
+ * `strict` de Groq (Plans/migracion-fuera-de-anthropic.md, Etapa 1) — este es
+ * el único de los 4 call sites de Groq que usa `strict: false`.
+ */
+const RECOMMENDATIONS_GROQ_SCHEMA: GroqJsonSchema = {
+  type: "object",
+  properties: {
+    knowns: { type: "string" },
+    hypotheses: { type: "string" },
+    unknowns: { type: "string" },
+    recommendations: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          kind: { type: "string", enum: ["REPETIR", "CORTAR", "PROBAR"] },
+          objective: { type: "string", enum: ["ALCANCE", "AUTORIDAD", "CONVERSION"] },
+          title: { type: "string" },
+          body: { type: "string" },
+          evidenceSummary: { type: "string" },
+          postIds: { type: "array", items: { type: "string" } },
+          metrics: { type: "object" },
+        },
+        required: ["kind", "objective", "title", "body", "evidenceSummary", "postIds", "metrics"],
+      },
+    },
+  },
+  required: ["knowns", "hypotheses", "unknowns", "recommendations"],
+};
 
 export interface GeneratedRecommendation {
   kind: "REPETIR" | "CORTAR" | "PROBAR";
@@ -65,8 +95,10 @@ function collectKnownPostIds(insights: BrandInsightsSummary): Set<string> {
  * agregados ya calculados y devuelve qué repetir/cortar/probar. La aritmética
  * vive en lib/brand/insights/, nunca acá.
  *
- * El system prompt es el SOC completo (Plans/03 §3.10) — reemplaza al
- * "analista de contenido" improvisado que había antes.
+ * El system prompt es el SOC completo (Plans/03 §3.10). Desde
+ * Plans/migracion-fuera-de-anthropic.md (Etapa 1), corre en Groq en vez de
+ * Claude Opus — *decidir* qué recomendar sigue yendo al modelo de mayor
+ * criterio disponible gratis.
  */
 export async function generateBrandRecommendations(params: {
   apiKey: string;
@@ -75,46 +107,35 @@ export async function generateBrandRecommendations(params: {
   /** Piezas publicadas desde el planificador con hipótesis escrita (§3.7): lo que cierra el ciclo. */
   hypotheses?: PublishedHypothesis[];
 }): Promise<GeneratedAnalysis> {
-  const client = createAnthropicClient(params.apiKey);
   const knownPostIds = collectKnownPostIds(params.insights);
   // Las piezas con hipótesis también se pueden citar como evidencia.
   for (const test of params.hypotheses ?? []) if (test.post_id) knownPostIds.add(test.post_id);
 
-  const request = {
-    model: "claude-opus-5" as const,
-    max_tokens: 16000,
-    thinking: { type: "adaptive" as const },
-    output_config: { effort: "high" as const, format: zodOutputFormat(RecommendationsOutputSchema) },
-    system: [{ type: "text" as const, text: getContentOS(), cache_control: { type: "ephemeral" as const } }],
-    messages: [{ role: "user" as const, content: buildRecommendationsUserPrompt(params.platform, params.insights, params.hypotheses) }],
-  };
+  const basePrompt = buildRecommendationsUserPrompt(params.platform, params.insights, params.hypotheses);
 
-  // El límite de 900 caracteres por sección es una instrucción, no algo que
-  // Anthropic fuerce: a veces el modelo se pasa (§29 con muchas hipótesis
-  // para cerrar) y la validación del schema tira todo el análisis. Un solo
-  // reintento alcanza en la práctica y evita perder la corrida por eso.
-  let response;
-  try {
-    response = await client.messages.parse(request);
-  } catch (error) {
-    if (!(error instanceof Anthropic.AnthropicError) || !error.message.startsWith("Failed to parse structured output")) {
-      throw error;
-    }
-    response = await client.messages.parse(request);
-  }
-
-  if (!response.parsed_output) {
-    throw new Error("Claude no devolvió una respuesta estructurada válida.");
-  }
+  const parsed = await resolveStructuredJson(RecommendationsOutputSchema, (repairNote) =>
+    generateGroqJson({
+      apiKey: params.apiKey,
+      system: getContentOS(),
+      prompt: repairNote ? `${basePrompt}\n\n${repairNote}` : basePrompt,
+      schema: RECOMMENDATIONS_GROQ_SCHEMA,
+      schemaName: "brand_recommendations",
+      strict: false,
+      // Bajado de 16000: reenviar el SOC completo sin caché en cada llamada
+      // acerca la cuota de tokens/minuto de Groq (ver plan de migración,
+      // Riesgos). Puede forzar recortar cuántas recomendaciones caben.
+      maxTokens: 6000,
+    }),
+  );
 
   // El prompt prohíbe inventar postIds, pero se filtra igual: una
   // recomendación sin evidencia trazable es una opinión (Plans/03 §3.5), y
   // eso vale también si el modelo se equivoca.
   return {
-    knowns: response.parsed_output.knowns,
-    hypotheses: response.parsed_output.hypotheses,
-    unknowns: response.parsed_output.unknowns,
-    recommendations: response.parsed_output.recommendations.map((r) => ({
+    knowns: parsed.knowns,
+    hypotheses: parsed.hypotheses,
+    unknowns: parsed.unknowns,
+    recommendations: parsed.recommendations.map((r) => ({
       kind: r.kind,
       objective: r.objective,
       title: r.title,

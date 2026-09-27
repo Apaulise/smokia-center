@@ -399,7 +399,9 @@ Al terminar escribe `lead_intel.enrichment`, `leads.sales_angle`, y mueve `NUEVO
 
 ### 1.11 Biblioteca de ángulos y generador de apertura
 
-> **Estado (2026-09-26): en curso.** `angles.ts`, `schemas.ts` (Opening/Analyze/Rewrite/FollowUp) y `prompts.ts` (bloque de estado + bloque de ángulo) ya están. Falta: `opening.ts` (`chooseSalesAngle` + `generateOpening`), sumar la Server Action a `lib/leads/ai/actions.ts`, la migración de `lead_angle_counts_30d()` (ya aplicada), y la UI de la ficha. §1.8 y §1.9 y §1.10 están completos (migraciones aplicadas, `npm run typecheck`/`lint` limpios salvo los dos errores previos de `components/shell/sidebar.tsx`) — retomar desde acá.
+> **Estado (2026-09-26): implementado, verificación manual PENDIENTE.** `angles.ts`, `schemas.ts`, `prompts.ts`, `opening.ts` (`chooseSalesAngle` + `generateOpening`), las Server Actions (`generateLeadOpening` / `confirmLeadOpening` en `lib/leads/ai/actions.ts`) y el panel de la ficha (`components/leads/opening-panel.tsx`) ya están. `npm run typecheck`/`lint` limpios salvo los dos errores previos de `components/shell/sidebar.tsx`.
+>
+> **Decisión de implementación que el plan no fijaba — variante.** El plan dejaba `angle` y `variant` en `lead_messages` desde §1.9 pero no decía qué es una "variante": acá se definieron tres encuadres fijos para el primer mensaje (observación visible / duda genuina / observación de rubro, ver `VARIANT_HINT` en `opening.ts`), balanceados con el mismo criterio que el ángulo (el menos usado para ese ángulo en 30 días, calculado sin una consulta nueva: `count % 3`). Es lo que hace comparable §1.19 entre leads distintos. Revisar si el encuadre de cada variante tiene sentido antes de acumular datos con ellos.
 
 `lib/leads/ai/angles.ts` — los nueve ángulos del `SPA §6` con su regla de uso, **en TypeScript, no en el prompt**. El modelo recibe el ángulo ya elegido y el porqué, no la tabla entera para que elija. Una tabla de nueve opciones en el prompt es nueve veces la oportunidad de elegir la cómoda.
 
@@ -410,6 +412,10 @@ Al terminar escribe `lead_intel.enrichment`, `leads.sales_angle`, y mueve `NUEVO
 - Se guarda como `lead_messages` con `sender = 'VENDEDOR'`, `generated_by = 'IA'`, `angle` y `variant`. **No se marca como enviado hasta que el usuario confirma**: el envío es un acto humano y el `SPA §24` no admite matices ahí.
 
 ### 1.12 Conversación y analizador de respuestas
+
+> **Estado (2026-09-26): implementado, verificación manual PENDIENTE.** `lib/leads/ai/analyze.ts` + la Server Action `analyzeLeadResponseAction` (una sola corrida: mensaje entrante, señales, memoria, `CRMStateEngine` y próxima acción) + `components/leads/analyze-panel.tsx` en la ficha.
+>
+> **Decisión que el plan no fijaba.** `analyzeLeadResponse()` es una sola llamada sin herramientas, a propósito: a diferencia del chat de Marca (`lib/brand/ai/chat.ts`), acá no hay una conversación visible turno a turno donde ver qué busca o guarda el modelo — el SPA §22 pide un panel que renderiza la memoria, no un chat. Ver la nota de §1.18 sobre las tools de memoria global.
 
 `lib/leads/ai/analyze.ts` — `analyzeLeadResponse()`, el corazón del sistema. Opus 5, `effort: "high"`, salida estructurada con exactamente la forma del `SPA §29`: `analysis` / `crm_update` / `strategy` / `suggested_reply`.
 
@@ -426,6 +432,10 @@ Una corrida escribe, en una sola server action:
 **`AUTORESPUESTA` no es una respuesta**, y esa distinción es lo que hace que la tasa de respuesta signifique algo. El `response_type` la separa y las métricas del §1.17 la excluyen del numerador de respuesta humana. Un "gracias por tu mensaje, te responderemos a la brevedad" que cuenta como respuesta convierte el embudo en decoración.
 
 ### 1.13 Dolores, señales y evidencia
+
+> **Estado (2026-09-26): implementado, verificación manual PENDIENTE.** `lib/leads/signals.ts` (`clampSignalStatus`, `planSignalWrites`, `hasConfirmedPain`) y `components/leads/copilot/signals-list.tsx` en la ficha.
+>
+> **Decisión que el plan no fijaba.** El analizador no manda el id de una señal existente (el esquema de salida de §1.12 no lo tiene). `planSignalWrites` matchea por `(kind, título normalizado en minúsculas)`: sin match inserta una fila nueva — más seguro un duplicado ocasional que pisar la señal equivocada. El estado nunca retrocede (mismo criterio que el `CRMStateEngine`).
 
 `lib/leads/signals.ts`. Un dolor tiene ciclo de vida, y subir de escalón cuesta:
 
@@ -445,6 +455,10 @@ Por eso `lead_signals` lleva además `business_impact`, `trigger_event` y `timin
 
 ### 1.14 Memoria por lead y próxima acción
 
+> **Estado (2026-09-26): implementado, verificación manual PENDIENTE.** `lib/leads/ai/memory.ts` (`rebuildLeadMemory`) y `lib/leads/ai/next-action.ts` (`computeNextBestAction`), los dos integrados en `analyzeLeadResponseAction`.
+>
+> **Decisiones que el plan no fijaba.** (1) `lead_intel.memory` se recalcula en TypeScript puro a partir de `lead_signals` y la salida del analizador — no hay una llamada al modelo dedicada a esto; no está en la tabla "Reparto de modelos" de §1.7. (2) `next_best_action` agrega `CLOSE_LEAD` cuando el interés llega a 9/10 con dolor confirmado (SPA §11: "quiere una llamada o una propuesta"), más allá de las tres condiciones literales de `ASK_FOR_MEETING`. (3) `SEND_INFORMATION` nunca lo elige el motor solo — queda como opción manual en la ficha, no automatizada.
+
 **La IA no relee el chat entero cada vez.** `lead_intel.memory` tiene la forma del `SPA §25` (`business_context`, `current_process`, `pain_points`, `objections`, `buying_signals`, `tools_used`, `key_quotes`, `timing`, `next_action`), se reescribe después de cada análisis, y es lo que viaja en el turno siguiente. Un hilo de veinte mensajes reenviado entero es caro y, peor, entierra lo importante en ruido.
 
 `lib/leads/ai/next-action.ts` calcula la `next_best_action` del `SPA §13`: `ASK_QUESTION`, `EXPLAIN_SERVICE`, `ASK_FOR_MEETING`, `SEND_INFORMATION`, `FOLLOW_UP`, `WAIT`, `DISQUALIFY`, `CLOSE_LEAD`.
@@ -454,6 +468,12 @@ Por eso `lead_signals` lleva además `business_impact`, `trigger_event` y `timin
 La regla de no sobrepreguntar (`SPA §14`) se hace cumplir igual de literal: el esquema de salida admite **una** pregunta. Las cinco preguntas juntas del ejemplo no son un mensaje, son un formulario.
 
 ### 1.15 La ficha reconstruida y el copiloto lateral
+
+> **Estado (2026-09-26): implementado, verificación manual PENDIENTE — es el paso más grande para probar a mano.** `lib/leads/temperature.ts`, `lib/leads/conversation.ts` + `components/leads/conversation/message-thread.tsx` (reemplaza a `lead-timeline.tsx`, borrado), `components/leads/copilot/{signals-list,status-summary,save-signal-button}.tsx`, `lib/leads/ai/rewrite.ts` + `components/leads/rewrite-buttons.tsx` + `components/leads/suggested-reply-confirm.tsx`, y la página `app/(app)/leads/[id]/page.tsx` reescrita entera.
+>
+> **Decisión que el plan no fijaba: dónde van los datos de contacto, rubro/origen, agenda y notas.** El `SPA §22` describe cabecera + conversación al centro + copiloto a la derecha, pero no dice dónde queda lo que ya existía de §1.3/§1.5. Quedaron en una columna angosta a la izquierda (`lg:grid-cols-12`: 3/6/3). Revisar si esa proporción funciona en la práctica, sobre todo en pantallas chicas (`CLAUDE.md` verificación #15).
+>
+> **Bug real encontrado y corregido en este paso:** `rewrite-buttons.tsx` (cliente) importaba `REWRITE_TONES`/`RewriteTone` directo de `lib/leads/ai/rewrite.ts`, que arrastra `sales-os.ts` (`readFileSync`) al bundle del navegador — `npm run build` lo detectó (`Module not found: Can't resolve 'fs'`). Se separaron los tonos a `lib/leads/ai/rewrite-tones.ts`, sin dependencias de servidor. **`npm run typecheck` no lo detecta, sólo `npm run build`** — vale la pena correr build antes de dar por cerrado cualquier paso que agregue un componente cliente nuevo.
 
 `/leads/[id]` pasa a tres columnas, con la forma del `SPA §22`:
 
@@ -469,6 +489,8 @@ Se reusan `components/ui/*`, `lead-timeline.tsx` (extendido para renderizar mens
 
 ### 1.16 Seguimiento futuro
 
+> **Estado (2026-09-26): implementado, verificación manual PENDIENTE.** `lib/leads/ai/follow-up.ts` (`generateFollowup`), la Server Action `generateLeadFollowup` y `components/leads/follow-up-panel.tsx` en la ficha. `listStaleLeads` (§1.4) se extendió con la condición `next_action_at.lte.now()` y el panel de atención distingue "seguimiento vencido" de "sin tocar".
+
 `AHORA_NO` es el estado que más plata deja sobre la mesa si se trata mal. El `SPA §18` es terminante: *"no ahora porque estoy abriendo otro local, escribime en un mes"* **no es** `CERRADO_PERDIDO`.
 
 Se guarda con `next_action_at`, la razón, y la oportunidad que quedó identificada. Cuando llega la fecha el lead aparece en el panel de atención del dashboard — `listStaleLeads` ya existe y se extiende.
@@ -476,6 +498,10 @@ Se guarda con `next_action_at`, la razón, y la oportunidad que quedó identific
 `generateFollowup()` escribe **desde el contexto histórico**, no desde una plantilla. El prompt tiene prohibido "Hola, quería hacer seguimiento", y la regla que lo hace cumplible es dura: si no puede citar algo concreto de la conversación anterior, **no genera nada y lo dice**. Un follow-up genérico gasta el único intento que quedaba.
 
 ### 1.17 Métricas de prospección
+
+> **Estado (2026-09-26): implementado y desplegado, verificación manual PENDIENTE.** Migración `20260926160000_leads_prospecting_funnel.sql` (aplicada con `db push`, tipos regenerados), `lib/leads/prospecting-rates.ts` y `components/leads/dashboard/prospecting-funnel.tsx` en `/leads`.
+>
+> **Decisión que el plan no fijaba: los siete escalones exactos.** El `SPA §21` no está en el archivo del prompt (llega hasta §21 "Regla final" — ver la nota de §1.7 sobre qué es y qué no es el archivo). Se interpretaron como: leads totales, contactados, respuestas humanas, calificados, interesados, con reunión y cerrados ganados — leyendo literalmente la lista de fórmulas que sí da este mismo `§1.17` del plan. Revisar que sea la lectura correcta de "los siete escalones".
 
 RPC nueva `leads_prospecting_funnel()`, SQL, `SECURITY INVOKER` como las cinco que ya existen. Devuelve los siete escalones del `SPA §21` y las tasas del `SPA §20`.
 
@@ -487,6 +513,10 @@ El embudo se dibuja con la skill `dataviz` (`CLAUDE.md` §12) y la paleta de mar
 
 ### 1.18 Memoria global de ventas
 
+> **Estado (2026-09-26): implementado, verificación manual PENDIENTE.** `lib/leads/knowledge/{schema,queries,mutations,actions}.ts`, `lib/leads/ai/tools.ts` (las tres tools), `components/leads/knowledge/{knowledge-list,knowledge-dialog}.tsx` y `app/(app)/leads/conocimiento/page.tsx`, agregada al sidebar (`components/shell/nav.ts`). `components/leads/copilot/save-signal-button.tsx` deja "Guardar en memoria global" desde una señal confirmada de la ficha.
+>
+> **Decisión de implementación que el plan no fijaba — y la más importante para revisar de este paso.** Las tres tools (`buscar_conocimiento`, `guardar_conocimiento`, `actualizar_conocimiento`) están escritas en `lib/leads/ai/tools.ts` pero **no están conectadas a ninguna llamada todavía**. `analyzeLeadResponse()` (§1.12) es una sola corrida de salida estructurada sin conversación visible — conectar tool-use ahí significaría que el modelo busca y escribe en la memoria global sin que la persona vea qué hizo, a diferencia del chat de Marca donde el tool-use se ve en pantalla turno a turno. Mientras tanto, la escritura a memoria global es 100% humana: manual desde `/leads/conocimiento`, o con un clic desde una señal confirmada en la ficha, prellenada mecánicamente (no por el modelo). Si preferís que el modelo escriba solo ahí (como en Marca), hay que decidir dónde vive esa conversación visible antes de conectarlo.
+
 `sales_knowledge` más tres herramientas para el modelo — `buscar_conocimiento`, `guardar_conocimiento`, `actualizar_conocimiento` — calcadas de `lib/brand/ai/tools.ts` con sus mismos topes: preview del `body` a 1.500 caracteres y máximo 15 notas por resultado, porque 15 notas largas son ~30k tokens en un solo `tool_result`. **Sin herramienta de borrado.**
 
 Colecciones: `OBJECIONES`, `DOLORES`, `ANGULOS`, `SEGMENTOS`, `MENSAJES`, `APRENDIZAJES`.
@@ -494,6 +524,10 @@ Colecciones: `OBJECIONES`, `DOLORES`, `ANGULOS`, `SEGMENTOS`, `MENSAJES`, `APREN
 Pantalla `/leads/conocimiento`, reusando la grilla de la biblioteca de marca. No es opcional: **una memoria que sólo el modelo puede leer es una caja negra**, y el día que empiece a repetir una conclusión equivocada no habría dónde ir a corregirla.
 
 ### 1.19 Experimentación de aperturas
+
+> **Estado (2026-09-26): implementado y desplegado, verificación manual PENDIENTE.** Migración `20260926170000_lead_angle_variant_performance.sql` (RPC `lead_angle_variant_performance()`, aplicada con `db push`), `ANGLE_MIN_SAMPLE = 20` en `components/leads/dashboard/angle-experiments.tsx`, mostrada en `/leads`.
+>
+> Con cero aperturas confirmadas hoy (recién se cierra §1.11), la tabla va a estar vacía o con `n` bajo el mínimo hasta que se use el copiloto en leads reales — es el resultado esperado, no un bug.
 
 Sin tabla nueva: `angle` y `variant` ya están en `lead_messages` desde §1.9. Una RPC agrupa por ángulo y variante y devuelve tasa de respuesta humana, de calificación y de agenda — lo que el `SPA §27` quiere poder comparar.
 

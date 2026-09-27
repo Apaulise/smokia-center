@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/leads/ui/button";
 import { createClient } from "@/lib/supabase/client";
 
 export function GoogleSignInButton({ next }: { next: string }) {
@@ -32,16 +32,11 @@ export function GoogleSignInButton({ next }: { next: string }) {
 
   return (
     <>
-      <Button
-        variant="primary"
-        size="lg"
-        className="w-full"
-        onClick={signIn}
-        disabled={pending}
-      >
+      {/* Secundario (outline), no primario: en Design System §08 el amarillo es sólo para el submit por email. */}
+      <Button variant="secondary" onClick={signIn} disabled={pending} className="h-10 w-full sm:h-12">
         {pending ? "Redirigiendo…" : "Continuar con Google"}
       </Button>
-      {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
+      {error ? <p className="mt-3 text-[13px] text-lm-danger">{error}</p> : null}
     </>
   );
 }

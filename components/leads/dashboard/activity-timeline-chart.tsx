@@ -10,9 +10,12 @@ const PADDING = { top: 16, right: 12, bottom: 24, left: 12 };
 const INNER_WIDTH = WIDTH - PADDING.left - PADDING.right;
 const INNER_HEIGHT = HEIGHT - PADDING.top - PADDING.bottom;
 
-// violeta = proceso (el esfuerzo de contactar, en curso) · cyan = resultado (un cierre)
-const CONTACTED_COLOR = "#7C3AED";
-const WON_COLOR = "#18D6E8";
+// Sistema "Señal y humo": serie principal (resultado) en `signal`, comparación
+// en `smoke-5` — nunca dos hues saturados compitiendo (README del sistema).
+// La combinación queda desaturada a propósito; se valida con la skill dataviz
+// (chroma floor) y se compensa con leyenda + etiqueta directa en cada línea.
+const CONTACTED_COLOR = "#b9bbbe";
+const WON_COLOR = "#f2c14e";
 
 /** Redondea hacia arriba al siguiente 1/2/5 × 10ⁿ, para que el gridline superior sea un número limpio. */
 function niceCeil(value: number) {
@@ -41,7 +44,7 @@ export function ActivityTimelineChart({ points }: { points: ActivityTimelinePoin
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
   if (points.length === 0) {
-    return <p className="text-sm text-muted">Sin datos en este período.</p>;
+    return <p className="text-[13px] text-lm-ink-2">Sin datos en este período.</p>;
   }
 
   const max = Math.max(1, ...points.map((p) => Math.max(p.contacted, p.won)));
@@ -68,7 +71,7 @@ export function ActivityTimelineChart({ points }: { points: ActivityTimelinePoin
 
   return (
     <div>
-      <div className="mb-3 flex items-center gap-4 text-xs text-muted">
+      <div className="mb-3 flex items-center gap-4 text-xs text-lm-ink-2">
         <span className="inline-flex items-center gap-1.5">
           <span className="h-0.5 w-4 rounded-full" style={{ backgroundColor: WON_COLOR }} />
           Cierres
@@ -95,8 +98,7 @@ export function ActivityTimelineChart({ points }: { points: ActivityTimelinePoin
               x2={WIDTH - PADDING.right}
               y1={yAt(value)}
               y2={yAt(value)}
-              stroke="var(--color-line)"
-              strokeOpacity={0.35}
+              stroke="var(--color-lm-line)"
               strokeWidth={1}
             />
           ))}
@@ -107,7 +109,7 @@ export function ActivityTimelineChart({ points }: { points: ActivityTimelinePoin
               x2={xAt(hoverIndex)}
               y1={PADDING.top}
               y2={HEIGHT - PADDING.bottom}
-              stroke="var(--color-line)"
+              stroke="var(--color-lm-line-strong)"
               strokeWidth={1}
             />
           ) : null}
@@ -115,43 +117,43 @@ export function ActivityTimelineChart({ points }: { points: ActivityTimelinePoin
           <path d={contactedPath} fill="none" stroke={CONTACTED_COLOR} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
           <path d={wonPath} fill="none" stroke={WON_COLOR} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
 
-          <circle cx={xAt(points.length - 1)} cy={yAt(points[points.length - 1].contacted)} r={4} fill={CONTACTED_COLOR} stroke="var(--color-elevated)" strokeWidth={2} />
-          <circle cx={xAt(points.length - 1)} cy={yAt(points[points.length - 1].won)} r={4} fill={WON_COLOR} stroke="var(--color-elevated)" strokeWidth={2} />
+          <circle cx={xAt(points.length - 1)} cy={yAt(points[points.length - 1].contacted)} r={4} fill={CONTACTED_COLOR} stroke="var(--color-lm-surface)" strokeWidth={2} />
+          <circle cx={xAt(points.length - 1)} cy={yAt(points[points.length - 1].won)} r={4} fill={WON_COLOR} stroke="var(--color-lm-surface)" strokeWidth={2} />
 
           {hoverIndex !== null ? (
             <>
-              <circle cx={xAt(hoverIndex)} cy={yAt(points[hoverIndex].contacted)} r={4} fill={CONTACTED_COLOR} stroke="var(--color-elevated)" strokeWidth={2} />
-              <circle cx={xAt(hoverIndex)} cy={yAt(points[hoverIndex].won)} r={4} fill={WON_COLOR} stroke="var(--color-elevated)" strokeWidth={2} />
+              <circle cx={xAt(hoverIndex)} cy={yAt(points[hoverIndex].contacted)} r={4} fill={CONTACTED_COLOR} stroke="var(--color-lm-surface)" strokeWidth={2} />
+              <circle cx={xAt(hoverIndex)} cy={yAt(points[hoverIndex].won)} r={4} fill={WON_COLOR} stroke="var(--color-lm-surface)" strokeWidth={2} />
             </>
           ) : null}
 
-          <text x={PADDING.left} y={HEIGHT - 6} fill="var(--color-muted)" fontSize={10}>
+          <text x={PADDING.left} y={HEIGHT - 6} fill="var(--color-lm-ink-3)" fontSize={10}>
             {formatDay(points[0].day)}
           </text>
-          <text x={WIDTH - PADDING.right} y={HEIGHT - 6} textAnchor="end" fill="var(--color-muted)" fontSize={10}>
+          <text x={WIDTH - PADDING.right} y={HEIGHT - 6} textAnchor="end" fill="var(--color-lm-ink-3)" fontSize={10}>
             {formatDay(points[points.length - 1].day)}
           </text>
         </svg>
 
         {hovered ? (
           <div
-            className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-[12px] border border-line bg-elevated px-3 py-2 text-xs shadow-lg"
+            className="lm-shadow-pop pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-lm-md border border-lm-line bg-lm-raised px-3 py-2 text-xs"
             style={{ left: `${Math.min(Math.max(tooltipLeftPct, 12), 88)}%` }}
           >
-            <p className="mb-1 font-medium text-ink">{formatDay(hovered.day, { day: "2-digit", month: "short" })}</p>
-            <p className="flex items-center justify-between gap-4 text-muted">
+            <p className="mb-1 font-medium text-lm-ink">{formatDay(hovered.day, { day: "2-digit", month: "short" })}</p>
+            <p className="flex items-center justify-between gap-4 text-lm-ink-2">
               <span className="inline-flex items-center gap-1.5">
                 <span className="h-0.5 w-3 rounded-full" style={{ backgroundColor: WON_COLOR }} />
                 Cierres
               </span>
-              <span className="tabular text-ink">{hovered.won}</span>
+              <span className="font-mono tabular-nums text-lm-ink">{hovered.won}</span>
             </p>
-            <p className="flex items-center justify-between gap-4 text-muted">
+            <p className="flex items-center justify-between gap-4 text-lm-ink-2">
               <span className="inline-flex items-center gap-1.5">
                 <span className="h-0.5 w-3 rounded-full" style={{ backgroundColor: CONTACTED_COLOR }} />
                 Contactos
               </span>
-              <span className="tabular text-ink">{hovered.contacted}</span>
+              <span className="font-mono tabular-nums text-lm-ink">{hovered.contacted}</span>
             </p>
           </div>
         ) : null}

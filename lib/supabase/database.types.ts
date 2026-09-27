@@ -1780,6 +1780,17 @@ export type Database = {
           message_count: number
         }[]
       }
+      lead_angle_variant_performance: {
+        Args: never
+        Returns: {
+          angle: Database["public"]["Enums"]["lead_sales_angle"]
+          human_response_rate: number
+          meeting_rate: number
+          n: number
+          qualification_rate: number
+          variant: number
+        }[]
+      }
       leads_activity_timeline: {
         Args: { days?: number }
         Returns: {
@@ -1817,6 +1828,7 @@ export type Database = {
       leads_performance_by_list: {
         Args: never
         Returns: {
+          contacted_count: number
           criteria: Json
           industry_color: string
           industry_name: string
@@ -1826,6 +1838,19 @@ export type Database = {
           source: Database["public"]["Enums"]["lead_source"]
           win_rate: number
           won_count: number
+        }[]
+      }
+      leads_prospecting_funnel: {
+        Args: never
+        Returns: {
+          contacts_sent: number
+          human_responses: number
+          interested: number
+          meetings: number
+          qualified: number
+          total_leads: number
+          total_responses: number
+          won: number
         }[]
       }
     }

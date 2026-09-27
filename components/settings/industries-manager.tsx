@@ -4,9 +4,9 @@ import { CheckCircle2, Loader2, Sparkles, XCircle } from "lucide-react";
 import { useActionState, useEffect, useRef, useTransition } from "react";
 
 import { DeleteButton } from "@/components/settings/delete-button";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/leads/ui/button";
+import { Field, Input } from "@/components/leads/ui/field";
+import { Chip } from "@/components/leads/ui/status-badge";
 import type { Database } from "@/lib/supabase/database.types";
 import { createIndustry, deleteIndustry, seedDefaultIndustries } from "@/lib/settings/actions";
 import { cn } from "@/lib/utils";
@@ -23,10 +23,10 @@ export function IndustriesManager({ industries }: { industries: Industry[] }) {
   }, [state]);
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {industries.length === 0 ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-line bg-surface/60 px-4 py-3">
-          <p className="text-sm text-muted">Todavía no cargaste ningún rubro.</p>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lm-sm border border-lm-line-strong bg-lm-raised px-4 py-3">
+          <p className="text-[13px] text-lm-ink-2">Todavía no cargaste ningún rubro.</p>
           <Button
             type="button"
             variant="secondary"
@@ -34,22 +34,15 @@ export function IndustriesManager({ industries }: { industries: Industry[] }) {
             disabled={seedPending}
             onClick={() => startSeed(() => void seedDefaultIndustries())}
           >
-            {seedPending ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="size-3.5" />
-            )}
+            {seedPending ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" strokeWidth={1.5} />}
             Sembrar rubros comunes
           </Button>
         </div>
       ) : (
         <div className="flex flex-wrap gap-2">
           {industries.map((industry) => (
-            <div
-              key={industry.id}
-              className="flex items-center gap-1.5 rounded-full border border-line bg-surface/40 py-0.5 pr-1 pl-1"
-            >
-              <Badge color={industry.color}>{industry.name}</Badge>
+            <div key={industry.id} className="flex items-center gap-1 rounded-lm-sm border border-lm-line bg-lm-raised py-0.5 pr-1 pl-1">
+              <Chip color={industry.color}>{industry.name}</Chip>
               <DeleteButton
                 action={deleteIndustry.bind(null, industry.id)}
                 confirmText={`¿Eliminar el rubro "${industry.name}"? Los leads que lo usan quedan sin rubro.`}
@@ -62,23 +55,19 @@ export function IndustriesManager({ industries }: { industries: Industry[] }) {
 
       <form ref={formRef} action={formAction} className="flex flex-wrap items-end gap-3">
         <div className="min-w-[200px] flex-1">
-          <label htmlFor="industry-name" className="mb-1.5 block text-xs text-muted">
-            Nuevo rubro
-          </label>
-          <Input id="industry-name" name="name" placeholder="Ej: Peluquerías" required />
+          <Field label="Nuevo rubro" htmlFor="industry-name">
+            <Input id="industry-name" name="name" placeholder="Ej: Peluquerías" required />
+          </Field>
         </div>
-        <div>
-          <label htmlFor="industry-color" className="mb-1.5 block text-xs text-muted">
-            Color
-          </label>
+        <Field label="Color" htmlFor="industry-color">
           <input
             id="industry-color"
             name="color"
             type="color"
-            defaultValue="#18D6E8"
-            className="h-10 w-14 cursor-pointer rounded-[12px] border border-line bg-surface/60 p-1"
+            defaultValue="#F2C14E"
+            className="h-9 w-14 cursor-pointer rounded-lm-sm border border-lm-line-strong bg-lm-raised p-1"
           />
-        </div>
+        </Field>
         <Button type="submit" variant="secondary" disabled={pending}>
           {pending ? <Loader2 className="size-3.5 animate-spin" /> : null}
           Agregar
@@ -86,13 +75,8 @@ export function IndustriesManager({ industries }: { industries: Industry[] }) {
       </form>
 
       {state ? (
-        <p
-          className={cn(
-            "flex items-center gap-1.5 text-sm",
-            state.ok ? "text-positive" : "text-danger",
-          )}
-        >
-          {state.ok ? <CheckCircle2 className="size-4" /> : <XCircle className="size-4" />}
+        <p className={cn("flex items-center gap-1.5 text-[13px]", state.ok ? "text-lm-success" : "text-lm-danger")}>
+          {state.ok ? <CheckCircle2 className="size-4" strokeWidth={1.5} /> : <XCircle className="size-4" strokeWidth={1.5} />}
           {state.message}
         </p>
       ) : null}

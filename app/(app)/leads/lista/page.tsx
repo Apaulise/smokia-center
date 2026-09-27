@@ -1,42 +1,42 @@
 import { ListChecks } from "lucide-react";
 
-import { PageHeader } from "@/components/shell/page-header";
-import { ButtonLink } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
-import { LeadListCard } from "@/components/leads/lead-list-card";
+import { ListsBrowser } from "@/components/leads/lists-browser";
+import { ButtonLink } from "@/components/leads/ui/button";
+import { EmptyState } from "@/components/leads/ui/feedback";
+import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
 import { listLeadListsOverview } from "@/lib/leads/queries";
 
 export const metadata = { title: "Listas de leads · Awareness AI" };
 
 /**
- * Previsualización de listas (ajuste sobre Plan §1.3): antes de ver la tabla
- * de todos los leads mezclados, se elige una lista puntual. Cada card permite
- * además renombrar o borrar la lista sin entrar a sus leads.
+ * Previsualización de listas (Design System §03/04): tabla densa por
+ * defecto, grilla opcional. Cada fila/card permite además renombrar o borrar
+ * la lista sin entrar a sus leads.
  */
-export default async function LeadsListaPage() {
+export default async function LeadsListaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
+  const { view: viewParam } = await searchParams;
+  const view = viewParam === "grilla" ? "grilla" : "tabla";
   const lists = await listLeadListsOverview();
 
   return (
     <>
-      <PageHeader
-        eyebrow="Gestor de Leads"
-        title="Listas de leads"
-        description="Elegí una lista para ver y trabajar sus leads."
-      />
-      <div className="px-6 py-8 lg:px-10">
+      <HeaderBar breadcrumb="Gestor de Leads / Listas" />
+      <div className="flex flex-col gap-6 px-6 py-8 lg:px-8">
+        <PageHeading title="Listas" description="Elegí una lista para ver y trabajar sus leads." />
+
         {lists.length === 0 ? (
           <EmptyState
-            icon={<ListChecks className="size-6" />}
+            icon={<ListChecks className="size-5" strokeWidth={1.5} />}
             title="Todavía no generaste ninguna lista"
             description="Generá una lista por rubro y zona, o importá un CSV, para empezar a trabajarla."
-            action={<ButtonLink href="/leads/generar">Generar lista</ButtonLink>}
+            action={<ButtonLink href="/leads/generar" variant="primary">Generar lista</ButtonLink>}
           />
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {lists.map((list) => (
-              <LeadListCard key={list.id} list={list} />
-            ))}
-          </div>
+          <ListsBrowser lists={lists} view={view} />
         )}
       </div>
     </>

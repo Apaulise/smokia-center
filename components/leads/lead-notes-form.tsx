@@ -4,8 +4,9 @@ import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/leads/ui/button";
+import { Field, Input, Textarea } from "@/components/leads/ui/field";
+
 import { updateLeadNotes } from "@/lib/leads/actions";
 
 function toDatetimeLocal(value: string | null): string {
@@ -15,15 +16,7 @@ function toDatetimeLocal(value: string | null): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-export function LeadNotesForm({
-  leadId,
-  notes,
-  nextActionAt,
-}: {
-  leadId: string;
-  notes: string | null;
-  nextActionAt: string | null;
-}) {
+export function LeadNotesForm({ leadId, notes, nextActionAt }: { leadId: string; notes: string | null; nextActionAt: string | null }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(updateLeadNotes, null);
 
@@ -33,38 +26,26 @@ export function LeadNotesForm({
   }, [state]);
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={formAction} className="flex flex-col gap-4">
       <input type="hidden" name="leadId" value={leadId} />
 
-      <div>
-        <label className="mb-1.5 block text-xs text-muted" htmlFor="notes">
-          Notas
-        </label>
-        <Textarea id="notes" name="notes" defaultValue={notes ?? ""} className="min-h-32" />
-      </div>
+      <Field label="Notas" htmlFor="notes">
+        <Textarea id="notes" name="notes" defaultValue={notes ?? ""} className="min-h-28" />
+      </Field>
 
-      <div>
-        <label className="mb-1.5 block text-xs text-muted" htmlFor="nextActionAt">
-          Próxima acción
-        </label>
-        <input
-          id="nextActionAt"
-          name="nextActionAt"
-          type="datetime-local"
-          defaultValue={toDatetimeLocal(nextActionAt)}
-          className="h-10 w-full rounded-[12px] border border-line bg-surface/60 px-3 text-sm text-ink"
-        />
-      </div>
+      <Field label="Próxima acción" htmlFor="nextActionAt">
+        <Input id="nextActionAt" name="nextActionAt" type="datetime-local" defaultValue={toDatetimeLocal(nextActionAt)} mono />
+      </Field>
 
       <div className="flex items-center gap-3">
-        <Button type="submit" variant="secondary" disabled={pending}>
+        <Button type="submit" variant="secondary" size="sm" disabled={pending}>
           {pending ? <Loader2 className="size-3.5 animate-spin" /> : null}
           Guardar
         </Button>
         {state ? (
-          <p className={`flex items-center gap-1.5 text-sm ${state.ok ? "text-positive" : "text-danger"}`}>
-            {state.ok ? <CheckCircle2 className="size-4" /> : <XCircle className="size-4" />}
-            {state.message}
+          <p className={`flex items-center gap-1.5 text-xs ${state.ok ? "text-lm-success" : "text-lm-danger"}`}>
+            {state.ok ? <CheckCircle2 className="size-3.5" strokeWidth={1.5} /> : <XCircle className="size-3.5" strokeWidth={1.5} />}
+            {state.ok ? `Guardado · ${new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}` : state.message}
           </p>
         ) : null}
       </div>

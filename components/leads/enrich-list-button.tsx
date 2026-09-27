@@ -3,7 +3,7 @@
 import { Loader2, Sparkles } from "lucide-react";
 import { useState, useTransition } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/leads/ui/button";
 import { enrichLeadListBatch } from "@/lib/leads/ai/actions";
 
 /** "Enriquecer lista" (Plan §1.10): dispara el lote en segundo plano — no hay progreso en vivo, se refresca a mano. */
@@ -25,10 +25,10 @@ export function EnrichListButton({ leadListId }: { leadListId: string }) {
           })
         }
       >
-        {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+        {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" strokeWidth={1.5} />}
         Enriquecer lista
       </Button>
-      {message ? <span className="text-xs text-muted">{message}</span> : null}
+      {message ? <span className="text-xs text-lm-ink-3">{message}</span> : null}
     </div>
   );
 }

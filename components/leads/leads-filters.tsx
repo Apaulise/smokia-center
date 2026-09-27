@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { Search } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Button } from "@/components/leads/ui/button";
+import { Input, Select } from "@/components/leads/ui/field";
 import { LEAD_STATUSES, STATUS_LABEL } from "@/lib/leads/status";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -36,31 +35,21 @@ export function LeadsFilters({
   const hasFilters = Boolean(current.industryId || current.status || current.city || current.q);
 
   return (
-    <form
-      method="get"
-      action={basePath}
-      className="flex flex-wrap items-end gap-3 rounded-[20px] border border-line bg-elevated/70 p-4"
-    >
+    <form method="get" action={basePath} className="flex flex-wrap items-end gap-3 rounded-lm-lg border border-lm-line bg-lm-surface p-4">
       <input type="hidden" name="view" value={view} />
 
       <div className="min-w-[200px] flex-1">
-        <label className="mb-1.5 block text-xs text-muted" htmlFor="q">
+        <label className="mb-1.5 block text-xs text-lm-ink-2" htmlFor="q">
           Buscar
         </label>
         <div className="relative">
-          <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted" />
-          <Input
-            id="q"
-            name="q"
-            defaultValue={current.q}
-            placeholder="Nombre, teléfono, email o dirección"
-            className="pl-9"
-          />
+          <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-lm-ink-3" strokeWidth={1.5} />
+          <Input id="q" name="q" defaultValue={current.q} placeholder="Nombre, teléfono, email o dirección" className="pl-9" />
         </div>
       </div>
 
       <div className="w-44">
-        <label className="mb-1.5 block text-xs text-muted" htmlFor="industryId">
+        <label className="mb-1.5 block text-xs text-lm-ink-2" htmlFor="industryId">
           Rubro
         </label>
         <Select id="industryId" name="industryId" defaultValue={current.industryId ?? ""}>
@@ -74,7 +63,7 @@ export function LeadsFilters({
       </div>
 
       <div className="w-44">
-        <label className="mb-1.5 block text-xs text-muted" htmlFor="status">
+        <label className="mb-1.5 block text-xs text-lm-ink-2" htmlFor="status">
           Estado
         </label>
         <Select id="status" name="status" defaultValue={current.status ?? ""}>
@@ -88,7 +77,7 @@ export function LeadsFilters({
       </div>
 
       <div className="w-40">
-        <label className="mb-1.5 block text-xs text-muted" htmlFor="city">
+        <label className="mb-1.5 block text-xs text-lm-ink-2" htmlFor="city">
           Ciudad
         </label>
         <Select id="city" name="city" defaultValue={current.city ?? ""}>
@@ -106,7 +95,7 @@ export function LeadsFilters({
           Filtrar
         </Button>
         {hasFilters ? (
-          <Link href={`${basePath}?view=${view}`} className="text-xs text-muted hover:text-ink">
+          <Link href={`${basePath}?view=${view}`} className="text-xs text-lm-ink-3 hover:text-lm-ink">
             Limpiar filtros
           </Link>
         ) : null}

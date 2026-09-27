@@ -161,3 +161,35 @@ export async function getAllApifyDatasetItems(params: { token: string; datasetId
 
   return items;
 }
+
+export interface ApifyAccountLimits {
+  maxMonthlyUsageUsd: number;
+  monthlyUsageUsd: number;
+  remainingUsd: number;
+}
+
+/**
+ * Crédito restante del mes (Design System §04, panel COSTO: "Crédito Apify
+ * restante"). No es crítico para generar una lista — si Apify cambia esta
+ * respuesta o el plan no tiene tope, se devuelve null y la pantalla
+ * simplemente no muestra la línea, en vez de romper o inventar un número.
+ */
+export async function getApifyAccountLimits(token: string): Promise<ApifyAccountLimits | null> {
+  try {
+    const response = await fetch(`${APIFY_BASE}/users/me/limits`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) return null;
+
+    const body = (await response.json()) as {
+      data?: { limits?: { maxMonthlyUsageUsd?: unknown }; current?: { monthlyUsageUsd?: unknown } };
+    };
+    const max = body.data?.limits?.maxMonthlyUsageUsd;
+    const used = body.data?.current?.monthlyUsageUsd;
+    if (typeof max !== "number" || typeof used !== "number") return null;
+
+    return { maxMonthlyUsageUsd: max, monthlyUsageUsd: used, remainingUsd: Math.max(0, max - used) };
+  } catch {
+    return null;
+  }
+}

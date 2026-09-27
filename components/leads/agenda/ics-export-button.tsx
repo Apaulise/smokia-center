@@ -3,7 +3,7 @@
 import { CalendarArrowDown, Loader2 } from "lucide-react";
 import { useTransition } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/leads/ui/button";
 import { exportAgendaIcs } from "@/lib/leads/actions";
 
 function downloadIcs(ics: string, filename: string) {
@@ -29,7 +29,7 @@ export function IcsExportButton() {
 
   return (
     <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={handleClick}>
-      {pending ? <Loader2 className="size-3.5 animate-spin" /> : <CalendarArrowDown className="size-3.5" />}
+      {pending ? <Loader2 className="size-3.5 animate-spin" /> : <CalendarArrowDown className="size-3.5" strokeWidth={1.5} />}
       Exportar .ics
     </Button>
   );

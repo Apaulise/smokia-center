@@ -3,12 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { PageHeader } from "@/components/shell/page-header";
-import { ButtonLink } from "@/components/ui/button";
 import { EnrichListButton } from "@/components/leads/enrich-list-button";
 import { LeadsFilters } from "@/components/leads/leads-filters";
 import { LeadsKanban } from "@/components/leads/leads-kanban";
 import { LeadsTable } from "@/components/leads/leads-table";
+import { ButtonLink } from "@/components/leads/ui/button";
+import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
+import { Segmented, SegmentedLink } from "@/components/leads/ui/tabs";
 import type { LeadsSortField } from "@/lib/leads/queries";
 import { getLeadList, listLeadCities, listLeads, listLeadsForKanban } from "@/lib/leads/queries";
 import type { LeadStatus } from "@/lib/leads/status";
@@ -69,30 +70,36 @@ export default async function LeadListaDetallePage({
     if (value && key !== "page") otherParams.set(key, value);
   }
 
-  const backAction = (
-    <ButtonLink href="/leads/lista" variant="ghost" size="sm">
-      <ArrowLeft className="size-3.5" />
-      Volver a listas
-    </ButtonLink>
+  const viewToggle = <ViewToggle view={view} basePath={basePath} otherParams={otherParams} />;
+
+  const header = (
+    <>
+      <HeaderBar breadcrumb={`Gestor de Leads / Listas / ${list.name}`} />
+      <div className="px-6 pt-8 lg:px-8">
+        <PageHeading
+          title={list.name}
+          description="Filtrá por rubro, estado o ciudad y hacé seguimiento hasta el cierre."
+          action={
+            <div className="flex items-center gap-3">
+              <ButtonLink href="/leads/lista" variant="ghost" size="sm">
+                <ArrowLeft className="size-3.5" strokeWidth={1.5} />
+                Volver a listas
+              </ButtonLink>
+              <EnrichListButton leadListId={id} />
+              {viewToggle}
+            </div>
+          }
+        />
+      </div>
+    </>
   );
 
   if (view === "kanban") {
     const leads = await listLeadsForKanban(filters);
     return (
       <>
-        <PageHeader
-          eyebrow="Gestor de Leads"
-          title={list.name}
-          description="Filtrá por rubro, estado o ciudad y hacé seguimiento hasta el cierre."
-          action={
-            <div className="flex items-center gap-3">
-              {backAction}
-              <EnrichListButton leadListId={id} />
-              <ViewToggle view={view} basePath={basePath} otherParams={otherParams} />
-            </div>
-          }
-        />
-        <div className="space-y-6 px-6 py-8 lg:px-10">
+        {header}
+        <div className="flex flex-col gap-6 px-6 py-8 lg:px-8">
           <LeadsFilters industries={industries} cities={cities} view={view} current={filters} basePath={basePath} />
           <LeadsKanban leads={leads} />
         </div>
@@ -107,37 +114,26 @@ export default async function LeadListaDetallePage({
 
   return (
     <>
-      <PageHeader
-        eyebrow="Gestor de Leads"
-        title={list.name}
-        description="Filtrá por rubro, estado o ciudad y hacé seguimiento hasta el cierre."
-        action={
-          <div className="flex items-center gap-3">
-            {backAction}
-            <EnrichListButton leadListId={id} />
-            <ViewToggle view={view} basePath={basePath} otherParams={otherParams} />
-          </div>
-        }
-      />
-      <div className="space-y-6 px-6 py-8 lg:px-10">
+      {header}
+      <div className="flex flex-col gap-6 px-6 py-8 lg:px-8">
         <LeadsFilters industries={industries} cities={cities} view={view} current={filters} basePath={basePath} />
 
         <LeadsTable leads={leads} industries={industries} />
 
         {count > 0 ? (
-          <div className="flex items-center justify-between text-sm text-muted">
-            <span className="tabular">
+          <div className="flex items-center justify-between text-[13px] text-lm-ink-2">
+            <span className="font-mono tabular-nums">
               Mostrando {from}–{to} de {count}
             </span>
             <div className="flex items-center gap-2">
               <PageLink basePath={basePath} params={otherParams} page={page - 1} disabled={page <= 1}>
-                <ChevronLeft className="size-4" />
+                <ChevronLeft className="size-4" strokeWidth={1.5} />
               </PageLink>
-              <span className="tabular">
+              <span className="font-mono tabular-nums">
                 {page} / {totalPages}
               </span>
               <PageLink basePath={basePath} params={otherParams} page={page + 1} disabled={page >= totalPages}>
-                <ChevronRight className="size-4" />
+                <ChevronRight className="size-4" strokeWidth={1.5} />
               </PageLink>
             </div>
           </div>
@@ -162,24 +158,16 @@ function ViewToggle({
   kanbanParams.set("view", "kanban");
 
   return (
-    <div className="flex items-center gap-1 rounded-[12px] border border-line bg-surface/40 p-1">
-      <ButtonLink
-        href={`${basePath}?${tablaParams.toString()}`}
-        variant={view === "tabla" ? "secondary" : "ghost"}
-        size="sm"
-      >
-        <TableProperties className="size-3.5" />
+    <Segmented>
+      <SegmentedLink href={`${basePath}?${tablaParams.toString()}`} active={view === "tabla"}>
+        <TableProperties className="mr-1.5 inline size-3.5" strokeWidth={1.5} />
         Tabla
-      </ButtonLink>
-      <ButtonLink
-        href={`${basePath}?${kanbanParams.toString()}`}
-        variant={view === "kanban" ? "secondary" : "ghost"}
-        size="sm"
-      >
-        <LayoutGrid className="size-3.5" />
+      </SegmentedLink>
+      <SegmentedLink href={`${basePath}?${kanbanParams.toString()}`} active={view === "kanban"}>
+        <LayoutGrid className="mr-1.5 inline size-3.5" strokeWidth={1.5} />
         Kanban
-      </ButtonLink>
-    </div>
+      </SegmentedLink>
+    </Segmented>
   );
 }
 
@@ -204,8 +192,8 @@ function PageLink({
       href={disabled ? "#" : `${basePath}?${linkParams.toString()}`}
       aria-disabled={disabled}
       className={cn(
-        "flex size-8 items-center justify-center rounded-[12px] border border-line",
-        disabled ? "pointer-events-none opacity-40" : "hover:border-cyan/40 hover:text-cyan",
+        "flex size-8 items-center justify-center rounded-lm-sm border border-lm-line-strong text-lm-ink-2",
+        disabled ? "pointer-events-none opacity-40" : "hover:bg-lm-raised hover:text-lm-ink",
       )}
     >
       {children}

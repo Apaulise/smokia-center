@@ -70,6 +70,34 @@ export const STATUS_TONE: Record<LeadStatus, BadgeTone> = {
   DESCARTADO: "danger",
 };
 
+/**
+ * Grupo de temperatura del `StatusBadge` del sistema "Señal y humo": el color
+ * agrupa por temperatura, la etiqueta siempre queda escrita (README del
+ * design system, tabla "Estados del pipeline"). No confundir con
+ * `STAGE_GROUP` de más abajo, que agrupa para el tablero Kanban.
+ */
+export type StatusTemperatureGroup = "frio" | "curso" | "caliente" | "ganado" | "pausa" | "salida";
+
+export const STATUS_TEMPERATURE_GROUP: Record<LeadStatus, StatusTemperatureGroup> = {
+  NUEVO: "frio",
+  LISTO: "frio",
+  CONTACTADO: "curso",
+  AUTORESPUESTA: "curso",
+  RESPONDIO: "caliente",
+  DIAGNOSTICO: "caliente",
+  CALIFICADO: "caliente",
+  INTERESADO: "caliente",
+  REUNION_PROPUESTA: "caliente",
+  REUNION_AGENDADA: "caliente",
+  REUNION_REALIZADA: "caliente",
+  PROPUESTA_ENVIADA: "caliente",
+  CERRADO_GANADO: "ganado",
+  AHORA_NO: "pausa",
+  SEGUIMIENTO: "pausa",
+  CERRADO_PERDIDO: "salida",
+  DESCARTADO: "salida",
+};
+
 export const ACTIVITY_LABEL: Record<LeadActivityType, string> = {
   NOTA: "Nota",
   WHATSAPP: "WhatsApp",

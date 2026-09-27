@@ -7,6 +7,7 @@ import { z } from "zod";
 import { decrypt, encrypt } from "@/lib/crypto";
 import { instagramProvider } from "@/lib/brand/sources/instagram";
 import { generateGeminiJson } from "@/lib/gemini/client";
+import { generateGroqJson } from "@/lib/groq/client";
 import { queryWindsorConnector } from "@/lib/windsor/client";
 import type { LeadSource } from "@/lib/providers/types";
 import { createClient, requireUser } from "@/lib/supabase/server";
@@ -17,6 +18,7 @@ import {
   APIFY_KEY_SETTING,
   DEFAULT_INDUSTRIES,
   GEMINI_KEY_SETTING,
+  GROQ_KEY_SETTING,
   SALES_PROFILE_SETTING,
   WINDSOR_KEY_SETTING,
   actorOverrideKey,
@@ -330,6 +332,79 @@ export async function testGeminiConnection(_prevState: ActionState, _formData: F
     return { ok: true, message: "Conexión exitosa." };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "No se pudo contactar a Gemini." };
+  }
+}
+
+// ── Groq API key (Plans/migracion-fuera-de-anthropic.md, Etapa 1) ────────
+
+const groqKeySchema = z.object({
+  apiKey: z.string().trim().min(10, "La API key parece incompleta."),
+});
+
+export async function saveGroqKey(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const user = await requireUser();
+  const parsed = groqKeySchema.safeParse({ apiKey: formData.get("apiKey") });
+  if (!parsed.success) {
+    return { ok: false, message: firstIssue(parsed.error, "API key inválida.") };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("settings").upsert(
+    {
+      owner_id: user.id,
+      key: GROQ_KEY_SETTING,
+      value_encrypted: encrypt(parsed.data.apiKey),
+    },
+    { onConflict: "owner_id,key" },
+  );
+
+  if (error) return { ok: false, message: "No se pudo guardar la key." };
+
+  revalidatePath("/configuracion");
+  return { ok: true, message: "API key guardada." };
+}
+
+export async function deleteGroqKey() {
+  const supabase = await createClient();
+  await supabase.from("settings").delete().eq("key", GROQ_KEY_SETTING);
+  revalidatePath("/configuracion");
+}
+
+export async function testGroqConnection(_prevState: ActionState, _formData: FormData): Promise<ActionState> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("settings")
+    .select("value_encrypted")
+    .eq("key", GROQ_KEY_SETTING)
+    .maybeSingle();
+
+  if (!data) return { ok: false, message: "Todavía no cargaste una API key." };
+
+  let apiKey: string;
+  try {
+    apiKey = decrypt(data.value_encrypted);
+  } catch {
+    return { ok: false, message: "La key guardada no se pudo leer. Volvé a cargarla." };
+  }
+
+  try {
+    // La prueba más barata que existe: una respuesta de un token contra el
+    // mismo modelo que después decide. Confirma GROQ_MODEL de paso.
+    // maxTokens generoso a propósito: gpt-oss es un modelo de razonamiento y
+    // gasta parte del presupuesto en razonamiento oculto antes de responder
+    // (ver GroqJsonParams.reasoningEffort) — un valor bajo corta el JSON a
+    // mitad de camino y Groq lo reporta como "Failed to validate JSON".
+    await generateGroqJson({
+      apiKey,
+      system: "Respondé sólo con el JSON pedido.",
+      prompt: 'Devolvé {"ok": true}.',
+      schema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"], additionalProperties: false },
+      schemaName: "connection_test",
+      maxTokens: 300,
+    });
+    return { ok: true, message: "Conexión exitosa." };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "No se pudo contactar a Groq." };
   }
 }
 

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { getAnthropicApiKey } from "@/lib/brand/ai/key";
+import { getGeminiApiKey } from "@/lib/brand/ai/key";
 import { generateScriptFromIdea } from "@/lib/brand/ai/script";
 import { buildScriptContext } from "@/lib/brand/ai/script-context";
 import { getBrandSource } from "@/lib/brand/sources/registry";
@@ -178,7 +178,7 @@ export async function generateItemScript(
   const parsed = ScriptFromIdeaInput.safeParse(input);
   if (!parsed.success) return { ok: false, message: FIRST_ERROR(parsed.error) };
 
-  const keyResult = await getAnthropicApiKey();
+  const keyResult = await getGeminiApiKey();
   if (!keyResult.ok) return { ok: false, message: keyResult.message };
 
   try {

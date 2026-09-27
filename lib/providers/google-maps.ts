@@ -16,7 +16,7 @@ const criteriaSchema = z.object({
 type Criteria = z.infer<typeof criteriaSchema>;
 
 const fields: CriteriaField[] = [
-  { name: "rubro", label: "Rubro", type: "text", placeholder: "Peluquerías", required: true },
+  { name: "rubro", label: "Qué buscar", type: "text", placeholder: "Peluquerías", required: true },
   { name: "zona", label: "Zona", type: "text", placeholder: "Palermo, CABA", required: true },
   {
     name: "maxResults",

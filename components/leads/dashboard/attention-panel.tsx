@@ -1,6 +1,7 @@
 import { CalendarClock, Clock } from "lucide-react";
 import Link from "next/link";
 
+import { EmptyLine } from "@/components/leads/ui/feedback";
 import type { listStaleLeads, listUpcomingAppointments } from "@/lib/leads/queries";
 
 type Appointments = Awaited<ReturnType<typeof listUpcomingAppointments>>;
@@ -11,30 +12,28 @@ function daysSince(iso: string) {
   return Math.max(0, Math.floor(ms / (24 * 60 * 60 * 1000)));
 }
 
-/** Próximas reuniones agendadas (Plan §1.4) — enlaza directo a la ficha del lead. */
+/** Próximas reuniones agendadas — enlaza directo a la ficha del lead. */
 export function UpcomingAppointments({ appointments }: { appointments: Appointments }) {
   if (appointments.length === 0) {
-    return <p className="text-sm text-muted">No hay reuniones agendadas próximamente.</p>;
+    return <EmptyLine>No hay reuniones agendadas próximamente.</EmptyLine>;
   }
 
   return (
-    <ul className="space-y-3">
+    <ul className="flex flex-col">
       {appointments.map((appt) => (
-        <li key={appt.id} className="flex items-start gap-3">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-line bg-surface/60 text-cyan">
-            <CalendarClock className="size-4" />
-          </div>
+        <li key={appt.id} className="flex items-center gap-3 border-b border-lm-line py-2.5 last:border-b-0">
+          <CalendarClock className="size-4 shrink-0 text-lm-ink-3" strokeWidth={1.5} />
           <div className="min-w-0 flex-1">
             {appt.leads ? (
-              <Link href={`/leads/${appt.leads.id}`} className="block truncate text-sm font-medium text-ink hover:text-cyan">
+              <Link href={`/leads/${appt.leads.id}`} className="block truncate text-[13px] font-medium text-lm-ink hover:text-lm-signal-text">
                 {appt.leads.name}
               </Link>
             ) : (
-              <p className="truncate text-sm font-medium text-ink">{appt.title}</p>
+              <p className="truncate text-[13px] font-medium text-lm-ink">{appt.title}</p>
             )}
-            <p className="truncate text-xs text-muted">{appt.title}</p>
+            <p className="truncate text-xs text-lm-ink-3">{appt.title}</p>
           </div>
-          <time className="shrink-0 text-xs text-muted">
+          <time className="shrink-0 font-mono text-xs text-lm-ink-3">
             {new Date(appt.starts_at).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}
           </time>
         </li>
@@ -43,26 +42,26 @@ export function UpcomingAppointments({ appointments }: { appointments: Appointme
   );
 }
 
-/** Leads sin tocar hace más de N días (Plan §1.4) — la lista que dice a quién escribirle hoy. */
+/** Leads sin tocar hace más de N días — la lista que dice a quién escribirle hoy. */
 export function StaleLeadsList({ leads }: { leads: StaleLeads }) {
   if (leads.length === 0) {
-    return <p className="text-sm text-muted">Todos los leads activos tienen seguimiento al día.</p>;
+    return <EmptyLine>Todos los leads activos tienen seguimiento al día.</EmptyLine>;
   }
 
   return (
-    <ul className="space-y-3">
+    <ul className="flex flex-col">
       {leads.map((lead) => {
+        // Plan §1.16: un AHORA_NO con next_action_at vencido no es "sin tocar" — es un seguimiento que llegó su fecha.
+        const followUpDue = "next_action_at" in lead && lead.next_action_at && new Date(lead.next_action_at) <= new Date();
         const since = daysSince(lead.last_contacted_at ?? lead.created_at);
         return (
-          <li key={lead.id} className="flex items-center gap-3">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-line bg-surface/60 text-violet">
-              <Clock className="size-4" />
-            </div>
-            <Link href={`/leads/${lead.id}`} className="min-w-0 flex-1 truncate text-sm font-medium text-ink hover:text-cyan">
+          <li key={lead.id} className="group flex items-center gap-3 border-b border-lm-line py-2.5 last:border-b-0 hover:bg-lm-raised">
+            <Clock className="size-4 shrink-0 text-lm-ink-3" strokeWidth={1.5} />
+            <Link href={`/leads/${lead.id}`} className="min-w-0 flex-1 truncate text-[13px] font-medium text-lm-ink group-hover:text-lm-signal-text">
               {lead.name}
             </Link>
-            <span className="tabular shrink-0 text-xs text-muted">
-              {lead.last_contacted_at ? `${since} d sin contacto` : `${since} d sin tocar`}
+            <span className="shrink-0 font-mono text-xs text-lm-ink-3">
+              {followUpDue ? "seguimiento vencido" : lead.last_contacted_at ? `${since} d sin contacto` : `${since} d sin tocar`}
             </span>
           </li>
         );

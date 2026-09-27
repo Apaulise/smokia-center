@@ -4,11 +4,9 @@ import { CheckCircle2, Loader2, Trash2, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/leads/ui/button";
+import { Dialog } from "@/components/leads/ui/dialog";
+import { Field, Input, Select, Textarea } from "@/components/leads/ui/field";
 import { createAppointment, deleteAppointment, updateAppointment } from "@/lib/leads/actions";
 import { APPOINTMENT_STATUSES, APPOINTMENT_STATUS_LABEL, type AppointmentStatus } from "@/lib/leads/appointments";
 import type { AppointmentWithLead } from "@/lib/leads/queries";
@@ -30,7 +28,10 @@ const DURATIONS = [
   { value: "90", label: "1 hora 30" },
 ];
 
-/** Crear o editar un turno (Plan §1.5) — un solo formulario para ambos casos. */
+/**
+ * Crear o editar un turno (Plan §1.5, Design System §05.B "Nuevo turno") — un
+ * solo formulario para ambos casos.
+ */
 export function AppointmentDialog({
   mode,
   appointment,
@@ -81,26 +82,15 @@ export function AppointmentDialog({
   }
 
   return (
-    <Dialog
-      open
-      onClose={onClose}
-      title={mode === "edit" ? "Editar turno" : "Nuevo turno"}
-      description={appointment?.leads?.name}
-    >
-      <form action={formAction} className="space-y-4">
+    <Dialog open onClose={onClose} title={mode === "edit" ? "Editar turno" : "Nuevo turno"} description={appointment?.leads?.name}>
+      <form action={formAction} className="flex flex-col gap-4">
         {appointment ? <input type="hidden" name="id" value={appointment.id} /> : null}
 
-        <div>
-          <label className="mb-1.5 block text-xs text-muted" htmlFor="title">
-            Título
-          </label>
+        <Field label="Título" htmlFor="title">
           <Input id="title" name="title" defaultValue={appointment?.title} required />
-        </div>
+        </Field>
 
-        <div>
-          <label className="mb-1.5 block text-xs text-muted" htmlFor="leadId">
-            Lead (opcional)
-          </label>
+        <Field label="Lead (opcional)" htmlFor="leadId">
           <Select id="leadId" name="leadId" value={leadId} onChange={(event) => setLeadId(event.target.value)}>
             <option value="">Sin lead</option>
             {leads.map((lead) => (
@@ -109,26 +99,13 @@ export function AppointmentDialog({
               </option>
             ))}
           </Select>
-        </div>
+        </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="mb-1.5 block text-xs text-muted" htmlFor="startsAt">
-              Fecha y hora
-            </label>
-            <input
-              id="startsAt"
-              name="startsAt"
-              type="datetime-local"
-              defaultValue={startsAtDefault}
-              required
-              className="h-10 w-full rounded-[12px] border border-line bg-surface/60 px-3 text-sm text-ink"
-            />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-xs text-muted" htmlFor="durationMinutes">
-              Duración
-            </label>
+          <Field label="Fecha y hora" htmlFor="startsAt">
+            <Input id="startsAt" name="startsAt" type="datetime-local" defaultValue={startsAtDefault} required mono />
+          </Field>
+          <Field label="Duración" htmlFor="durationMinutes">
             <Select id="durationMinutes" name="durationMinutes" defaultValue={durationDefault}>
               {DURATIONS.map((d) => (
                 <option key={d.value} value={d.value}>
@@ -136,14 +113,11 @@ export function AppointmentDialog({
                 </option>
               ))}
             </Select>
-          </div>
+          </Field>
         </div>
 
         {mode === "edit" ? (
-          <div>
-            <label className="mb-1.5 block text-xs text-muted" htmlFor="status">
-              Estado
-            </label>
+          <Field label="Estado" htmlFor="status">
             <Select
               id="status"
               name="status"
@@ -156,49 +130,42 @@ export function AppointmentDialog({
                 </option>
               ))}
             </Select>
-          </div>
+          </Field>
         ) : null}
 
         {showAdvanceLead ? (
-          <div className="rounded-[12px] border border-cyan/30 bg-cyan/5 p-3">
-            <label className="mb-1.5 block text-xs text-muted" htmlFor="newLeadStatus">
-              Avanzar estado de {appointment?.leads?.name ?? "el lead"} (opcional)
-            </label>
-            <Select id="newLeadStatus" name="newLeadStatus" defaultValue={advanceDefault}>
-              {LEAD_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_LABEL[s]}
-                </option>
-              ))}
-            </Select>
+          <div className="rounded-lm-sm border border-lm-line-strong bg-lm-raised p-3">
+            <Field label={`Avanzar estado de ${appointment?.leads?.name ?? "el lead"} (opcional)`} htmlFor="newLeadStatus">
+              <Select id="newLeadStatus" name="newLeadStatus" defaultValue={advanceDefault}>
+                {LEAD_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {STATUS_LABEL[s]}
+                  </option>
+                ))}
+              </Select>
+            </Field>
           </div>
         ) : null}
 
-        <div>
-          <label className="mb-1.5 block text-xs text-muted" htmlFor="meetingUrl">
-            Link de la reunión (opcional)
-          </label>
+        <Field label="Link de la reunión (opcional)" htmlFor="meetingUrl">
           <Input id="meetingUrl" name="meetingUrl" type="url" defaultValue={appointment?.meeting_url ?? undefined} placeholder="https://meet.google.com/…" />
-        </div>
+        </Field>
 
-        <div>
-          <label className="mb-1.5 block text-xs text-muted" htmlFor="notes">
-            Notas (opcional)
-          </label>
+        <Field label="Notas (opcional)" htmlFor="notes">
           <Textarea id="notes" name="notes" defaultValue={appointment?.notes ?? undefined} />
-        </div>
+        </Field>
 
         {state && !state.ok ? (
-          <p className="flex items-center gap-1.5 text-sm text-danger">
-            <XCircle className="size-4" />
+          <p className="flex items-center gap-1.5 text-[13px] text-lm-danger">
+            <XCircle className="size-4" strokeWidth={1.5} />
             {state.message}
           </p>
         ) : null}
 
-        <div className="flex items-center justify-between gap-2 border-t border-line/60 pt-4">
+        <div className="flex items-center justify-between gap-2 border-t border-lm-line pt-4">
           {appointment ? (
             <Button type="button" variant="ghost" size="sm" disabled={deleting} onClick={handleDelete}>
-              {deleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+              {deleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" strokeWidth={1.5} />}
               Eliminar
             </Button>
           ) : (
@@ -209,7 +176,7 @@ export function AppointmentDialog({
               Cancelar
             </Button>
             <Button type="submit" variant="primary" disabled={pending}>
-              {pending ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" />}
+              {pending ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" strokeWidth={1.5} />}
               {mode === "edit" ? "Guardar" : "Agendar"}
             </Button>
           </div>

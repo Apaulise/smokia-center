@@ -3,8 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/leads/ui/button";
+import { Field, Input } from "@/components/leads/ui/field";
 import { createClient } from "@/lib/supabase/client";
 
 type Mode = "sign-in" | "sign-up";
@@ -17,11 +17,20 @@ type Mode = "sign-in" | "sign-up";
  *
  * El proyecto de Supabase pide confirmar el mail al registrarse
  * (mailer_autoconfirm = false), así que "Crear cuenta" no deja sesión
- * iniciada al toque: hay que abrir el link que llega por mail.
+ * iniciada al toque: hay que abrir el link que llega por mail. `mode` es
+ * controlado por `LoginScreen` (Design System §08): la cita del panel de
+ * marca cambia con sign-in/sign-up, así que ese estado vive un nivel arriba.
  */
-export function EmailSignInForm({ next }: { next: string }) {
+export function EmailSignInForm({
+  next,
+  mode,
+  onModeChange,
+}: {
+  next: string;
+  mode: Mode;
+  onModeChange: (mode: Mode) => void;
+}) {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("sign-in");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signedUp, setSignedUp] = useState(false);
@@ -61,17 +70,11 @@ export function EmailSignInForm({ next }: { next: string }) {
 
   return (
     <div>
-      <form onSubmit={onSubmit} className="space-y-3">
-        <div>
-          <label htmlFor="email" className="mb-1.5 block text-xs text-muted">
-            Email
-          </label>
-          <Input id="email" name="email" type="email" autoComplete="email" required />
-        </div>
-        <div>
-          <label htmlFor="password" className="mb-1.5 block text-xs text-muted">
-            Contraseña
-          </label>
+      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <Field label="Email" htmlFor="email">
+          <Input id="email" name="email" type="email" autoComplete="email" required className="h-10 sm:h-12" />
+        </Field>
+        <Field label="Contraseña" htmlFor="password">
           <Input
             id="password"
             name="password"
@@ -79,35 +82,30 @@ export function EmailSignInForm({ next }: { next: string }) {
             autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
             minLength={6}
             required
+            className="h-10 sm:h-12"
           />
-        </div>
+        </Field>
 
-        <Button type="submit" variant="primary" size="lg" className="w-full" disabled={pending}>
-          {pending
-            ? "Un momento…"
-            : mode === "sign-in"
-              ? "Ingresar"
-              : "Crear cuenta"}
+        <Button type="submit" variant="primary" disabled={pending} className="mt-1 h-10 w-full sm:h-12">
+          {pending ? "Un momento…" : mode === "sign-in" ? "Ingresar" : "Crear cuenta"}
         </Button>
       </form>
 
-      {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
+      {error ? <p className="mt-3 text-[13px] text-lm-danger">{error}</p> : null}
       {signedUp ? (
-        <p className="mt-3 text-sm text-positive">
-          Cuenta creada. Confirmá el mail que te llegó para poder ingresar.
-        </p>
+        <p className="mt-3 text-[13px] text-lm-success">Cuenta creada. Confirmá el mail que te llegó para poder ingresar.</p>
       ) : null}
 
       <button
         type="button"
         onClick={() => {
-          setMode((current) => (current === "sign-in" ? "sign-up" : "sign-in"));
+          onModeChange(mode === "sign-in" ? "sign-up" : "sign-in");
           setError(null);
           setSignedUp(false);
         }}
-        className="mt-4 text-sm text-muted underline-offset-4 hover:text-cyan hover:underline"
+        className="mt-4 text-[13px] text-lm-ink-2 underline-offset-4 hover:text-lm-ink hover:underline"
       >
-        {mode === "sign-in" ? "¿No tenés cuenta? Crear una" : "¿Ya tenés cuenta? Ingresar"}
+        {mode === "sign-in" ? "¿No tenés cuenta? Crear cuenta" : "¿Ya tenés cuenta? Ingresar"}
       </button>
     </div>
   );
