@@ -1,13 +1,10 @@
+import { Meter } from "@/components/brand/ui/card";
 import type { PatternRow } from "@/lib/brand/insights";
 
-// Mismo criterio que audience-bars.tsx: una sola serie de "resultado" (manual
-// §9), rankeada por magnitud — el número siempre al lado de la barra, nunca
-// sólo el color como codificación (dataviz).
-const BAR_COLOR = "#18D6E8";
-
+/** Filas rankeadas por magnitud: una sola serie neutra, con el número siempre al lado de la barra (dataviz). */
 export function RankedBars({ rows, emptyMessage }: { rows: PatternRow[]; emptyMessage: string }) {
   if (rows.length === 0) {
-    return <p className="text-sm text-muted">{emptyMessage}</p>;
+    return <p className="text-[12.5px] leading-normal text-lm-ink-3">{emptyMessage}</p>;
   }
 
   // A diferencia de audience-bars.tsx, acá value suele ser una tasa (<1) —
@@ -16,19 +13,14 @@ export function RankedBars({ rows, emptyMessage }: { rows: PatternRow[]; emptyMe
   const max = Math.max(...rows.map((r) => r.value)) || 1;
 
   return (
-    <ol className="space-y-3">
+    <ol className="flex flex-col gap-4">
       {rows.map((row) => (
-        <li key={row.key} className="group space-y-1.5">
-          <div className="flex items-baseline justify-between gap-3 text-sm">
-            <span className="truncate text-ink">{row.label}</span>
-            <span className="tabular shrink-0 text-muted">{row.displayValue}</span>
+        <li key={row.key} className="flex flex-col gap-[7px]">
+          <div className="flex gap-3 text-[13px]">
+            <span className="min-w-0 flex-1 truncate text-lm-ink">{row.label}</span>
+            <span className="shrink-0 font-mono text-xs text-lm-ink tabular-nums">{row.displayValue}</span>
           </div>
-          <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface/60">
-            <div
-              className="h-full rounded-full transition-[filter] duration-150 group-hover:brightness-125"
-              style={{ width: `${(row.value / max) * 100}%`, backgroundColor: BAR_COLOR }}
-            />
-          </div>
+          <Meter percent={(row.value / max) * 100} />
         </li>
       ))}
     </ol>

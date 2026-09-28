@@ -4,13 +4,47 @@ import { Loader2, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/leads/ui/button";
+import { Dialog } from "@/components/leads/ui/dialog";
+import { Input } from "@/components/leads/ui/field";
 import { deleteCompetitor, refreshCompetitor, updateCompetitorResultsLimit } from "@/lib/brand/competitors/actions";
 import { estimateRunCostUsd, MAX_RESULTS_LIMIT } from "@/lib/brand/competitors/schema";
+import { cn } from "@/lib/utils";
 
 const usd = new Intl.NumberFormat("es-AR", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 3 });
+
+/** Botón de ícono de 28px: gris hasta el hover; el de eliminar vira al rojo suave. */
+function IconAction({
+  label,
+  title,
+  danger,
+  disabled,
+  onClick,
+  children,
+}: {
+  label: string;
+  title: string;
+  danger?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={title}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "grid size-7 cursor-pointer place-items-center rounded-lm-sm transition-colors duration-150 disabled:pointer-events-none disabled:opacity-45",
+        danger ? "hover:bg-lm-danger-soft hover:text-lm-danger" : "hover:bg-lm-ink/5 hover:text-lm-ink",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
 
 /** Actualizar (cuesta plata: dice cuánto), editar cuántas trae, y dejar de seguir (con confirmación: borra las publicaciones traídas). */
 export function CompetitorRowActions({
@@ -70,23 +104,17 @@ export function CompetitorRowActions({
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <div className="flex items-center gap-1">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
+      <div className="flex items-center gap-0.5 text-lm-ink-3">
+        <IconAction
+          label={`Actualizar @${username}`}
+          title={`Trae de nuevo ${resultsLimit} publicaciones: unos ${usd.format(estimateRunCostUsd(resultsLimit))} (estimado)`}
           disabled={busy !== null || running}
           onClick={handleRefresh}
-          title={`Trae de nuevo ${resultsLimit} publicaciones: unos ${usd.format(estimateRunCostUsd(resultsLimit))} (estimado)`}
         >
-          {busy === "refresh" ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
-          Actualizar
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          aria-label={`Editar cuántas publicaciones trae @${username}`}
+          {busy === "refresh" ? <Loader2 className="size-[13px] animate-spin" /> : <RefreshCw className="size-[13px]" />}
+        </IconAction>
+        <IconAction
+          label={`Editar cuántas publicaciones trae @${username}`}
           title="Cuántas publicaciones trae la próxima actualización"
           disabled={busy !== null}
           onClick={() => {
@@ -95,13 +123,19 @@ export function CompetitorRowActions({
             setEditing(true);
           }}
         >
-          <Pencil className="size-3.5" />
-        </Button>
-        <Button type="button" variant="ghost" size="sm" aria-label={`Dejar de seguir a @${username}`} disabled={busy !== null} onClick={handleDelete}>
-          {busy === "delete" ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
-        </Button>
+          <Pencil className="size-[13px]" />
+        </IconAction>
+        <IconAction
+          label={`Dejar de seguir a @${username}`}
+          title="Dejar de seguir"
+          danger
+          disabled={busy !== null}
+          onClick={handleDelete}
+        >
+          {busy === "delete" ? <Loader2 className="size-[13px] animate-spin" /> : <Trash2 className="size-[13px]" />}
+        </IconAction>
       </div>
-      {error ? <p className="max-w-56 text-right text-xs text-danger">{error}</p> : null}
+      {error ? <p className="max-w-56 text-right text-xs text-lm-danger">{error}</p> : null}
 
       <Dialog
         open={editing}
@@ -111,9 +145,9 @@ export function CompetitorRowActions({
       >
         <div className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-xs text-muted">Publicaciones a traer</label>
+            <label className="mb-1.5 block text-[13px] font-medium text-lm-ink-2">Publicaciones a traer</label>
             <Input type="number" min={1} max={MAX_RESULTS_LIMIT} value={limit} onChange={(e) => setLimit(e.target.value)} autoFocus />
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-xs text-lm-ink-2">
               Apify cobra por resultado.{" "}
               {validLimit
                 ? `Cada actualización de esta cuenta va a costar unos ${usd.format(estimateRunCostUsd(parsedLimit))} (estimado).`

@@ -1,7 +1,8 @@
 import { PlannerView } from "@/components/brand/planner/planner-view";
-import { WeekSummaryCard } from "@/components/brand/planner/week-summary";
+import { WeekSummaryStrip } from "@/components/brand/planner/week-summary";
+import { Crumbs } from "@/components/brand/ui/card";
+import { HeaderBar } from "@/components/leads/ui/page-header";
 import { PeriodNav, ViewToggle, type CalendarView } from "@/components/shell/calendar-nav";
-import { PageHeader } from "@/components/shell/page-header";
 import { getLinkablePosts } from "@/lib/brand/goals/queries";
 import { getPlannerItemsInRange, getItemChoices, getUnscheduledItems } from "@/lib/brand/planner/queries";
 import { summarizeWeek } from "@/lib/brand/planner/week";
@@ -62,43 +63,40 @@ export default async function PlanificadorPage({ searchParams }: { searchParams:
   const summary = summarizeWeek(items, summaryDays);
   const hasWinners = Object.values(classifications).some((result) => result.classification.startsWith("GANADOR"));
 
+  const planned = items.filter((item) => item.status !== "PUBLICADO").length;
+  const eyebrow = `${items.length} ${items.length === 1 ? "PIEZA" : "PIEZAS"} · ${planned} ${planned === 1 ? "PLANIFICADA" : "PLANIFICADAS"}`;
+
   return (
     <>
-      <PageHeader
-        eyebrow="Gestor de Marca Personal"
-        title="Planificador"
-        description={isWeek ? weekLabel(days) : monthLabel(monthStart)}
-        action={
-          <div className="flex items-center gap-2">
-            <PeriodNav
-              basePath={BASE_PATH}
-              view={view}
-              prev={isWeek ? addDaysIso(weekStart, -7) : addMonthsIso(monthStart, -1)}
-              next={isWeek ? addDaysIso(weekStart, 7) : addMonthsIso(monthStart, 1)}
-              today={today}
-            />
-            <ViewToggle basePath={BASE_PATH} view={view} date={anchor} views={VIEWS} />
-          </div>
+      <HeaderBar breadcrumb={<Crumbs items={[{ label: "Marca personal" }, { label: "Planificador" }]} />} />
+
+      <PlannerView
+        platform={PLATFORM}
+        ownerId={user.id}
+        accountUsername={account.data?.username ?? null}
+        mode={view === "semana" ? "semana" : "mes"}
+        days={days}
+        currentMonth={isWeek ? undefined : monthStart.slice(0, 7)}
+        today={today}
+        items={items}
+        unscheduled={unscheduled}
+        choices={choices}
+        linkablePosts={linkablePosts}
+        title={isWeek ? weekLabel(days) : monthLabel(monthStart)}
+        eyebrow={eyebrow}
+        nav={
+          <PeriodNav
+            variant="signal"
+            basePath={BASE_PATH}
+            view={view}
+            prev={isWeek ? addDaysIso(weekStart, -7) : addMonthsIso(monthStart, -1)}
+            next={isWeek ? addDaysIso(weekStart, 7) : addMonthsIso(monthStart, 1)}
+            today={today}
+          />
         }
+        toggle={<ViewToggle variant="signal" basePath={BASE_PATH} view={view} date={anchor} views={VIEWS} />}
+        strip={<WeekSummaryStrip summary={summary} weekLabel={weekLabel(summaryDays)} hasWinners={hasWinners} />}
       />
-
-      <div className="space-y-6 px-6 py-8 lg:px-10">
-        <WeekSummaryCard summary={summary} weekLabel={weekLabel(summaryDays)} hasWinners={hasWinners} />
-
-        <PlannerView
-          platform={PLATFORM}
-          ownerId={user.id}
-          accountUsername={account.data?.username ?? null}
-          mode={view === "semana" ? "semana" : "mes"}
-          days={days}
-          currentMonth={isWeek ? undefined : monthStart.slice(0, 7)}
-          today={today}
-          items={items}
-          unscheduled={unscheduled}
-          choices={choices}
-          linkablePosts={linkablePosts}
-        />
-      </div>
     </>
   );
 }

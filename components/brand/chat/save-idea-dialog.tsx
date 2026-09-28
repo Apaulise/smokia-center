@@ -3,11 +3,9 @@
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/leads/ui/button";
+import { Dialog } from "@/components/leads/ui/dialog";
+import { Input, Select, Textarea } from "@/components/leads/ui/field";
 import { saveBrandContentIdea } from "@/lib/brand/actions";
 import { extractHashtags } from "@/lib/brand/insights";
 import { CONTENT_OBJECTIVES, OBJECTIVE_LABEL, type ContentObjective } from "@/lib/brand/planner/schema";
@@ -82,11 +80,11 @@ export function SaveIdeaDialog({
     <Dialog open={open} onClose={onClose} title="Guardar como idea" description="Queda en la bandeja “Sin fecha” del planificador.">
       <div className="space-y-4">
         <div>
-          <label className="mb-1.5 block text-xs text-muted">Título</label>
+          <label className="mb-1.5 block text-[13px] font-medium text-lm-ink-2">Título</label>
           <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Un nombre corto para encontrarla después" autoFocus />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs text-muted">Tipo</label>
+          <label className="mb-1.5 block text-[13px] font-medium text-lm-ink-2">Tipo</label>
           <Select value={kind} onChange={(e) => setKind(e.target.value as BrandPostKind)}>
             {KIND_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -97,7 +95,7 @@ export function SaveIdeaDialog({
         </div>
         <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
           <div>
-            <label className="mb-1.5 block text-xs text-muted">Objetivo</label>
+            <label className="mb-1.5 block text-[13px] font-medium text-lm-ink-2">Objetivo</label>
             <Select value={objective} onChange={(e) => setObjective(e.target.value as Objective | "")}>
               <option value="">Sin definir</option>
               {CONTENT_OBJECTIVES.map((value) => (
@@ -108,7 +106,7 @@ export function SaveIdeaDialog({
             </Select>
           </div>
           <div>
-            <label className="mb-1.5 block text-xs text-muted">Hipótesis</label>
+            <label className="mb-1.5 block text-[13px] font-medium text-lm-ink-2">Hipótesis</label>
             <Textarea
               value={hypothesis}
               onChange={(e) => setHypothesis(e.target.value)}
@@ -118,14 +116,14 @@ export function SaveIdeaDialog({
           </div>
         </div>
         <div>
-          <label className="mb-1.5 block text-xs text-muted">Idea / guion</label>
+          <label className="mb-1.5 block text-[13px] font-medium text-lm-ink-2">Idea / guion</label>
           <Textarea value={idea} onChange={(e) => setIdea(e.target.value)} className="min-h-40" />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs text-muted">Hashtags</label>
+          <label className="mb-1.5 block text-[13px] font-medium text-lm-ink-2">Hashtags</label>
           <Input value={hashtags} onChange={(e) => setHashtags(e.target.value)} placeholder="#reels #marca" />
         </div>
-        {error ? <p className="text-xs text-danger">{error}</p> : null}
+        {error ? <p className="text-xs text-lm-danger">{error}</p> : null}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
             Cancelar

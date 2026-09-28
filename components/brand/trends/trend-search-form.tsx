@@ -4,9 +4,9 @@ import { Loader2, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/leads/ui/button";
+import { Dialog } from "@/components/leads/ui/dialog";
+import { Input } from "@/components/leads/ui/field";
 import { searchTrends } from "@/lib/brand/trends/actions";
 import { estimateRunCostUsd, MAX_RESULTS_LIMIT } from "@/lib/brand/competitors/schema";
 import { TREND_MIN_VIEWS } from "@/lib/brand/competitors/insights";
@@ -49,7 +49,7 @@ export function TrendSearchButton({ lastQuery }: { lastQuery: string | null }) {
 
   return (
     <>
-      <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(true)}>
+      <Button type="button" variant="secondary" className="h-[34px]" onClick={() => setOpen(true)}>
         <Sparkles className="size-3.5" />
         Buscar virales
       </Button>
@@ -62,27 +62,27 @@ export function TrendSearchButton({ lastQuery }: { lastQuery: string | null }) {
       >
         <div className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-xs text-muted">Hashtags del nicho</label>
+            <label className="mb-1.5 block text-[13px] font-medium text-lm-ink-2">Hashtags del nicho</label>
             <Input
               value={hashtags}
               onChange={(e) => setHashtags(e.target.value)}
               placeholder="iaparaemprendedores, automatizacion"
               autoFocus
             />
-            <p className={validTags || !hashtags.trim() ? "mt-1 text-xs text-muted" : "mt-1 text-xs text-danger"}>
+            <p className={validTags || !hashtags.trim() ? "mt-1 text-xs text-lm-ink-2" : "mt-1 text-xs text-lm-danger"}>
               {tags.length > 0 ? `Se busca: ${tags.map((tag) => `#${tag}`).join(", ")}.` : "Separados por coma."} Máximo {MAX_TREND_HASHTAGS}.
             </p>
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs text-muted">Reels a traer</label>
+            <label className="mb-1.5 block text-[13px] font-medium text-lm-ink-2">Reels a traer</label>
             <Input type="number" min={1} max={MAX_RESULTS_LIMIT} value={limit} onChange={(e) => setLimit(e.target.value)} />
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-xs text-lm-ink-2">
               Apify cobra por resultado. {validLimit ? `Esta corrida cuesta unos ${usd.format(estimateRunCostUsd(parsedLimit))} (estimado).` : `Entre 1 y ${MAX_RESULTS_LIMIT}.`}
             </p>
           </div>
 
-          {error ? <p className="text-sm text-danger">{error}</p> : null}
+          {error ? <p className="text-sm text-lm-danger">{error}</p> : null}
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={busy}>

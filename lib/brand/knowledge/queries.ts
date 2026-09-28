@@ -75,3 +75,11 @@ export async function getKnowledgeForPost(postId: string): Promise<KnowledgeRow[
   if (error) throw error;
   return (data ?? []) as KnowledgeRow[];
 }
+
+/** Total de notas de la base de conocimiento, para el badge del sidebar — sin traer filas. */
+export async function countKnowledgeNotes(): Promise<number> {
+  const supabase = await createClient();
+  const { count, error } = await supabase.from("brand_knowledge").select("id", { count: "exact", head: true });
+  if (error) throw error;
+  return count ?? 0;
+}

@@ -1,9 +1,10 @@
 import { KeyRound } from "lucide-react";
 
 import { BrandChatPanel } from "@/components/brand/chat/chat-panel";
-import { PageHeader } from "@/components/shell/page-header";
-import { ButtonLink } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
+import { Crumbs } from "@/components/brand/ui/card";
+import { ButtonLink } from "@/components/leads/ui/button";
+import { EmptyState } from "@/components/leads/ui/feedback";
+import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
 import { getBrandChatMessages, getBrandChatThreads } from "@/lib/brand/queries";
 import { getAnthropicKeyStatus } from "@/lib/settings/queries";
 import { requireUser } from "@/lib/supabase/server";
@@ -22,8 +23,9 @@ export default async function GenerarPage({ searchParams }: { searchParams: Prom
   if (!anthropicKey.configured) {
     return (
       <>
-        <PageHeader eyebrow="Gestor de Marca Personal" title="Generar contenido" description="Ideas, guiones, captions y hashtags." />
-        <div className="px-6 lg:px-10">
+        <HeaderBar breadcrumb={<Crumbs items={[{ label: "Marca personal" }, { label: "Generar contenido" }]} />} />
+        <div className="flex flex-col gap-8 px-6 py-7 lg:px-8">
+          <PageHeading title="Generar contenido" description="Ideas, guiones, captions y hashtags." />
           <EmptyState
             icon={<KeyRound className="size-5" />}
             title="Falta la API key de Anthropic"

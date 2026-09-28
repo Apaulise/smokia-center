@@ -4,8 +4,8 @@ import { Loader2, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
+import { Button } from "@/components/leads/ui/button";
+import { Dialog } from "@/components/leads/ui/dialog";
 import { generateBrandAnalysis } from "@/lib/brand/actions";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
 
@@ -50,14 +50,14 @@ export function GenerateAnalysisPanel({
       <Button
         type="button"
         variant="primary"
-        size="sm"
+        className="h-[34px] px-3.5 text-[13px]"
         disabled={pending}
         onClick={() => (pendingCount > 0 ? setConfirming(true) : generate())}
       >
         {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
         {pending ? "Analizando…" : "Generar análisis"}
       </Button>
-      {error ? <p className="max-w-xs text-right text-xs text-danger">{error}</p> : null}
+      {error ? <p className="max-w-xs text-right text-xs text-lm-danger">{error}</p> : null}
 
       <Dialog
         open={confirming}
@@ -65,7 +65,7 @@ export function GenerateAnalysisPanel({
         title="Reemplazar recomendaciones"
         description="Un análisis nuevo reemplaza a las recomendaciones nuevas de ahora."
       >
-        <p className="text-sm text-muted">
+        <p className="text-[13px] leading-normal text-lm-ink-2">
           Hay {pendingCount} {pendingCount === 1 ? "recomendación nueva" : "recomendaciones nuevas"} sin ninguna acción tomada:
           se van a borrar cuando termine el análisis. Las aplicadas y las descartadas se conservan en el historial.
         </p>

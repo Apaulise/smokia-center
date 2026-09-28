@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><link href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><style>body{margin:0;background:#0C0C0D;font-family:'Host Grotesk',sans-serif;-webkit-font-smoothing:antialiased}a{color:#EDEBE6;text-decoration:none}a:hover{color:#F2C14E}textarea{font-family:inherit}@keyframes smoke{0%{background-position:-400px 0}100%{background-position:400px 0}}</style></helmet>
+<div style="padding:56px 64px;display:flex;flex-direction:column;gap:72px">
+  <header style="display:flex;flex-direction:column;gap:8px;max-width:760px">
+    <span style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:0.14em;color:#85837E">AWARENESS AI · GESTOR DE LEADS · 07</span>
+    <h1 style="margin:0;font-weight:500;font-size:40px;letter-spacing:-0.025em;color:#EDEBE6">Detalle de lead</h1>
+    <p style="margin:0;color:#9A9893;font-size:14px;line-height:1.6;text-wrap:pretty">Tres zonas: ficha a la izquierda, conversación al centro, Copilot a la derecha. Las tres acciones de IA viven en un solo composer que cambia según la etapa. El estado se cambia desde el header. <a href="Dashboard.dc.html">← Dashboard</a></p>
+  </header>
+
+  <sc-for list="{{ frames }}" as="f" hint-placeholder-count="1">
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <span style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:0.1em;color:#85837E">{{ f.label }}</span>
+    <div style="width:{{ f.w }}px;display:flex;background:#161618;border:1px solid rgba(237,235,230,0.08);border-radius:8px;overflow:hidden;color:#EDEBE6">
+      <div style="flex:none;align-self:stretch"><dc-import name="Sidebar" active="listas" collapsed="{{ f.collapsed }}" hint-size="232px,100%" style="height:100%"></dc-import></div>
+      <main style="flex:1;min-width:0;display:flex;flex-direction:column">
+        <div style="height:56px;display:flex;align-items:center;gap:8px;padding:0 28px;border-bottom:1px solid rgba(237,235,230,0.06);font-size:12px;color:#85837E">
+          <a href="Listas.dc.html" style="color:#85837E">Listas</a><span style="color:#65635F">/</span><a href="Listas.dc.html" style="color:#85837E">Clinicas Estéticas 3</a><span style="color:#65635F">/</span><span style="color:#EDEBE6">ALMA Centro de Estetica</span>
+          <span style="flex:1"></span>
+          <span style="font:400 11px 'JetBrains Mono',monospace">12 / 30</span>
+          <span style="width:26px;height:26px;display:grid;place-items:center;border:1px solid rgba(237,235,230,0.1);border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px">K</span>
+          <span style="width:26px;height:26px;display:grid;place-items:center;border:1px solid rgba(237,235,230,0.1);border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px">J</span>
+        </div>
+        <div style="padding:22px 28px 20px;display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;border-bottom:1px solid rgba(237,235,230,0.08)">
+          <div style="flex:1;min-width:320px;display:flex;flex-direction:column;gap:10px">
+            <h2 style="margin:0;font-weight:500;font-size:26px;letter-spacing:-0.02em">ALMA Centro de Estetica</h2>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:12.5px;color:#9A9893">
+              <button style="height:28px;display:flex;align-items:center;gap:8px;padding:0 8px 0 10px;background:#1E1E21;border:1px solid rgba(237,235,230,0.14);border-radius:5px;color:#EDEBE6;font:500 12.5px 'Host Grotesk',sans-serif;cursor:pointer" style-hover="border-color:rgba(237,235,230,0.28)"><span style="width:7px;height:7px;border:1.5px solid #EDEBE6;border-radius:50%;box-sizing:border-box;background:#EDEBE6;clip-path:inset(0 50% 0 0)"></span>Respondió<span style="color:#85837E;font-size:10px">▾</span></button>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#85837E">etapa 3 de 9</span>
+              <span style="color:#65635F">·</span><span>Peña 2382, Recoleta, CABA</span>
+              <span style="color:#65635F">·</span><a href="Listas.dc.html" style="color:#9A9893;border-bottom:1px solid rgba(237,235,230,0.2)">Clinicas Estéticas 3</a>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <sc-for list="{{ quick }}" as="q" hint-placeholder-count="4">
+              <button title="{{ q.title }}" style="height:32px;display:flex;align-items:center;gap:7px;padding:0 11px;background:transparent;border:1px solid rgba(237,235,230,0.12);border-radius:5px;color:{{ q.color }};font:500 12.5px 'Host Grotesk',sans-serif;cursor:pointer;transition:background 140ms" style-hover="background:rgba(237,235,230,0.05)"><span style="width:14px;height:14px;background:currentColor;mask:{{ q.mask }};-webkit-mask:{{ q.mask }}"></span>{{ q.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:flex;min-height:760px">
+          <aside style="width:{{ f.leftW }}px;flex:none;padding:20px 24px;border-right:1px solid rgba(237,235,230,0.08);display:flex;flex-direction:column;gap:22px;font-size:13px">
+            <section style="display:flex;flex-direction:column;gap:12px">
+              <span style="font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E">CONTACTO</span>
+              <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:11.5px;color:#85837E">Teléfono</span><span style="font-family:'JetBrains Mono',monospace;font-size:12.5px">+54 11 4806-1867</span></div>
+              <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:11.5px;color:#85837E">Web</span><a href="#" style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">instagram.com/alma.belleza</a></div>
+              <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:11.5px;color:#85837E">Rating Google</span><span style="font-family:'JetBrains Mono',monospace;font-size:12.5px">4.8 <span style="color:#85837E">· 164 reseñas</span></span></div>
+              <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:11.5px;color:#85837E">Dirección</span><span style="font-size:12.5px;line-height:1.45;color:#9A9893">Peña 2382, C1125, CABA</span></div>
+              <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:11.5px;color:#85837E">Email</span><a href="#" style="font-size:12.5px;color:#9A9893">+ Agregar</a></div>
+            </section>
+            <section style="display:flex;flex-direction:column;gap:10px;padding-top:18px;border-top:1px solid rgba(237,235,230,0.06)">
+              <span style="font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E">RUBRO Y ORIGEN</span>
+              <div style="display:flex;justify-content:space-between;gap:8px"><span style="color:#85837E">Rubro</span><a href="#" style="color:#9A9893">Asignar</a></div>
+              <div style="display:flex;justify-content:space-between;gap:8px"><span style="color:#85837E">Lista</span><span>Clinicas Est. 3</span></div>
+              <div style="display:flex;justify-content:space-between;gap:8px"><span style="color:#85837E">Fuente</span><span style="color:#9A9893">Google Maps</span></div>
+            </section>
+            <section style="display:flex;flex-direction:column;gap:10px;padding-top:18px;border-top:1px solid rgba(237,235,230,0.06)">
+              <span style="font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E">AGENDA</span>
+              <div style="display:flex;justify-content:space-between;gap:8px;color:#85837E"><span>Sin reuniones</span><a href="Agenda.dc.html" style="color:#9A9893">Agendar</a></div>
+            </section>
+            <section style="display:flex;flex-direction:column;gap:10px;padding-top:18px;border-top:1px solid rgba(237,235,230,0.06)">
+              <span style="font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E">PRÓXIMA ACCIÓN</span>
+              <div style="display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;background:#1E1E21;border:1px solid rgba(237,235,230,0.1);border-radius:5px"><span style="flex:1;font-size:12.5px">Responder precio</span><span style="font:400 11.5px 'JetBrains Mono',monospace;color:#9A9893">hoy 18:00</span></div>
+            </section>
+            <section style="display:flex;flex-direction:column;gap:10px;padding-top:18px;border-top:1px solid rgba(237,235,230,0.06)">
+              <span style="font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E">NOTAS</span>
+              <div style="min-height:72px;padding:10px;border:1px solid rgba(237,235,230,0.08);border-radius:5px;font-size:12.5px;line-height:1.5;color:#9A9893">La dueña es Sofía. Atienden 2 recepcionistas, sin sistema de turnos.</div>
+              <span style="font:400 11px 'JetBrains Mono',monospace;color:#65635F">Guardado · 24/09</span>
+            </section>
+          </aside>
+
+          <section style="flex:1;min-width:0;padding:20px 28px;display:flex;flex-direction:column;gap:20px">
+            <div style="background:#1C1C1F;border:1px solid rgba(237,235,230,0.1);border-radius:8px;overflow:hidden">
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(237,235,230,0.06)">
+                <span style="font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E">SIGUIENTE PASO</span>
+                <span style="font-size:12.5px;color:#EDEBE6">Pegá la respuesta del prospecto y analizala</span>
+                <span style="flex:1"></span>
+                <span style="font-size:11.5px;color:#85837E">según etapa: Respondió</span>
+              </div>
+              <div style="padding:12px 14px;min-height:64px;font-size:13px;color:#65635F;line-height:1.5">Pegá acá el mensaje tal como lo escribió…</div>
+              <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid rgba(237,235,230,0.06)">
+                <div style="display:flex;padding:2px;gap:2px;border:1px solid rgba(237,235,230,0.1);border-radius:5px;font-size:12px"><span style="padding:4px 8px;background:#26262A;border-radius:3px">WhatsApp</span><span style="padding:4px 8px;color:#9A9893">Email</span><span style="padding:4px 8px;color:#9A9893">Llamada</span></div>
+                <span style="flex:1"></span>
+                <span style="font:400 11px 'JetBrains Mono',monospace;color:#65635F">⌘↵</span>
+                <button style="height:30px;padding:0 12px;display:flex;align-items:center;gap:7px;background:#F2C14E;color:#17150F;border:0;border-radius:5px;font:500 12.5px 'Host Grotesk',sans-serif"><span style="width:13px;height:13px;background:currentColor;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/sparkles.svg) center/13px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/sparkles.svg) center/13px no-repeat"></span>Analizar</button>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px"><span style="font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E">ACTIVIDAD</span><span style="flex:1;height:1px;background:rgba(237,235,230,0.06)"></span><span style="font-size:11.5px;color:#9A9893">Todo</span><span style="font-size:11.5px;color:#65635F">Mensajes</span><span style="font-size:11.5px;color:#65635F">IA</span></div>
+            <div style="display:flex;flex-direction:column">
+              <sc-for list="{{ timeline }}" as="t" hint-placeholder-count="5">
+                <div style="display:grid;grid-template-columns:64px 16px minmax(0,1fr);gap:0 12px">
+                  <div style="padding-top:2px;display:flex;flex-direction:column;gap:2px;font:400 11px 'JetBrains Mono',monospace;color:#85837E;text-align:right"><span>{{ t.date }}</span><span style="color:#65635F">{{ t.time }}</span></div>
+                  <div style="position:relative;display:flex;justify-content:center"><span style="position:absolute;top:0;bottom:0;width:1px;background:rgba(237,235,230,0.08)"></span><span style="position:relative;margin-top:5px;width:7px;height:7px;border-radius:{{ t.shape }};background:{{ t.dot }};box-shadow:0 0 0 3px #161618"></span></div>
+                  <div style="padding-bottom:22px;display:flex;flex-direction:column;gap:8px;min-width:0">
+                    <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="font-size:12.5px;font-weight:500">{{ t.title }}</span><span style="font-size:11.5px;color:#85837E">{{ t.meta }}</span></div>
+                    <sc-if value="{{ t.body }}"><div style="max-width:560px;padding:10px 12px;background:{{ t.bubble }};border:1px solid rgba(237,235,230,0.07);border-radius:6px;font-size:13px;line-height:1.55;color:#DAD8D2;text-wrap:pretty">{{ t.body }}</div></sc-if>
+                    <sc-if value="{{ t.action }}"><div style="display:flex;gap:6px"><button style="height:28px;padding:0 10px;background:transparent;border:1px solid rgba(237,235,230,0.14);border-radius:5px;color:#EDEBE6;font:500 12px 'Host Grotesk',sans-serif">{{ t.action }}</button><button style="height:28px;padding:0 10px;background:transparent;border:0;color:#9A9893;font:500 12px 'Host Grotesk',sans-serif">Ver análisis</button></div></sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </section>
+
+          <sc-if value="{{ f.fullCopilot }}">
+          <aside style="width:320px;flex:none;border-left:1px solid rgba(237,235,230,0.08);padding:20px 22px;display:flex;flex-direction:column;gap:22px">
+            <div style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;background:#9A9893;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/sparkles.svg) center/14px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/sparkles.svg) center/14px no-repeat"></span><span style="font-weight:500;font-size:14px">Copilot</span><span style="flex:1"></span><span style="font:400 11px 'JetBrains Mono',monospace;color:#65635F">act. 11:48</span></div>
+            <section style="display:flex;flex-direction:column;gap:10px">
+              <span style="font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E">INTERÉS</span>
+              <div style="display:flex;align-items:baseline;gap:6px"><span style="font:400 36px/1 'JetBrains Mono',monospace;color:#F2C14E;letter-spacing:-0.03em">7</span><span style="font:400 14px 'JetBrains Mono',monospace;color:#85837E">/10</span><span style="flex:1"></span><span style="font:400 11.5px 'JetBrains Mono',monospace;color:#8FAE8B">↑ desde —</span></div>
+              <div style="display:flex;gap:3px"><sc-for list="{{ ticks }}" as="k" hint-placeholder-count="10"><span style="flex:1;height:4px;border-radius:1px;background:{{ k }}"></span></sc-for></div>
+              <span style="font-size:12px;color:#9A9893;line-height:1.5">Preguntó precio sin que se lo ofrezcas. Buen momento para proponer una llamada corta.</span>
+            </section>
+            <section style="display:flex;flex-direction:column;gap:10px;padding-top:18px;border-top:1px solid rgba(237,235,230,0.06)">
+              <div style="display:flex;align-items:center"><span style="font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E">ENRIQUECIMIENTO</span><span style="flex:1"></span><a href="#" style="font-size:11.5px;color:#9A9893">Actualizar</a></div>
+              <div style="display:flex;flex-direction:column;gap:8px;font-size:12.5px;line-height:1.5">
+                <div style="display:grid;grid-template-columns:72px 1fr;gap:8px"><span style="color:#85837E">Qué hacen</span><span>Depilación láser, faciales y corporales.</span></div>
+                <div style="display:grid;grid-template-columns:72px 1fr;gap:8px"><span style="color:#85837E">Canales</span><span>WhatsApp e Instagram <span style="font-family:'JetBrains Mono',monospace;color:#9A9893">12k</span></span></div>
+                <div style="display:grid;grid-template-columns:72px 1fr;gap:8px"><span style="color:#85837E">Ángulo</span><span>Turnos por WhatsApp a mano; 9 reseñas mencionan demora en responder.</span></div>
+              </div>
+            </section>
+            <section style="display:flex;flex-direction:column;gap:12px;padding-top:18px;border-top:1px solid rgba(237,235,230,0.06)">
+              <span style="font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E">DOLORES</span>
+              <div style="display:flex;flex-wrap:wrap;gap:6px"><span style="padding:3px 8px;border:1px solid rgba(237,235,230,0.14);border-radius:4px;font-size:12px">Demora en turnos</span><span style="padding:3px 8px;border:1px solid rgba(237,235,230,0.14);border-radius:4px;font-size:12px">Temporada alta</span></div>
+              <span style="font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E">OBJECIONES</span>
+              <div style="display:flex;flex-wrap:wrap;gap:6px"><span style="padding:3px 8px;border:1px dashed rgba(237,235,230,0.22);border-radius:4px;font-size:12px;color:#9A9893">Tiempo</span></div>
+              <span style="font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E">SEÑALES DE COMPRA</span>
+              <div style="position:relative;display:flex;flex-wrap:wrap;gap:6px">
+                <span style="padding:3px 8px;background:rgba(242,193,78,0.12);border:1px solid rgba(242,193,78,0.4);border-radius:4px;font-size:12px;color:#F2C14E;cursor:help">Pidió precio</span>
+                <div style="position:absolute;left:0;top:30px;z-index:2;width:250px;padding:10px 12px;background:#26262A;border:1px solid rgba(237,235,230,0.12);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,0.4);display:flex;flex-direction:column;gap:6px">
+                  <span style="font:400 10.5px 'JetBrains Mono',monospace;color:#85837E">EVIDENCIA · WHATSAPP · HOY 11:42</span>
+                  <span style="font-size:12.5px;line-height:1.5">“¿Cuánto sale más o menos? Así lo veo con mi socia.”</span>
+                </div>
+              </div>
+            </section>
+          </aside>
+          </sc-if>
+          <sc-if value="{{ f.compactCopilot }}">
+          <aside style="width:52px;flex:none;border-left:1px solid rgba(237,235,230,0.08);padding:16px 0;display:flex;flex-direction:column;align-items:center;gap:14px">
+            <span style="width:30px;height:30px;display:grid;place-items:center;border:1px solid rgba(237,235,230,0.12);border-radius:5px"><span style="width:14px;height:14px;background:#9A9893;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/sparkles.svg) center/14px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/sparkles.svg) center/14px no-repeat"></span></span>
+            <span style="font:400 18px/1 'JetBrains Mono',monospace;color:#F2C14E">7</span>
+            <span style="writing-mode:vertical-rl;font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E">COPILOT · 3 SEÑALES</span>
+          </aside>
+          </sc-if>
+        </div>
+      </main>
+    </div>
+  </div>
+  </sc-for>
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <span style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:0.1em;color:#85837E">07.C · COMPOSER CONTEXTUAL · UN SOLO BLOQUE, TRES MODOS</span>
+    <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">
+      <div style="width:600px;display:flex;flex-direction:column;gap:8px">
+        <span style="font-size:12px;color:#9A9893">Sin contacto → Generar apertura (editable antes de enviar)</span>
+        <div style="background:#1C1C1F;border:1px solid rgba(237,235,230,0.1);border-radius:8px;overflow:hidden;color:#EDEBE6">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(237,235,230,0.06)"><span style="font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E">APERTURA</span><div style="display:flex;gap:2px;font:500 11.5px 'JetBrains Mono',monospace"><span style="padding:2px 7px;background:#26262A;border-radius:3px">A</span><span style="padding:2px 7px;color:#85837E">B</span></div><span style="flex:1"></span><span style="font-size:11.5px;color:#85837E">Ángulo: demora en turnos</span></div>
+          <div style="padding:14px;font-size:13.5px;line-height:1.6;color:#EDEBE6;text-wrap:pretty">Hola, ¿cómo va? Vi que ALMA tiene 164 reseñas con 4.8 y varias mencionan que cuesta conseguir turno por WhatsApp. ¿Hoy cómo manejan las consultas que llegan fuera de horario?<span style="display:inline-block;width:1.5px;height:16px;background:#F2C14E;vertical-align:-3px;margin-left:1px"></span></div>
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid rgba(237,235,230,0.06)"><span style="font:400 11px 'JetBrains Mono',monospace;color:#65635F">212 car.</span><span style="flex:1"></span><button style="height:30px;padding:0 10px;background:transparent;border:0;color:#9A9893;font:500 12.5px 'Host Grotesk',sans-serif">Regenerar</button><button style="height:30px;padding:0 12px;background:#F2C14E;color:#17150F;border:0;border-radius:5px;font:500 12.5px 'Host Grotesk',sans-serif">Copiar y abrir WhatsApp</button></div>
+        </div>
+      </div>
+      <div style="width:600px;display:flex;flex-direction:column;gap:8px">
+        <span style="font-size:12px;color:#9A9893">Cargando IA · shimmer de humo que se disipa</span>
+        <div style="background:#1C1C1F;border:1px solid rgba(237,235,230,0.1);border-radius:8px;overflow:hidden;color:#EDEBE6">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(237,235,230,0.06)"><span style="font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E">APERTURA</span><span style="font-size:12px;color:#9A9893">Leyendo reseñas y web…</span></div>
+          <div style="padding:16px 14px;display:flex;flex-direction:column;gap:10px">
+            <span style="height:11px;width:92%;border-radius:2px;background:linear-gradient(90deg,#222226 0,#34343A 50%,#222226 100%);background-size:800px 100%;animation:smoke 1.6s linear infinite"></span>
+            <span style="height:11px;width:78%;border-radius:2px;background:linear-gradient(90deg,#222226 0,#34343A 50%,#222226 100%);background-size:800px 100%;animation:smoke 1.6s linear infinite"></span>
+            <span style="height:11px;width:54%;border-radius:2px;background:linear-gradient(90deg,#222226 0,#34343A 50%,#222226 100%);background-size:800px 100%;animation:smoke 1.6s linear infinite;opacity:0.6"></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid rgba(237,235,230,0.06)"><span style="flex:1"></span><button style="height:30px;padding:0 10px;background:transparent;border:0;color:#9A9893;font:500 12.5px 'Host Grotesk',sans-serif">Cancelar</button></div>
+        </div>
+      </div>
+      <div style="width:600px;display:flex;flex-direction:column;gap:8px">
+        <span style="font-size:12px;color:#9A9893">“Ahora no” con fecha cumplida → Generar seguimiento</span>
+        <div style="background:#1C1C1F;border:1px solid rgba(237,235,230,0.1);border-radius:8px;overflow:hidden;color:#EDEBE6">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(237,235,230,0.06)"><span style="font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E">SEGUIMIENTO</span><span style="font-size:12.5px">Pidió que le escribas en octubre</span><span style="flex:1"></span><span style="font:400 11px 'JetBrains Mono',monospace;color:#F2C14E">vence hoy</span></div>
+          <div style="padding:12px 14px;font-size:12.5px;line-height:1.55;color:#9A9893">Cita: “Ahora estamos a full con la temporada, hablame en octubre.” <span style="font-family:'JetBrains Mono',monospace;color:#65635F">· 12/09</span></div>
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid rgba(237,235,230,0.06)"><button style="height:30px;padding:0 10px;background:transparent;border:0;color:#9A9893;font:500 12.5px 'Host Grotesk',sans-serif">Posponer 7 d</button><span style="flex:1"></span><button style="height:30px;padding:0 12px;background:#F2C14E;color:#17150F;border:0;border-radius:5px;font:500 12.5px 'Host Grotesk',sans-serif">Generar seguimiento</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:48px;flex-wrap:wrap;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <span style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:0.1em;color:#85837E">07.D · SELECTOR DE ETAPA (ABIERTO)</span>
+      <div style="width:260px;padding:6px;background:#1E1E21;border:1px solid rgba(237,235,230,0.12);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,0.4);color:#EDEBE6;font-size:13px">
+        <span style="display:block;padding:6px 8px 4px;font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E">EMBUDO</span>
+        <sc-for list="{{ stageMenu }}" as="s" hint-placeholder-count="9">
+          <div style="display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:4px;background:{{ s.bg }};color:{{ s.color }}" style-hover="background:rgba(237,235,230,0.05)"><span style="font:400 10.5px 'JetBrains Mono',monospace;width:14px;color:#65635F">{{ s.i }}</span><span style="flex:1">{{ s.label }}</span><span style="color:#F2C14E;font-size:12px">{{ s.check }}</span></div>
+        </sc-for>
+        <div style="height:1px;background:rgba(237,235,230,0.08);margin:6px 0"></div>
+        <span style="display:block;padding:6px 8px 4px;font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E">SALIDAS</span>
+        <div style="padding:6px 8px;color:#9A9893">Ahora no… <span style="color:#65635F;font-size:11.5px">pide fecha</span></div>
+        <div style="padding:6px 8px;color:#9A9893">Cerrado perdido</div>
+        <div style="padding:6px 8px;color:#9A9893">Descartado</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <span style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:0.1em;color:#85837E">07.E · LEAD NUEVO · VACÍOS DE UNA LÍNEA</span>
+      <div style="width:320px;padding:20px 22px;background:#161618;border:1px solid rgba(237,235,230,0.08);border-radius:8px;display:flex;flex-direction:column;gap:18px;color:#EDEBE6">
+        <div style="display:flex;align-items:center;gap:8px"><span style="font-weight:500;font-size:14px">Copilot</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12.5px;color:#85837E"><span>Interés: sin medir</span><span style="font-size:11.5px">tras la 1.ª respuesta</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px;border-top:1px solid rgba(237,235,230,0.06);font-size:12.5px;color:#85837E"><span>Sin enriquecer</span><button style="height:28px;padding:0 10px;background:transparent;border:1px solid rgba(237,235,230,0.14);border-radius:5px;color:#EDEBE6;font:500 12px 'Host Grotesk',sans-serif">Enriquecer</button></div>
+        <div style="padding-top:14px;border-top:1px solid rgba(237,235,230,0.06);font-size:12.5px;color:#85837E">Dolores y señales aparecen al analizar respuestas.</div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const ic = n => `url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/${n}.svg) center/14px no-repeat`;
+    const stages = ['Nuevo','Listo para contactar','Contactado','Respondió','Diagnóstico','Calificado','Interesado','Reunión','Propuesta enviada','Cerrado ganado'];
+    return {
+      frames: [
+        {label:'07.A · DETALLE DE LEAD · 1440 · RESPONDIÓ', w:1440, collapsed:false, leftW:248, fullCopilot:true, compactCopilot:false},
+        {label:'07.B · 1024 · COPILOT PLEGADO EN RIEL', w:1024, collapsed:true, leftW:232, fullCopilot:false, compactCopilot:true}
+      ],
+      quick: [
+        {label:'WhatsApp',title:'Abrir chat',color:'#EDEBE6',mask:ic('message-circle')},
+        {label:'Email',title:'Sin email cargado',color:'#65635F',mask:ic('mail')},
+        {label:'Llamada',title:'Registrar llamada',color:'#EDEBE6',mask:ic('phone')},
+        {label:'Agendar',title:'Nuevo turno',color:'#EDEBE6',mask:ic('calendar-plus')}
+      ],
+      timeline: [
+        {date:'HOY',time:'11:48',title:'Análisis de respuesta',meta:'IA · interés 7/10',dot:'#F2C14E',shape:'1px',bubble:'transparent',body:'Pregunta por precio antes de que se lo ofrezcas: señal de compra. Menciona temporada alta, posible objeción de tiempo. Sugerencia: responder con rango y proponer 15 min esta semana.',action:'Usar respuesta sugerida'},
+        {date:'HOY',time:'11:42',title:'Sofía · ALMA',meta:'WhatsApp · recibido',dot:'#EDEBE6',shape:'50%',bubble:'#222226',body:'Hola! Sí, nos pasa bastante. ¿Cuánto sale más o menos? Así lo veo con mi socia.',action:''},
+        {date:'24/09',time:'10:15',title:'Vos',meta:'WhatsApp · apertura B',dot:'#85837E',shape:'50%',bubble:'transparent',body:'Hola, ¿cómo va? Vi que ALMA tiene 164 reseñas con 4.8 y varias mencionan que cuesta conseguir turno por WhatsApp. ¿Hoy cómo manejan las consultas que llegan fuera de horario?',action:''},
+        {date:'24/09',time:'10:02',title:'Enriquecido',meta:'IA · 3 hallazgos',dot:'#65635F',shape:'1px',bubble:'',body:'',action:''},
+        {date:'18/09',time:'09:30',title:'Lead creado',meta:'Clinicas Estéticas 3 · Google Maps',dot:'#65635F',shape:'1px',bubble:'',body:'',action:''}
+      ],
+      ticks: Array.from({length:10},(_,i)=> i<7 ? '#F2C14E' : 'rgba(237,235,230,0.1)'),
+      stageMenu: stages.map((l,i)=>({label:l,i:i+1,check:l==='Respondió'?'✓':'',bg:l==='Respondió'?'rgba(242,193,78,0.1)':'transparent',color:l==='Respondió'?'#EDEBE6':'#9A9893'}))
+    };
+  }
+}
+</script>
+</body>
+</html>

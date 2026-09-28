@@ -1,15 +1,15 @@
-import { ArrowLeft, ExternalLink, Heart } from "lucide-react";
+import { ExternalLink, Heart } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { hookText } from "@/components/brand/analysis/retention-list";
 import { ResultDetail } from "@/components/brand/content/result-detail";
-import { BrandLineChart, type LineChartPoint } from "@/components/brand/dashboard/line-chart";
+import { BrandLineChart, type LineChartPoint, type LineChartSeries } from "@/components/brand/dashboard/line-chart";
 import { FollowerGainCard } from "@/components/brand/goals/follower-gain-card";
 import { Markdown } from "@/components/brand/markdown";
-import { PageHeader } from "@/components/shell/page-header";
-import { Badge } from "@/components/ui/badge";
-import { ButtonLink } from "@/components/ui/button";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { PostThumb } from "@/components/brand/post-thumb";
+import { Card, CardBody, CardHeader, Crumbs, Eyebrow, Tag } from "@/components/brand/ui/card";
+import { HeaderBar } from "@/components/leads/ui/page-header";
 import { extractHashtags } from "@/lib/brand/insights";
 import { getKnowledgeForPost } from "@/lib/brand/knowledge/queries";
 import { COLLECTION_LABEL, ORIGIN_LABEL } from "@/lib/brand/knowledge/schema";
@@ -24,6 +24,7 @@ import {
   getBrandPostMetricsHistory,
   getBrandPostsForAnalysis,
 } from "@/lib/brand/queries";
+import { cn } from "@/lib/utils";
 
 const PLATFORM = "INSTAGRAM" as const;
 
@@ -36,16 +37,25 @@ const KIND_LABEL: Record<string, string> = {
   SHORT: "Short",
 };
 
+const EVOLUTION_SERIES: LineChartSeries[] = [
+  { key: "views", label: "Views", color: "var(--color-lm-ink)" },
+  { key: "reach", label: "Alcance", color: "var(--color-lm-smoke-4)", dashed: true },
+];
+
 const numberFormat = new Intl.NumberFormat("es-AR");
 
 function formatCount(value: number | null) {
-  return value === null ? "—" : numberFormat.format(value);
+  return value === null ? null : numberFormat.format(value);
 }
 
 /** `captured_on` es un `YYYY-MM-DD` sin hora: se reordena como texto, sin pasar por Date (que lo correría por zona horaria). */
 function formatCapturedOn(day: string) {
   const [year, month, date] = day.split("-");
   return `${date}/${month}/${year}`;
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" });
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -88,6 +98,7 @@ export default async function ContenidoDetallePage({ params }: { params: Promise
 
   const hashtags = extractHashtags(post.caption);
   const captionWithoutTags = post.caption?.replace(/#[\p{L}0-9_]+/gu, "").trim() || null;
+  const captionParagraphs = captionWithoutTags ? captionWithoutTags.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean) : [];
 
   const timeline: LineChartPoint[] = metrics.map((m) => ({
     day: m.captured_on,
@@ -97,7 +108,7 @@ export default async function ContenidoDetallePage({ params }: { params: Promise
 
   // Los snapshots vienen ordenados por día: el último es el número de hoy.
   const latest = metrics.at(-1) ?? null;
-  const metricItems = latest
+  const metricItems: { label: string; value: string | null }[] = latest
     ? [
         { label: "Views", value: formatCount(latest.views) },
         { label: "Alcance", value: formatCount(latest.reach) },
@@ -114,63 +125,139 @@ export default async function ContenidoDetallePage({ params }: { params: Promise
       ]
     : [];
 
+  const kindLabel = KIND_LABEL[post.kind] ?? post.kind;
+  const publishedLabel = post.published_at ? formatDate(post.published_at) : null;
+  const title = post.caption ? hookText(post.caption) : kindLabel;
+  const hoursSincePublished = post.published_at ? (now.getTime() - new Date(post.published_at).getTime()) / 3_600_000 : null;
+
   return (
     <>
-      <PageHeader
-        eyebrow="Biblioteca de contenido"
-        title={KIND_LABEL[post.kind] ?? post.kind}
-        description={post.published_at ? new Date(post.published_at).toLocaleDateString("es-AR") : undefined}
-        action={
-          <ButtonLink href="/marca/contenido" variant="ghost" size="sm">
-            <ArrowLeft className="size-3.5" />
-            Volver a la biblioteca
-          </ButtonLink>
+      <HeaderBar
+        breadcrumb={
+          <Crumbs
+            items={[
+              { label: "Biblioteca", href: "/marca/contenido" },
+              { label: publishedLabel ? `${kindLabel} · ${publishedLabel}` : kindLabel },
+            ]}
+          />
         }
+        meta={latest ? `Última sincronización ${formatCapturedOn(latest.captured_on)}` : undefined}
       />
 
-      <div className="grid grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-3 lg:px-10">
-        <div className="space-y-6 lg:col-span-1">
-          <Card>
-            <div className="relative aspect-9/16 w-full overflow-hidden rounded-t-[20px] bg-elevated">
-              {post.thumbnail_url ? (
-                // eslint-disable-next-line @next/next/no-img-element -- URL externa de Instagram
-                <img src={post.thumbnail_url} alt="" className="size-full object-cover" />
-              ) : null}
+      <div className="grid grid-cols-1 items-start gap-8 px-6 py-7 lg:grid-cols-[340px_minmax(0,1fr)] lg:px-8 lg:pb-10">
+        <aside className="flex flex-col gap-[18px]">
+          <PostThumb url={post.thumbnail_url} bare className="aspect-9/16 w-full rounded-lm-lg border border-lm-line" />
+
+          {captionParagraphs.length > 0 ? (
+            <div className="flex flex-col gap-3 text-[13px] leading-[1.55] text-lm-smoke-5">
+              {captionParagraphs.map((paragraph, index) => (
+                <p key={index} className="whitespace-pre-line">
+                  {paragraph}
+                </p>
+              ))}
             </div>
-            <CardBody className="space-y-3">
-              {captionWithoutTags ? <p className="text-sm text-ink whitespace-pre-wrap">{captionWithoutTags}</p> : null}
-              {hashtags.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {hashtags.map((tag) => (
-                    <Badge key={tag} tone="violet">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              ) : null}
-              {post.permalink ? (
-                <a
-                  href={post.permalink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm text-cyan hover:underline"
+          ) : null}
+
+          {hashtags.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {hashtags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex h-[22px] items-center rounded-lm-sm bg-lm-raised px-2 font-mono text-[11.5px] text-lm-ink-2"
                 >
-                  Ver en Instagram
-                  <ExternalLink className="size-3.5" />
-                </a>
-              ) : null}
-            </CardBody>
+                  {tag}
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          {post.permalink ? (
+            <a
+              href={post.permalink}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 text-[12.5px] text-lm-ink-2 transition-colors hover:text-lm-signal-text"
+            >
+              Ver en Instagram
+              <ExternalLink className="size-3" />
+            </a>
+          ) : null}
+        </aside>
+
+        <div className="flex min-w-0 flex-col gap-4">
+          <div className="flex items-end gap-3">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <Eyebrow>
+                {kindLabel.toUpperCase()}
+                {publishedLabel ? ` · PUBLICADO ${publishedLabel}` : ""}
+              </Eyebrow>
+              <h1 className="font-lm-sans text-[26px] leading-tight font-medium tracking-[-0.02em] text-balance">{title}</h1>
+            </div>
+            <Link
+              href="/marca/contenido"
+              className="pb-1 text-xs whitespace-nowrap text-lm-ink-2 transition-colors hover:text-lm-signal-text"
+            >
+              ← Volver a la biblioteca
+            </Link>
+          </div>
+
+          <ResultDetail result={results[id]} publishedAt={post.published_at} />
+
+          <Card>
+            <CardHeader
+              title="Métricas"
+              description={
+                latest ? (
+                  <>
+                    Última sincronización: <span className="font-mono">{formatCapturedOn(latest.captured_on)}</span>
+                  </>
+                ) : undefined
+              }
+            />
+            {latest ? (
+              <dl className="grid grid-cols-3">
+                {metricItems.map((item, index) => (
+                  <div
+                    key={item.label}
+                    className={cn(
+                      "flex flex-col gap-1.5 border-lm-line px-5 py-4",
+                      index % 3 !== 0 && "border-l",
+                      index < metricItems.length - (metricItems.length % 3 || 3) && "border-b",
+                    )}
+                  >
+                    <Eyebrow>{item.label}</Eyebrow>
+                    <dd className="font-mono text-[22px] leading-none tracking-[-0.02em] tabular-nums">
+                      {item.value ?? <span className="text-lm-smoke-3">—</span>}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <CardBody>
+                <p className="text-[12.5px] text-lm-ink-2">Todavía no hay métricas sincronizadas para esta pieza.</p>
+              </CardBody>
+            )}
           </Card>
-        </div>
 
-        <div className="space-y-6 lg:col-span-2">
-          <ResultDetail result={results[id]} />
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <FollowerGainCard
+              gain={attribution.gains[id]}
+              surprise={attribution.surprises.find((surprise) => surprise.postId === id)}
+              currentFollowers={snapshots.at(-1)?.followers ?? null}
+              hoursSincePublished={hoursSincePublished}
+            />
 
-          <FollowerGainCard
-            gain={attribution.gains[id]}
-            surprise={attribution.surprises.find((surprise) => surprise.postId === id)}
-            currentFollowers={snapshots.at(-1)?.followers ?? null}
-          />
+            <Card>
+              <CardHeader title="Evolución desde que se publicó" description="Views y alcance por día sincronizado." />
+              <CardBody>
+                <BrandLineChart
+                  points={timeline}
+                  series={EVOLUTION_SERIES}
+                  minPointsMessage="Necesitás más días de sincronización para ver la evolución de esta pieza."
+                />
+              </CardBody>
+            </Card>
+          </div>
 
           {planned ? (
             <Card>
@@ -178,36 +265,39 @@ export default async function ContenidoDetallePage({ params }: { params: Promise
                 title="Hipótesis con la que salió"
                 description="Lo que se escribió en el planificador antes de grabar. Se compara contra el resultado de arriba."
               />
-              <CardBody className="space-y-3">
+              <CardBody className="flex flex-col gap-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  {planned.objective ? <Badge tone="cyan">{OBJECTIVE_LABEL[planned.objective]}</Badge> : null}
-                  <Badge tone="violet">{planned.parent_item_id ? "Variante de un ganador" : "Experimento nuevo"}</Badge>
+                  {planned.objective ? <Tag tone="solid">{OBJECTIVE_LABEL[planned.objective]}</Tag> : null}
+                  <Tag>{planned.parent_item_id ? "Variante de un ganador" : "Experimento nuevo"}</Tag>
                 </div>
                 {planned.hypothesis ? (
-                  <p className="text-sm text-ink whitespace-pre-wrap">{planned.hypothesis}</p>
+                  <p className="text-[13.5px] leading-[1.6] whitespace-pre-wrap text-lm-ink">{planned.hypothesis}</p>
                 ) : (
-                  <p className="text-sm text-muted">
+                  <p className="text-[12.5px] text-lm-ink-2">
                     Esta pieza salió sin hipótesis escrita: no hay contra qué comparar el resultado.
                   </p>
                 )}
                 {planned.hook || planned.angle ? (
-                  <dl className="grid gap-3 sm:grid-cols-2">
+                  <dl className="grid gap-4 sm:grid-cols-2">
                     {planned.hook ? (
-                      <div>
-                        <dt className="text-xs font-medium tracking-wide text-muted uppercase">Hook</dt>
-                        <dd className="mt-1 text-sm text-ink">{planned.hook}</dd>
+                      <div className="flex flex-col gap-1.5">
+                        <Eyebrow>Hook</Eyebrow>
+                        <dd className="text-[13px] text-lm-ink">{planned.hook}</dd>
                       </div>
                     ) : null}
                     {planned.angle ? (
-                      <div>
-                        <dt className="text-xs font-medium tracking-wide text-muted uppercase">Ángulo</dt>
-                        <dd className="mt-1 text-sm text-ink">{planned.angle}</dd>
+                      <div className="flex flex-col gap-1.5">
+                        <Eyebrow>Ángulo</Eyebrow>
+                        <dd className="text-[13px] text-lm-ink">{planned.angle}</dd>
                       </div>
                     ) : null}
                   </dl>
                 ) : null}
-                <Link href="/marca/planificador" className="inline-block text-sm text-cyan hover:underline">
-                  Ver en el planificador
+                <Link
+                  href="/marca/planificador"
+                  className="w-fit text-xs text-lm-ink-2 transition-colors hover:text-lm-signal-text"
+                >
+                  Ver en el planificador →
                 </Link>
               </CardBody>
             </Card>
@@ -219,95 +309,67 @@ export default async function ContenidoDetallePage({ params }: { params: Promise
                 title="Lo que se aprendió de esta pieza"
                 description="Notas de la base de conocimiento vinculadas a este contenido."
               />
-              <CardBody className="space-y-4">
+              <CardBody className="flex flex-col gap-4">
                 {notes.map((note) => (
-                  <div key={note.id} className="space-y-1.5 border-b border-line/60 pb-4 last:border-0 last:pb-0">
+                  <div key={note.id} className="flex flex-col gap-1.5 border-b border-lm-line pb-4 last:border-0 last:pb-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge tone="violet">{COLLECTION_LABEL[note.collection]}</Badge>
-                      <Badge tone={note.origin === "PROPIO" ? "cyan" : note.origin === "HIPOTESIS" ? "violet" : "neutral"}>
-                        {ORIGIN_LABEL[note.origin]}
-                      </Badge>
+                      <Tag tone="solid">{COLLECTION_LABEL[note.collection]}</Tag>
+                      <Tag>{ORIGIN_LABEL[note.origin]}</Tag>
                     </div>
-                    <p className="text-sm text-ink">{note.title}</p>
-                    {note.body ? <Markdown>{note.body}</Markdown> : null}
+                    <p className="text-sm font-medium text-lm-ink">{note.title}</p>
+                    {note.body ? <Markdown className="text-[13px] text-lm-ink-2">{note.body}</Markdown> : null}
                   </div>
                 ))}
-                <Link href={`/marca/conocimiento?c=${notes[0].collection}`} className="inline-block text-sm text-cyan hover:underline">
-                  Ver en la base de conocimiento
+                <Link
+                  href={`/marca/conocimiento?c=${notes[0].collection}`}
+                  className="w-fit text-xs text-lm-ink-2 transition-colors hover:text-lm-signal-text"
+                >
+                  Ver en la base de conocimiento →
                 </Link>
               </CardBody>
             </Card>
           ) : null}
 
           <Card>
-            <CardHeader
-              title="Métricas"
-              description={latest ? `Última sincronización: ${formatCapturedOn(latest.captured_on)}` : undefined}
-            />
-            <CardBody>
-              {latest ? (
-                <dl className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3">
-                  {metricItems.map((item) => (
-                    <div key={item.label}>
-                      <dt className="text-xs font-medium tracking-wide text-muted uppercase">{item.label}</dt>
-                      <dd className="tabular mt-1 text-2xl text-ink">{item.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              ) : (
-                <p className="text-sm text-muted">Todavía no hay métricas sincronizadas para esta pieza.</p>
-              )}
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader title="Evolución desde que se publicó" description="Views y alcance por día sincronizado." />
-            <CardBody>
-              <BrandLineChart
-                points={timeline}
-                series={[
-                  { key: "views", label: "Views", color: "#18D6E8" },
-                  { key: "reach", label: "Alcance", color: "#7C3AED" },
-                ]}
-                minPointsMessage="Necesitás más días de sincronización para ver la evolución de esta pieza."
-              />
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader
-              title="Comentarios"
-              description={
-                comments.length > 0
-                  ? undefined
-                  : "Si el post tiene comentarios en Instagram y no aparecen acá, puede que la próxima sincronización todavía no los haya traído."
-              }
-            />
-            <CardBody className="space-y-4">
+            <div className="flex items-baseline gap-2.5 border-b border-lm-line px-5 py-4">
+              <h3 className="font-lm-sans text-[15px] leading-5 font-medium">Comentarios</h3>
+              {comments.length > 0 ? <span className="font-mono text-[11px] text-lm-ink-3">{comments.length}</span> : null}
+            </div>
+            <div className="px-5">
               {comments.length === 0 ? (
-                <p className="text-sm text-muted">Sin comentarios sincronizados todavía.</p>
+                <p className="py-4 text-[12.5px] leading-normal text-lm-ink-2">
+                  Sin comentarios sincronizados todavía. Si el post tiene comentarios en Instagram y no aparecen acá, puede que la próxima sincronización todavía no los haya traído.
+                </p>
               ) : (
                 comments.map((comment) => (
-                  <div key={comment.id} className="flex items-start justify-between gap-4 border-b border-line/60 pb-3 last:border-0">
-                    <div>
-                      <p className="text-sm text-ink">
+                  <div key={comment.id} className="flex gap-3.5 border-b border-lm-line py-3 last:border-0">
+                    <span className="grid size-6 shrink-0 place-items-center rounded-full bg-lm-raised text-[10.5px] text-lm-ink-2 uppercase">
+                      {(comment.username ?? "?").slice(0, 1)}
+                    </span>
+                    <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
+                      <span className="text-[12.5px]">
                         <span className="font-medium">{comment.username ?? "Usuario de Instagram"}</span>{" "}
-                        <span className="text-muted">
-                          {comment.commented_at ? new Date(comment.commented_at).toLocaleDateString("es-AR") : ""}
+                        <span className="font-mono text-[11px] text-lm-ink-3">
+                          {comment.commented_at ? formatDate(comment.commented_at) : ""}
                         </span>
-                      </p>
-                      <p className="mt-1 text-sm text-muted">{comment.body}</p>
+                      </span>
+                      <span className="text-[13px] text-lm-smoke-5">{comment.body}</span>
                     </div>
                     {comment.like_count !== null ? (
-                      <span className="flex shrink-0 items-center gap-1 text-xs text-muted">
-                        <Heart className="size-3.5" />
+                      <span
+                        className={cn(
+                          "flex shrink-0 items-center gap-[5px] font-mono text-[11px]",
+                          comment.like_count === 0 ? "text-lm-smoke-3" : "text-lm-ink-2",
+                        )}
+                      >
+                        <Heart className="size-3" />
                         {comment.like_count}
                       </span>
                     ) : null}
                   </div>
                 ))
               )}
-            </CardBody>
+            </div>
           </Card>
         </div>
       </div>

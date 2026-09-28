@@ -3,11 +3,9 @@
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/leads/ui/button";
+import { Dialog } from "@/components/leads/ui/dialog";
+import { Input, Select, Textarea } from "@/components/leads/ui/field";
 import { saveKnowledgeNote } from "@/lib/brand/knowledge/actions";
 import type { KnowledgeRow } from "@/lib/brand/knowledge/queries";
 import {
@@ -80,7 +78,7 @@ export function KnowledgeDialog({
     >
       <div className="space-y-4">
         <div>
-          <label className="mb-1.5 block text-xs text-muted" htmlFor="knowledge-collection">
+          <label className="mb-1.5 block text-[13px] font-medium text-lm-ink-2" htmlFor="knowledge-collection">
             Colección
           </label>
           {/* Una nota no cambia de colección: mover algo de RADAR a WINNERS es escribir otra nota. */}
@@ -98,7 +96,7 @@ export function KnowledgeDialog({
           </Select>
         </div>
         <div>
-          <label className="mb-1.5 block text-xs text-muted" htmlFor="knowledge-title">
+          <label className="mb-1.5 block text-[13px] font-medium text-lm-ink-2" htmlFor="knowledge-title">
             Título
           </label>
           <Input
@@ -110,14 +108,14 @@ export function KnowledgeDialog({
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs text-muted" htmlFor="knowledge-body">
+          <label className="mb-1.5 block text-[13px] font-medium text-lm-ink-2" htmlFor="knowledge-body">
             Nota
           </label>
           <Textarea id="knowledge-body" value={body} onChange={(e) => setBody(e.target.value)} className="min-h-36" />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1.5 block text-xs text-muted" htmlFor="knowledge-origin">
+            <label className="mb-1.5 block text-[13px] font-medium text-lm-ink-2" htmlFor="knowledge-origin">
               Origen
             </label>
             <Select id="knowledge-origin" value={origin} onChange={(e) => setOrigin(e.target.value as KnowledgeOrigin)}>
@@ -130,7 +128,7 @@ export function KnowledgeDialog({
           </div>
           {collection === "EXPERIMENTOS" ? (
             <div>
-              <label className="mb-1.5 block text-xs text-muted" htmlFor="knowledge-status">
+              <label className="mb-1.5 block text-[13px] font-medium text-lm-ink-2" htmlFor="knowledge-status">
                 Estado
               </label>
               <Select id="knowledge-status" value={status} onChange={(e) => setStatus(e.target.value as KnowledgeStatus)}>
@@ -144,12 +142,12 @@ export function KnowledgeDialog({
           ) : null}
         </div>
         <div>
-          <label className="mb-1.5 block text-xs text-muted" htmlFor="knowledge-tags">
+          <label className="mb-1.5 block text-[13px] font-medium text-lm-ink-2" htmlFor="knowledge-tags">
             Etiquetas
           </label>
           <Input id="knowledge-tags" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="hook reels ia" />
         </div>
-        {error ? <p className="text-xs text-danger">{error}</p> : null}
+        {error ? <p className="text-xs text-lm-danger">{error}</p> : null}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
             Cancelar

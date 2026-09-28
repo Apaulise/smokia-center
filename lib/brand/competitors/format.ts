@@ -62,3 +62,17 @@ export function formatBaselines(insights: Pick<CompetitorInsights, "baselines" |
     });
   return parts.length > 0 ? parts.join(" · ") : "—";
 }
+
+/** Sólo el número de la cadencia ("6,3"), para mostrarlo en Mono con "/ sem" aparte. `null` si no hay datos suficientes. */
+export function formatCadenceValue(cadence: Cadence): string | null {
+  return cadence.perWeek === null ? null : oneDecimal.format(cadence.perWeek);
+}
+
+/** Los formatos con su porcentaje, de mayor a menor — para la barra segmentada de la mezcla. */
+export function mixSegments(mix: FormatMix): { kind: BrandPostKind; label: string; count: number; percent: number }[] {
+  const total = Object.values(mix).reduce((sum, n) => sum + (n ?? 0), 0);
+  if (total === 0) return [];
+  return (Object.entries(mix) as [BrandPostKind, number][])
+    .sort((a, b) => b[1] - a[1])
+    .map(([kind, count]) => ({ kind, label: KIND_PLURAL[kind], count, percent: (count / total) * 100 }));
+}

@@ -1,16 +1,16 @@
-import { Eye, Heart, KeyRound, TrendingUp, UserPlus, Users } from "lucide-react";
+import { KeyRound } from "lucide-react";
+import Link from "next/link";
 
 import { AudienceBars } from "@/components/brand/dashboard/audience-bars";
+import { BrandLineChart, ChartLegend, type LineChartSeries } from "@/components/brand/dashboard/line-chart";
 import { GoalCard } from "@/components/brand/goals/goal-card";
 import { NextStepsCard } from "@/components/brand/goals/next-steps-card";
-import { LatestPostsGrid } from "@/components/brand/dashboard/latest-posts-grid";
-import { BrandLineChart } from "@/components/brand/dashboard/line-chart";
-import { BrandSyncPanel } from "@/components/brand/sync-panel";
-import { PageHeader } from "@/components/shell/page-header";
-import { ButtonLink } from "@/components/ui/button";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
-import { StatTile } from "@/components/ui/stat-tile";
+import { ReelCard } from "@/components/brand/reel-card";
+import { BrandSyncProvider, SyncButton, SyncStatus } from "@/components/brand/sync-panel";
+import { Card, CardBody, CardHeader, Crumbs, KpiStrip } from "@/components/brand/ui/card";
+import { ButtonLink } from "@/components/leads/ui/button";
+import { EmptyState } from "@/components/leads/ui/feedback";
+import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
 import { buildNextSteps, countMatureReels } from "@/lib/brand/goals/next-steps";
 import { computeGoalProgress } from "@/lib/brand/goals/progress";
 import {
@@ -44,9 +44,22 @@ export const maxDuration = 60;
 
 const PLATFORM = "INSTAGRAM" as const;
 const WINDOW_DAYS = 30;
+const LATEST_REELS = 6;
+
+const FOLLOWER_SERIES: LineChartSeries[] = [{ key: "followers_count", label: "Seguidores", color: "var(--color-lm-ink)" }];
+const REACH_SERIES: LineChartSeries[] = [
+  { key: "reach", label: "Alcance", color: "var(--color-lm-smoke-5)", area: true },
+  { key: "total_interactions", label: "Interacciones", color: "var(--color-lm-smoke-4)", dashed: true },
+];
 
 function formatCompact(value: number) {
   return new Intl.NumberFormat("es-AR", { notation: "compact" }).format(value);
+}
+
+/** "2026-09-18" → "18/9" */
+function shortDay(iso: string) {
+  const [, month, day] = iso.split("-").map(Number);
+  return `${day}/${month}`;
 }
 
 export default async function MarcaPage() {
@@ -70,7 +83,7 @@ export default async function MarcaPage() {
     getBrandAccountSummary(PLATFORM, WINDOW_DAYS),
     getBrandMetricsTimeline(PLATFORM, WINDOW_DAYS),
     getBrandAudienceSummary(PLATFORM),
-    getBrandLatestPosts(PLATFORM, 8),
+    getBrandLatestPosts(PLATFORM, LATEST_REELS),
     getBrandContentViewsTotal(PLATFORM),
     getLatestBrandSyncJob(PLATFORM),
     getCurrentGoal(PLATFORM),
@@ -85,12 +98,13 @@ export default async function MarcaPage() {
   if (!account) {
     return (
       <>
-        <PageHeader
-          eyebrow="Gestor de Marca Personal"
-          title="Instagram"
-          description="Métricas, contenido y publicación sin salir de la app."
-        />
-        <div className="px-6 lg:px-10">
+        <HeaderBar breadcrumb={<Crumbs items={[{ label: "Marca personal" }, { label: "Resumen" }]} />} />
+        <div className="flex flex-col gap-8 px-6 py-7 lg:px-8">
+          <PageHeading
+            eyebrow="INSTAGRAM"
+            title="Marca personal"
+            description="Métricas, contenido y publicación sin salir de la app."
+          />
           <EmptyState
             icon={<KeyRound className="size-5" />}
             title="Todavía no hay una cuenta conectada"
@@ -147,104 +161,94 @@ export default async function MarcaPage() {
   const reachTotal = timeline.reduce((sum, p) => sum + (p.reach ?? 0), 0);
   const interactionsTotal = timeline.reduce((sum, p) => sum + (p.total_interactions ?? 0), 0);
 
-  return (
-    <>
-      <PageHeader
-        eyebrow="Gestor de Marca Personal"
-        title={account.display_name ?? account.username ?? "Instagram"}
-        description={account.username ? `@${account.username}` : undefined}
-        action={<BrandSyncPanel platform={PLATFORM} ownerId={user.id} initialJob={latestJob} />}
-      />
+  const followersSub =
+    followersDelta !== null && account.oldest_snapshot_on
+      ? `${followersDelta >= 0 ? "↑" : "↓"} ${Math.abs(followersDelta)} desde el ${shortDay(account.oldest_snapshot_on)}`
+      : "Necesitás más días de historial";
 
-      <div className="space-y-6 px-6 py-8 lg:px-10">
+  return (
+    <BrandSyncProvider platform={PLATFORM} ownerId={user.id} initialJob={latestJob}>
+      <HeaderBar breadcrumb={<Crumbs items={[{ label: "Marca personal" }, { label: "Resumen" }]} />} meta={<SyncStatus />} />
+
+      <div className="flex flex-col gap-7 px-6 py-7 lg:px-8 lg:pb-10">
+        <PageHeading
+          eyebrow={account.username ? `INSTAGRAM · @${account.username.toUpperCase()}` : "INSTAGRAM"}
+          title={account.display_name ?? account.username ?? "Instagram"}
+          action={<SyncButton />}
+        />
+
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <GoalCard platform={PLATFORM} goal={goal} progress={goalProgress} currentFollowers={currentFollowers} />
           <NextStepsCard steps={nextSteps} />
         </div>
 
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-          <StatTile
-            label="Seguidores"
-            value={account.followers_count ?? "—"}
-            accent="cyan"
-            icon={<Users className="size-4" />}
-            hint={
-              followersDelta !== null
-                ? `${followersDelta >= 0 ? "+" : ""}${followersDelta} desde el ${account.oldest_snapshot_on}`
-                : "Necesitás más días de historial"
-            }
-          />
-          <StatTile
-            label={`Alcance (${WINDOW_DAYS}d)`}
-            value={formatCompact(reachTotal)}
-            accent="violet"
-            icon={<TrendingUp className="size-4" />}
-          />
-          <StatTile
-            label="Views (contenido)"
-            value={formatCompact(viewsTotal)}
-            accent="cyan"
-            icon={<Eye className="size-4" />}
-          />
-          <StatTile
-            label={`Interacciones (${WINDOW_DAYS}d)`}
-            value={formatCompact(interactionsTotal)}
-            accent="violet"
-            icon={<Heart className="size-4" />}
-          />
-          <StatTile
-            label="Seguidos"
-            value={account.follows_count ?? "—"}
-            icon={<UserPlus className="size-4" />}
-          />
-        </div>
+        <KpiStrip
+          items={[
+            {
+              label: "Seguidores",
+              value: account.followers_count ?? "—",
+              sub: followersSub,
+              subTone: followersDelta !== null && followersDelta > 0 ? "up" : "muted",
+              accent: true,
+            },
+            { label: `Alcance (${WINDOW_DAYS}d)`, value: formatCompact(reachTotal), sub: "cuentas únicas" },
+            { label: "Views (contenido)", value: formatCompact(viewsTotal), sub: `${posts.length} piezas` },
+            {
+              label: `Interacciones (${WINDOW_DAYS}d)`,
+              value: formatCompact(interactionsTotal),
+              sub: "likes, guardados y comentarios",
+            },
+            { label: "Seguidos", value: account.follows_count ?? "—" },
+          ]}
+        />
 
-        <Card>
-          <CardHeader
-            title="Últimos reels"
-            description="Lo primero que se mira al abrir la app."
-            action={
-              <ButtonLink href="/marca/contenido" variant="ghost" size="sm">
-                Ver toda la biblioteca
-              </ButtonLink>
-            }
-          />
-          <CardBody>
-            <LatestPostsGrid posts={latestPosts} />
-          </CardBody>
-        </Card>
+        <section className="flex flex-col gap-3.5">
+          <div className="flex items-baseline gap-3">
+            <h3 className="flex-1 font-lm-sans text-[15px] font-medium">Últimos reels</h3>
+            <Link href="/marca/contenido" className="text-xs text-lm-ink-2 transition-colors hover:text-lm-signal-text">
+              Ver toda la biblioteca →
+            </Link>
+          </div>
+          {latestPosts.length === 0 ? (
+            <p className="text-[12.5px] text-lm-ink-2">Todavía no hay contenido sincronizado.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              {latestPosts.map((post) => (
+                <ReelCard key={post.post_id} post={post} />
+              ))}
+            </div>
+          )}
+        </section>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
-            <CardHeader title="Curva de seguidores" description={`Últimos ${WINDOW_DAYS} días.`} />
-            <CardBody>
-              <BrandLineChart
-                points={timeline}
-                series={[{ key: "followers_count", label: "Seguidores", color: "#18D6E8" }]}
-              />
+            <CardHeader
+              title="Curva de seguidores"
+              description={
+                account.oldest_snapshot_on
+                  ? `Últimos ${WINDOW_DAYS} días. El contador empezó el ${shortDay(account.oldest_snapshot_on)}.`
+                  : `Últimos ${WINDOW_DAYS} días.`
+              }
+            />
+            <CardBody className="px-5 pt-5 pb-4">
+              <BrandLineChart points={timeline} series={FOLLOWER_SERIES} />
             </CardBody>
           </Card>
           <Card>
-            <CardHeader title="Alcance e interacciones" description="Por día." />
-            <CardBody>
-              <BrandLineChart
-                points={timeline}
-                series={[
-                  { key: "reach", label: "Alcance", color: "#18D6E8" },
-                  { key: "total_interactions", label: "Interacciones", color: "#7C3AED" },
-                ]}
-              />
+            <CardHeader title="Alcance e interacciones" description="Por día." action={<ChartLegend series={REACH_SERIES} />} />
+            <CardBody className="px-5 pt-5 pb-4">
+              <BrandLineChart points={timeline} series={REACH_SERIES} showPeak />
             </CardBody>
           </Card>
         </div>
 
         <Card>
           <CardHeader title="Audiencia" description="Edad, género y top de ciudades." />
-          <CardBody>
+          <CardBody className="p-5">
             <AudienceBars rows={audience} />
           </CardBody>
         </Card>
       </div>
-    </>
+    </BrandSyncProvider>
   );
 }

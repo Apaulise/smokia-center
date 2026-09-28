@@ -52,13 +52,13 @@ export const MODULES: NavModule[] = [
     icon: "marca",
     available: true,
     children: [
-      { href: "/marca", label: "Dashboard", exact: true },
-      { href: "/marca/contenido", label: "Contenido" },
+      { href: "/marca", label: "Resumen", exact: true },
+      { href: "/marca/contenido", label: "Biblioteca" },
       { href: "/marca/analisis", label: "Análisis" },
-      { href: "/marca/generar", label: "Generar contenido" },
       { href: "/marca/planificador", label: "Planificador" },
       { href: "/marca/competencia", label: "Competencia" },
-      { href: "/marca/conocimiento", label: "Conocimiento" },
+      { href: "/marca/conocimiento", label: "Base de conocimiento" },
+      { href: "/marca/generar", label: "Generar contenido" },
     ],
   },
 ];

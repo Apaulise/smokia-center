@@ -3,7 +3,7 @@
 import { Film, Loader2, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/leads/ui/button";
 import { attachItemMedia, removeItemMedia } from "@/lib/brand/planner/actions";
 import {
   acceptForKind,
@@ -175,13 +175,13 @@ export function MediaUploader({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted">{requirementsForKind(kind)}</p>
+      <p className="text-xs text-lm-ink-2">{requirementsForKind(kind)}</p>
 
       {media.length > 0 ? (
         <ul className="space-y-2">
           {media.map((file, index) => (
-            <li key={file.path} className="flex items-center gap-3 rounded-[12px] border border-line/60 bg-surface/40 p-2">
-              <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-base/60 text-muted">
+            <li key={file.path} className="flex items-center gap-3 rounded-lm-md border border-lm-line bg-lm-surface p-2">
+              <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lm-md bg-lm-bg text-lm-ink-2">
                 {file.type === "IMAGE" ? (
                   // eslint-disable-next-line @next/next/no-img-element -- URL pública del bucket, tamaño de miniatura
                   <img
@@ -194,11 +194,11 @@ export function MediaUploader({
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm text-ink">
+                <p className="truncate text-sm text-lm-ink">
                   {media.length > 1 ? `${index + 1}. ` : ""}
                   {file.name}
                 </p>
-                <p className="tabular text-xs text-muted">
+                <p className="tabular text-xs text-lm-ink-2">
                   {formatSize(file.size)}
                   {file.durationSec !== null ? ` · ${formatDuration(file.durationSec)}` : ""}
                   {file.width && file.height ? ` · ${file.width}×${file.height}` : ""}
@@ -239,11 +239,11 @@ export function MediaUploader({
             {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
             {kind === "CARRUSEL" ? "Agregar imágenes" : "Subir archivo"}
           </Button>
-          {busy ? <span className="text-xs text-muted">{busy}</span> : null}
+          {busy ? <span className="text-xs text-lm-ink-2">{busy}</span> : null}
         </div>
       ) : null}
 
-      {error ? <p className="text-xs text-danger">{error}</p> : null}
+      {error ? <p className="text-xs text-lm-danger">{error}</p> : null}
     </div>
   );
 }

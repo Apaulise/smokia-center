@@ -21,10 +21,38 @@ export const GEMINI_MODEL = "gemini-3.5-flash-lite";
 /** Un esquema de respuesta como lo espera Gemini (subconjunto de OpenAPI, no JSON Schema completo). */
 export type GeminiSchema = Record<string, unknown>;
 
+interface GeminiErrorBody {
+  error?: {
+    message?: string;
+    details?: {
+      "@type"?: string;
+      violations?: { quotaMetric?: string; quotaId?: string; quotaDimensions?: { model?: string } }[];
+      retryDelay?: string;
+    }[];
+  };
+}
+
 async function geminiErrorMessage(response: Response): Promise<string> {
   try {
-    const body = (await response.json()) as { error?: { message?: string } };
-    if (body.error?.message) return body.error.message;
+    const body = (await response.json()) as GeminiErrorBody;
+    if (body.error?.message) {
+      // En un 429 el mensaje no dice *qué* cuota se agotó (por minuto, por día,
+      // grounding…). Eso viene en los details; sin ellos no se puede decidir
+      // entre esperar y cambiar de modelo o de plan.
+      const extra: string[] = [];
+      for (const detail of body.error.details ?? []) {
+        for (const violation of detail.violations ?? []) {
+          const id = violation.quotaId ?? violation.quotaMetric;
+          if (id) extra.push(violation.quotaDimensions?.model ? `${id} @ ${violation.quotaDimensions.model}` : id);
+        }
+        if (detail.retryDelay) extra.push(`reintentar en ${detail.retryDelay}`);
+      }
+      const message = body.error.message.trim();
+      if (extra.length > 0) return `${message} [HTTP ${response.status}: ${extra.join("; ")}]`;
+      // Sin violations reconocibles: se adjunta el detalle crudo (no lleva la key).
+      const raw = body.error.details ? JSON.stringify(body.error.details).slice(0, 600) : "sin details";
+      return `${message} [HTTP ${response.status}: ${raw}]`;
+    }
   } catch {
     // el cuerpo no era JSON — se informa sólo el status
   }

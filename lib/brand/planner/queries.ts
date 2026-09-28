@@ -93,3 +93,14 @@ export async function getPublishedHypotheses(platform: BrandPlatform, limit = 15
   if (error) throw error;
   return data ?? [];
 }
+
+/** Piezas del planificador que todavía no salieron, para el badge de "Planificador" del sidebar — sin traer filas. */
+export async function countOpenContentItems(): Promise<number> {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("brand_content_items")
+    .select("id", { count: "exact", head: true })
+    .neq("status", "PUBLICADO");
+  if (error) throw error;
+  return count ?? 0;
+}

@@ -2,57 +2,49 @@
 
 import { CheckCircle2, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useState, useTransition, type DragEvent } from "react";
+import { useCallback, useState, useTransition, type DragEvent, type ReactNode } from "react";
 
 import type { LinkablePost } from "@/lib/brand/goals/queries";
 import { PlannerItemDialog } from "@/components/brand/planner/item-dialog";
+import { Eyebrow, Tag } from "@/components/brand/ui/card";
 import { CalendarGrid, type CalendarMove } from "@/components/leads/agenda/calendar-grid";
-import { Badge, type BadgeTone } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/leads/ui/button";
 import { movePlannerItem } from "@/lib/brand/planner/actions";
 import type { PlannerItemChoice, PlannerNoteChoice } from "@/lib/brand/planner/queries";
-import { KIND_LABEL, STATUS_LABEL, type ContentStatus, type PlannerItem } from "@/lib/brand/planner/schema";
+import { KIND_LABEL, STATUS_LABEL, type PlannerItem } from "@/lib/brand/planner/schema";
 import { plannerDayOf } from "@/lib/brand/planner/week";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
 import { timeOfDay } from "@/lib/leads/calendar";
 import { cn } from "@/lib/utils";
 
-// Violeta = proceso (manual §9): una pieza en camino no es un resultado. Cyan cuando está lista para salir.
-const STATUS_DOT: Record<ContentStatus, string> = {
-  IDEA: "bg-violet",
-  GUION: "bg-violet",
-  GRABADO: "bg-violet",
-  EDITADO: "bg-violet",
-  LISTO: "bg-cyan",
-  PUBLICADO: "bg-positive",
-};
-
-const STATUS_TONE: Record<ContentStatus, BadgeTone> = {
-  IDEA: "violet",
-  GUION: "violet",
-  GRABADO: "violet",
-  EDITADO: "violet",
-  LISTO: "cyan",
-  PUBLICADO: "positive",
-};
-
 // Funciones de módulo (no inline) para que la grilla pueda memoizar sobre ellas.
 const itemDay = (item: PlannerItem) => plannerDayOf(item);
 const itemTime = (item: PlannerItem) => (item.scheduled_for ? timeOfDay(item.scheduled_for) : null);
 const itemCanDrag = (item: PlannerItem) => item.status !== "PUBLICADO";
+const itemChipClass = (item: PlannerItem) =>
+  item.status === "PUBLICADO" ? "" : "border-dashed border-lm-line-strong bg-transparent";
 
+/**
+ * Una pieza publicada es un chip lleno con el check verde; una en camino
+ * (idea, guion, grabada…) es un chip punteado con su estado en Mono arriba,
+ * para que se lea de un vistazo qué ya salió y qué es plan.
+ */
 function ItemChip(item: PlannerItem) {
+  if (item.status === "PUBLICADO") {
+    return (
+      <>
+        <CheckCircle2 className="mt-px size-[11px] shrink-0 text-lm-success" aria-label="Publicado" />
+        <span className="min-w-0 flex-1 truncate text-lm-ink">{item.title}</span>
+      </>
+    );
+  }
   return (
-    <>
-      {item.status === "PUBLICADO" ? (
-        <CheckCircle2 className="mt-0.5 size-3 shrink-0 text-positive" aria-label="Publicado" />
-      ) : (
-        <span className={cn("mt-0.5 size-1.5 shrink-0 rounded-full", STATUS_DOT[item.status])} />
-      )}
-      <span className="truncate text-ink">
-        <span className="text-muted">{KIND_LABEL[item.kind]}</span> {item.title}
+    <span className="flex min-w-0 flex-col gap-0.5">
+      <span className="font-mono text-[10px] leading-none text-lm-ink-3 uppercase">
+        {STATUS_LABEL[item.status]} · {KIND_LABEL[item.kind]}
       </span>
-    </>
+      <span className="line-clamp-2 leading-[1.35] whitespace-normal text-lm-smoke-5">{item.title}</span>
+    </span>
   );
 }
 
@@ -63,6 +55,10 @@ type DialogState = { mode: "create"; defaultDate?: string } | { mode: "edit"; it
  * agenda de Leads. A la izquierda de la grilla, la bandeja "Sin fecha": las
  * ideas guardadas desde el chat se arrastran de ahí a un día, y una pieza se
  * puede devolver a la bandeja soltándola encima.
+ *
+ * El encabezado (título, navegación, "Nueva pieza") también vive acá: el CTA
+ * abre el diálogo de este componente. La navegación de período llega como
+ * `nav`, ya resuelta por el Server Component (son links).
  */
 export function PlannerView({
   platform,
@@ -76,6 +72,11 @@ export function PlannerView({
   unscheduled,
   choices,
   linkablePosts,
+  title,
+  eyebrow,
+  nav,
+  toggle,
+  strip,
 }: {
   platform: BrandPlatform;
   ownerId: string;
@@ -88,6 +89,14 @@ export function PlannerView({
   unscheduled: PlannerItem[];
   choices: { items: PlannerItemChoice[]; notes: PlannerNoteChoice[] };
   linkablePosts: LinkablePost[];
+  title: string;
+  eyebrow: string;
+  /** Flechas anterior/siguiente + "Hoy". */
+  nav: ReactNode;
+  /** Segmented Mes/Semana. */
+  toggle: ReactNode;
+  /** La franja de cadencia y exploración, entre el encabezado y el calendario. */
+  strip: ReactNode;
 }) {
   const router = useRouter();
   const [dialog, setDialog] = useState<DialogState>(null);
@@ -117,17 +126,27 @@ export function PlannerView({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button type="button" variant="primary" size="sm" onClick={() => setDialog({ mode: "create" })}>
+    <div className="flex flex-col gap-6 px-6 py-7 lg:px-8 lg:pb-10">
+      <div className="flex flex-wrap items-end gap-2.5">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <Eyebrow>{eyebrow}</Eyebrow>
+          <div className="flex flex-wrap items-center gap-3.5">
+            <h1 className="font-lm-sans text-[28px] leading-8 font-medium tracking-[-0.02em] first-letter:uppercase">{title}</h1>
+            {nav}
+          </div>
+        </div>
+        {toggle}
+        <Button type="button" variant="primary" className="h-[34px] px-3.5 text-[13px]" onClick={() => setDialog({ mode: "create" })}>
           <Plus className="size-3.5" />
           Nueva pieza
         </Button>
       </div>
 
-      {moveError ? <p className="text-sm text-danger">{moveError}</p> : null}
+      {strip}
 
-      <div className="grid gap-4 xl:grid-cols-[260px_1fr]">
+      {moveError ? <p className="text-sm text-lm-danger">{moveError}</p> : null}
+
+      <div className="grid items-start gap-5 xl:grid-cols-[240px_minmax(0,1fr)]">
         <aside
           onDragOver={(event) => {
             event.preventDefault();
@@ -136,34 +155,34 @@ export function PlannerView({
           onDragLeave={() => setTrayHover(false)}
           onDrop={handleTrayDrop}
           className={cn(
-            "h-fit rounded-[20px] border border-line bg-elevated/70 p-3 transition-colors",
-            trayHover && "border-cyan/40 bg-cyan/5",
+            "flex h-fit flex-col gap-2.5 rounded-lm-lg border border-dashed border-lm-line-strong p-4 transition-colors",
+            trayHover && "border-lm-signal/60 bg-lm-signal-soft",
           )}
         >
-          <div className="mb-3 flex items-center justify-between px-1">
-            <h3 className="text-sm text-ink">Sin fecha</h3>
-            <span className="tabular text-xs text-muted">{unscheduled.length}</span>
+          <div className="flex items-baseline">
+            <h3 className="flex-1 font-lm-sans text-[13.5px] font-medium">Sin fecha</h3>
+            <span className="font-mono text-[11px] text-lm-ink-3">{unscheduled.length}</span>
           </div>
 
           {unscheduled.length === 0 ? (
-            <p className="px-1 pb-1 text-xs text-muted">
+            <p className="text-[12.5px] leading-[1.55] text-lm-ink-3">
               Las ideas que guardes desde el chat aparecen acá. Arrastralas a un día para planificarlas.
             </p>
           ) : (
-            <ul className="space-y-1.5">
+            <ul className="flex flex-col gap-1.5">
               {unscheduled.map((item) => (
                 <li
                   key={item.id}
                   draggable
                   onDragStart={(event) => event.dataTransfer.setData("text/plain", item.id)}
                   onClick={() => setDialog({ mode: "edit", item })}
-                  className="cursor-grab rounded-[12px] border border-line/60 bg-surface/60 p-2.5 hover:border-cyan/40 active:cursor-grabbing"
+                  className="cursor-grab rounded-lm-md border border-lm-line bg-lm-raised p-2.5 transition-colors hover:border-lm-line-strong active:cursor-grabbing"
                 >
-                  <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                    <Badge tone="cyan">{KIND_LABEL[item.kind]}</Badge>
-                    <Badge tone={STATUS_TONE[item.status]}>{STATUS_LABEL[item.status]}</Badge>
+                  <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                    <Tag tone="solid">{KIND_LABEL[item.kind]}</Tag>
+                    <Tag>{STATUS_LABEL[item.status]}</Tag>
                   </div>
-                  <p className="line-clamp-2 text-sm text-ink">{item.title}</p>
+                  <p className="line-clamp-2 text-[13px] leading-[1.4] text-lm-ink">{item.title}</p>
                 </li>
               ))}
             </ul>
@@ -171,12 +190,14 @@ export function PlannerView({
         </aside>
 
         <CalendarGrid
+          variant="signal"
           mode={mode}
           days={days}
           items={items}
           getDay={itemDay}
           getDragTime={itemTime}
           canDrag={itemCanDrag}
+          chipClassName={itemChipClass}
           renderChip={ItemChip}
           currentMonth={currentMonth}
           today={today}

@@ -212,6 +212,15 @@
     animation: lm-smoke 1.6s ease-in-out infinite;
   }
 
+  /* Portadas placeholder del Gestor de Marca Personal: rayado diagonal tenue. */
+  .lm-stripes {
+    background: repeating-linear-gradient(
+      135deg,
+      var(--color-lm-raised) 0 8px,
+      var(--color-lm-surface) 8px 16px
+    );
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .lm-smoke {
       animation: none;

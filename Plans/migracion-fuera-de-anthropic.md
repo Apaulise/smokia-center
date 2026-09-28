@@ -174,3 +174,14 @@ Para cada uno: confirmar que el mensaje de error, si falla, ya no menciona a Cla
 - `lib/settings/{constants,actions,queries}.ts`, `components/settings/groq-key-form.tsx`, `app/(app)/configuracion/page.tsx`
 - `lib/leads/ai/key.ts`, `lib/brand/ai/key.ts`
 - `lib/leads/ai/actions.ts`, `lib/brand/actions.ts`, `lib/brand/planner/actions.ts`, `lib/brand/trends/actions.ts`, `lib/brand/competitors/actions.ts`
+
+---
+
+## Pendiente (2026-09-27): enriquecer un lead falla con 429 de Gemini
+
+Al enriquecer un lead (§1.10, `lib/leads/ai/enrich.ts`) Gemini devuelve *"You exceeded your current quota, please check your plan and billing details"*. **No es un límite de frecuencia**: en Google AI Studio el proyecto está en Nivel 1 (4K RPM / 150K RPD) con uso casi nulo, y el banner de la consola dice *"Se agotaron los créditos prepagados de 'My Billing Account'"*. Google usa el mismo `RESOURCE_EXHAUSTED` cuando el saldo prepago llega a cero.
+
+- **Falta:** cargar créditos en AI Studio → Facturación, y reintentar el enriquecimiento. No requiere cambios de código.
+- **A vigilar:** el pase A usa `google_search` + `url_context`, que Google cobra por consulta con grounding. Mirar la pantalla *Gasto* después de las primeras pruebas.
+- **Alternativa descartada por ahora:** un proyecto nuevo sin facturación (free tier), porque probablemente no incluye grounding, que es lo que el enriquecimiento necesita.
+- `lib/gemini/client.ts` → `geminiErrorMessage()` ahora agrega al error el `quotaId`, el modelo y el `retryDelay` (o el `details` crudo) para distinguir cuota por minuto, por día o de facturación.

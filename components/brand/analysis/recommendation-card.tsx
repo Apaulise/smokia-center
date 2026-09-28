@@ -7,26 +7,19 @@ import { useTransition } from "react";
 
 import { parseEvidence, type EvidencePost } from "./evidence";
 import { PostThumb } from "@/components/brand/post-thumb";
-import { Badge, type BadgeTone } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Card, Eyebrow, Tag } from "@/components/brand/ui/card";
+import { Button } from "@/components/leads/ui/button";
 import { updateBrandRecommendationStatus } from "@/lib/brand/actions";
 import type { Database } from "@/lib/supabase/database.types";
 
 type Recommendation = Database["public"]["Tables"]["brand_recommendations"]["Row"];
 
 const KIND_LABEL: Record<Recommendation["kind"], string> = { REPETIR: "Repetir", CORTAR: "Cortar", PROBAR: "Probar" };
-// Repetir = seguir haciendo algo que ya funciona (positive), cortar = dejar
-// de hacer algo que rinde mal (danger), probar = experimentar (violeta =
-// proceso/innovación, manual §9).
-const KIND_TONE: Record<Recommendation["kind"], BadgeTone> = { REPETIR: "positive", CORTAR: "danger", PROBAR: "violet" };
 
-const STATUS_LABEL: Record<Recommendation["status"], string> = { NUEVA: "Nueva", APLICADA: "Aplicada", DESCARTADA: "Descartada" };
-const STATUS_TONE: Record<Recommendation["status"], BadgeTone> = { NUEVA: "cyan", APLICADA: "positive", DESCARTADA: "neutral" };
+const STATUS_LABEL: Record<Recommendation["status"], string> = { NUEVA: "NUEVA", APLICADA: "APLICADA", DESCARTADA: "DESCARTADA" };
 
 // SOC §16: no se optimiza todo para lo mismo — el objetivo es de lectura
-// neutral (ni "buena" ni "mala" noticia como REPETIR/CORTAR), así que va
-// siempre en tono neutral.
+// neutral (ni "buena" ni "mala" noticia como REPETIR/CORTAR).
 const OBJECTIVE_LABEL: Record<NonNullable<Recommendation["objective"]>, string> = {
   ALCANCE: "Alcance",
   AUTORIDAD: "Autoridad",
@@ -66,65 +59,64 @@ export function RecommendationCard({
 
   return (
     <Card>
-      <CardHeader
-        title={
-          <span className="flex flex-wrap items-center gap-2">
-            <Badge tone={KIND_TONE[recommendation.kind]}>{KIND_LABEL[recommendation.kind]}</Badge>
-            {recommendation.objective ? <Badge tone="neutral">{OBJECTIVE_LABEL[recommendation.objective]}</Badge> : null}
-            {recommendation.title}
-          </span>
-        }
-        action={<Badge tone={STATUS_TONE[recommendation.status]}>{STATUS_LABEL[recommendation.status]}</Badge>}
-      />
-      <CardBody className="space-y-4">
-        <p className="text-sm whitespace-pre-wrap text-ink">{recommendation.body}</p>
+      <div className="flex items-center gap-2.5 border-b border-lm-line px-5 py-4">
+        <Tag tone="solid" size="md">
+          {KIND_LABEL[recommendation.kind]}
+        </Tag>
+        {recommendation.objective ? <Tag size="md">{OBJECTIVE_LABEL[recommendation.objective]}</Tag> : null}
+        <h4 className="ml-1 min-w-0 flex-1 font-lm-sans text-[15px] leading-5 font-medium">{recommendation.title}</h4>
+        <span className="font-mono text-[11px] text-lm-ink-3">{STATUS_LABEL[recommendation.status]}</span>
+      </div>
 
-        {hasEvidence ? (
-          <div className="space-y-3 rounded-[12px] border border-line/60 bg-surface/40 p-3 text-xs text-muted">
-            {evidence.summary ? <p>{evidence.summary}</p> : null}
-            {Object.keys(evidence.metrics).length > 0 ? (
-              <dl className="grid grid-cols-2 gap-x-3 gap-y-1 sm:grid-cols-3">
-                {Object.entries(evidence.metrics).map(([key, value]) => (
-                  <div key={key} className="flex justify-between gap-2">
-                    <dt className="truncate">{key}</dt>
-                    <dd className="tabular text-ink">{value}</dd>
-                  </div>
-                ))}
-              </dl>
-            ) : null}
-            {evidencePosts.length > 0 ? (
-              <div className="flex flex-wrap gap-3 pt-1">
-                {evidencePosts.map((post) => (
-                  <Link
-                    key={post.id}
-                    href={`/marca/contenido/${post.id}`}
-                    title={post.caption ?? POST_KIND_LABEL[post.kind]}
-                    className="group w-14 space-y-1"
-                  >
-                    <PostThumb url={post.thumbnailUrl} className="w-14 transition-colors group-hover:border-cyan/50" />
-                    <span className="block truncate text-center text-[11px] text-muted group-hover:text-cyan">
-                      {POST_KIND_LABEL[post.kind]}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
+      <div className="grid grid-cols-1 gap-7 px-5 pt-[18px] pb-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <p className="text-[13.5px] leading-[1.65] whitespace-pre-wrap text-lm-smoke-5">{recommendation.body}</p>
 
-        {!isTerminal ? (
-          <div className="flex gap-2">
-            <Button type="button" variant="secondary" size="sm" disabled={pending} onClick={() => setStatus("APLICADA")}>
-              <Check className="size-3.5" />
-              Marcar aplicada
-            </Button>
-            <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => setStatus("DESCARTADA")}>
-              <X className="size-3.5" />
-              Descartar
-            </Button>
-          </div>
-        ) : null}
-      </CardBody>
+        <div className="flex flex-col gap-3">
+          {hasEvidence ? (
+            <>
+              <Eyebrow>Evidencia</Eyebrow>
+              {evidence.summary ? <p className="text-[12.5px] leading-[1.55] text-lm-ink-2">{evidence.summary}</p> : null}
+              {Object.keys(evidence.metrics).length > 0 ? (
+                <dl className="flex flex-col gap-1 text-xs text-lm-ink-2">
+                  {Object.entries(evidence.metrics).map(([key, value]) => (
+                    <div key={key} className="flex justify-between gap-3">
+                      <dt className="truncate">{key}</dt>
+                      <dd className="font-mono text-lm-ink tabular-nums">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : null}
+              {evidencePosts.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {evidencePosts.map((post) => (
+                    <Link
+                      key={post.id}
+                      href={`/marca/contenido/${post.id}`}
+                      title={post.caption ?? POST_KIND_LABEL[post.kind]}
+                      className="transition-opacity hover:opacity-80"
+                    >
+                      <PostThumb url={post.thumbnailUrl} className="aspect-auto h-[72px] w-[52px]" />
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          ) : null}
+
+          {!isTerminal ? (
+            <div className="flex gap-2 pt-1">
+              <Button type="button" variant="secondary" disabled={pending} onClick={() => setStatus("APLICADA")}>
+                <Check className="size-3.5" />
+                Marcar aplicada
+              </Button>
+              <Button type="button" variant="ghost" disabled={pending} onClick={() => setStatus("DESCARTADA")}>
+                <X className="size-3.5" />
+                Descartar
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      </div>
     </Card>
   );
 }

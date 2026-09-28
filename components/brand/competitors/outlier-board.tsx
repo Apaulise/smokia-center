@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { PostThumb } from "@/components/brand/post-thumb";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Tag } from "@/components/brand/ui/card";
+import { Button } from "@/components/leads/ui/button";
 import {
   classifyPendingOutliers,
   createIdeaFromOutlier,
@@ -18,6 +18,7 @@ import { OUTLIER_MAX_AGE_DAYS, RELEVANCE_MIN } from "@/lib/brand/competitors/ins
 import { formatCount } from "@/lib/brand/competitors/format";
 import { formatMultiple } from "@/lib/brand/insights";
 import { KIND_LABEL, type ContentKind } from "@/lib/brand/planner/schema";
+import { cn } from "@/lib/utils";
 import { classifyPendingTrendOutliers, createIdeaFromTrendPost, dismissTrendPost, restoreTrendPost } from "@/lib/brand/trends/actions";
 
 const dateFormat = new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short", year: "numeric" });
@@ -61,84 +62,85 @@ function OutlierCard({
   onDismiss: () => void;
   onRestore: () => void;
 }) {
-  const meta = (
-    <>
-      <PostThumb url={outlier.thumbnailUrl} className="w-20" />
-      <div className="min-w-0 space-y-1.5">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* El múltiplo va en texto: el color nunca es la única codificación. */}
-          <Badge tone="cyan">{formatMultiple(outlier.multiple)} su mediana</Badge>
-          {outlier.relevanceScore !== null ? (
-            <Badge tone="violet">Relevancia {outlier.relevanceScore}</Badge>
-          ) : null}
-          {outlier.source === "trend" ? <Badge tone="neutral">Descubierto</Badge> : null}
-          <span className="text-xs text-muted">@{outlier.username}</span>
-        </div>
-        <p className="tabular text-sm text-ink">
-          {formatCount(outlier.value)} {outlier.signalLabel}
-          <span className="text-muted"> · lo habitual: {formatCount(outlier.median)}</span>
-        </p>
-        {outlier.caption ? <p className="line-clamp-2 text-xs text-muted">{outlier.caption}</p> : null}
-        <p className="text-xs text-muted">
-          {KIND_LABEL[outlier.kind]}
-          {outlier.publishedAt ? ` · ${dateFormat.format(new Date(outlier.publishedAt))}` : ""}
-        </p>
-        {outlier.relevanceReason ? <p className="text-xs text-muted italic">{outlier.relevanceReason}</p> : null}
-      </div>
-    </>
-  );
-
   return (
     <article
-      className={`group relative rounded-[16px] border border-line bg-elevated/70 p-3 ${outlier.dismissed ? "opacity-50" : ""}`}
-    >
-      {/* El link envuelve sólo la ficha: un botón adentro de un <a> no es HTML válido. */}
-      {outlier.permalink ? (
-        <a
-          href={outlier.permalink}
-          target="_blank"
-          rel="noreferrer noopener"
-          className="flex gap-3 pr-7 hover:[&_p]:text-ink"
-        >
-          {meta}
-          <ExternalLink className="ml-auto size-3.5 shrink-0 text-muted group-hover:text-cyan" aria-label="Abre Instagram en otra pestaña" />
-        </a>
-      ) : (
-        <div className="flex gap-3 pr-7">{meta}</div>
+      className={cn(
+        "flex flex-col rounded-lm-lg border border-lm-line bg-lm-surface/50",
+        outlier.dismissed && "opacity-50",
       )}
-
-      <button
-        type="button"
-        onClick={outlier.dismissed ? onRestore : onDismiss}
-        disabled={busy}
-        aria-label={outlier.dismissed ? "Volver a mostrar esta publicación" : "Descartar esta publicación"}
-        title={outlier.dismissed ? "Volver a mostrarla" : "Descartarla"}
-        className="absolute top-2 right-2 cursor-pointer rounded-[8px] p-1 text-muted hover:bg-surface/60 hover:text-ink focus-visible:ring-2 focus-visible:ring-cyan/60 focus-visible:outline-none disabled:opacity-40"
-      >
-        {outlier.dismissed ? <Undo2 className="size-3.5" /> : <X className="size-3.5" />}
-      </button>
-
-      <div className="mt-3 flex items-center justify-between gap-2 border-t border-line/40 pt-2.5">
-        {outlier.ideaId ? (
-          <>
-            <span className="truncate text-xs text-muted">Idea: {outlier.ideaTitle}</span>
-            <Link
-              href={PLANNER_HREF}
-              className="shrink-0 text-xs text-cyan hover:underline focus-visible:ring-2 focus-visible:ring-cyan/60 focus-visible:outline-none"
+    >
+      <div className="flex flex-1 gap-3.5 p-3.5">
+        <PostThumb url={outlier.thumbnailUrl} className="aspect-auto h-[164px] w-[92px] rounded-lm-md" />
+        <div className="flex min-w-0 flex-1 flex-col gap-[7px]">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {/* El múltiplo va en texto: el color nunca es la única codificación. */}
+            <span className="font-mono text-[15px] font-medium tracking-[-0.01em] tabular-nums">{formatMultiple(outlier.multiple)}</span>
+            <span className="text-[11.5px] text-lm-ink-3">su mediana</span>
+            <span className="flex-1" />
+            {outlier.permalink ? (
+              <a
+                href={outlier.permalink}
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label="Abrir en Instagram (otra pestaña)"
+                title="Abrir en Instagram"
+                className="grid size-6 place-items-center rounded-lm-sm text-lm-ink-3 transition-colors hover:bg-lm-ink/5 hover:text-lm-ink"
+              >
+                <ExternalLink className="size-[13px]" />
+              </a>
+            ) : null}
+            <button
+              type="button"
+              onClick={outlier.dismissed ? onRestore : onDismiss}
+              disabled={busy}
+              aria-label={outlier.dismissed ? "Volver a mostrar esta publicación" : "Descartar esta publicación"}
+              title={outlier.dismissed ? "Volver a mostrarla" : "Descartarla"}
+              className="grid size-6 cursor-pointer place-items-center rounded-lm-sm text-lm-ink-3 transition-colors hover:bg-lm-ink/5 hover:text-lm-ink focus-visible:lm-focus disabled:opacity-45"
             >
-              Ver en el planificador
-            </Link>
-          </>
-        ) : (
-          <>
-            <span className="text-xs text-muted">{busy ? "Escribiendo la pieza…" : "¿Te sirve el mecanismo?"}</span>
-            <Button type="button" variant="primary" size="sm" disabled={busy} onClick={onUse}>
-              {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
-              Usar
-            </Button>
-          </>
-        )}
+              {outlier.dismissed ? <Undo2 className="size-[13px]" /> : <X className="size-[13px]" />}
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            {outlier.relevanceScore !== null ? (
+              <Tag>
+                Relevancia <span className="ml-1 font-mono">{outlier.relevanceScore}</span>
+              </Tag>
+            ) : null}
+            {outlier.source === "trend" ? <Tag tone="solid">Descubierto</Tag> : null}
+            <span className="text-xs text-lm-ink-2">@{outlier.username}</span>
+          </div>
+
+          <span className="font-mono text-xs text-lm-ink tabular-nums">
+            {formatCount(outlier.value)} {outlier.signalLabel} <span className="text-lm-ink-3">· lo habitual {formatCount(outlier.median)}</span>
+          </span>
+          {outlier.caption ? <span className="line-clamp-2 text-[12.5px] leading-[1.45] text-lm-smoke-5">{outlier.caption}</span> : null}
+          <span className="text-[11.5px] text-lm-ink-3">
+            {KIND_LABEL[outlier.kind]}
+            {outlier.publishedAt ? ` · ${dateFormat.format(new Date(outlier.publishedAt))}` : ""}
+          </span>
+          {outlier.relevanceReason ? (
+            <span className="border-l border-lm-line-strong pl-2.5 text-[12.5px] leading-normal text-lm-ink">{outlier.relevanceReason}</span>
+          ) : null}
+        </div>
       </div>
+
+      {outlier.ideaId ? (
+        <div className="flex min-h-[50px] items-center gap-2.5 border-t border-lm-line px-3.5 py-2.5">
+          <span className="min-w-0 flex-1 truncate text-xs text-lm-ink-2">Idea: {outlier.ideaTitle}</span>
+          <Link href={PLANNER_HREF} className="text-xs whitespace-nowrap text-lm-ink-2 transition-colors hover:text-lm-signal-text">
+            Ver en el planificador →
+          </Link>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2.5 border-t border-lm-line px-3.5 py-2.5">
+          <span className="flex-1 text-xs text-lm-ink-3">{busy ? "Escribiendo la pieza…" : "¿Te sirve el mecanismo?"}</span>
+          <Button type="button" variant="secondary" size="sm" className="h-[30px]" disabled={busy} onClick={onUse}>
+            {busy ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
+            Usar
+          </Button>
+        </div>
+      )}
     </article>
   );
 }
@@ -233,45 +235,45 @@ export function OutlierBoard({
   }
 
   return (
-    <section className="space-y-3">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-lg text-ink">Lo que explotó</h2>
-          <p className="max-w-3xl text-sm text-muted">
+    <section className="flex flex-col gap-3.5">
+      <div className="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
+          <h3 className="font-lm-sans text-[15px] font-medium">Lo que explotó</h3>
+          <p className="max-w-[720px] text-[12.5px] leading-normal text-lm-ink-2">
             Las publicaciones de los últimos {OUTLIER_MAX_AGE_DAYS} días que más se separaron de lo normal de su propia cuenta. Son candidatas a
             mirar por qué funcionaron — el mecanismo, no el tema. “Usar” escribe una pieza tuya con ese mecanismo y la deja en el planificador.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-4 text-xs text-muted">
+        <div className="flex flex-wrap items-center gap-5 text-xs text-lm-ink-2">
           <label className="flex cursor-pointer items-center gap-2">
-            <input type="checkbox" checked={includeOld} onChange={(e) => setIncludeOld(e.target.checked)} className="accent-[#18D6E8]" />
+            <input type="checkbox" checked={includeOld} onChange={(e) => setIncludeOld(e.target.checked)} className="size-3.5 accent-[#f2c14e]" />
             Incluir anteriores a {OUTLIER_MAX_AGE_DAYS} días
           </label>
           <label className="flex cursor-pointer items-center gap-2">
-            <input type="checkbox" checked={showDismissed} onChange={(e) => setShowDismissed(e.target.checked)} className="accent-[#18D6E8]" />
+            <input type="checkbox" checked={showDismissed} onChange={(e) => setShowDismissed(e.target.checked)} className="size-3.5 accent-[#f2c14e]" />
             Ver descartadas ({dismissedCount})
           </label>
         </div>
       </div>
 
       {message ? (
-        <p className="rounded-[12px] border border-cyan/30 bg-cyan/5 px-3 py-2 text-sm text-ink">
+        <p className="rounded-lm-md border border-lm-line-strong bg-lm-raised px-3 py-2 text-[13px] text-lm-ink">
           {message}{" "}
-          <Link href={PLANNER_HREF} className="text-cyan hover:underline">
+          <Link href={PLANNER_HREF} className="text-lm-signal-text hover:underline">
             Ir al planificador
           </Link>
         </p>
       ) : null}
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      {error ? <p className="text-sm text-lm-danger">{error}</p> : null}
 
       {visible.length === 0 ? (
-        <p className="rounded-[16px] border border-line bg-elevated/50 p-4 text-sm text-muted">
+        <p className="border-y border-dashed border-lm-line-strong py-4 text-[13px] leading-normal text-lm-ink-2">
           {showDismissed
             ? "No descartaste ninguna publicación todavía."
             : `No hay ninguna publicación marcada en los últimos ${OUTLIER_MAX_AGE_DAYS} días. Puede ser que nada se haya separado de lo habitual, o que lo que explotó sea más viejo: probá con “incluir anteriores”.`}
         </p>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+        <div className="grid gap-3.5 md:grid-cols-2 2xl:grid-cols-3">
           {visible.slice(0, shown).map((outlier) => (
             <OutlierCard
               key={outlier.postId}
@@ -289,7 +291,7 @@ export function OutlierBoard({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-lm-ink-2">
         {visible.length > shown ? <span>Se muestran las {shown} más marcadas de {visible.length}.</span> : null}
         {geminiConfigured && pendingRelevance > 0 ? (
           <>
@@ -303,7 +305,7 @@ export function OutlierBoard({
         {!geminiConfigured ? (
           <span>
             Sin la key de Google AI Studio no se filtra por nicho.{" "}
-            <Link href="/configuracion" className="text-cyan hover:underline">
+            <Link href="/configuracion" className="text-lm-signal-text hover:underline">
               Cargala en Configuración
             </Link>
             .

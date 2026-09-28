@@ -5,12 +5,10 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 
 import { MediaUploader } from "@/components/brand/planner/media-uploader";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Tag } from "@/components/brand/ui/card";
+import { Button } from "@/components/leads/ui/button";
+import { Dialog } from "@/components/leads/ui/dialog";
+import { Input, Select, Textarea } from "@/components/leads/ui/field";
 import type { LinkablePost } from "@/lib/brand/goals/queries";
 import {
   createPlannerItem,
@@ -49,22 +47,19 @@ const BASE_KINDS: ContentKind[] = ["REEL", "POST", "CARRUSEL", "HISTORIA"];
 const HYPOTHESIS_PLACEHOLDER =
   "Probamos si [formato] aplicado a [tema] mediante [ángulo] rinde mejor porque […]";
 
-const DATE_INPUT =
-  "h-10 w-full rounded-[12px] border border-line bg-surface/60 px-3 text-sm text-ink disabled:opacity-40";
-
 function Field({ label, hint, action, children }: { label: string; hint?: ReactNode; action?: ReactNode; children: ReactNode }) {
   return (
     <div>
       {action ? (
         <div className="mb-1.5 flex items-center justify-between gap-2">
-          <label className="text-xs text-muted">{label}</label>
+          <label className="text-[13px] font-medium text-lm-ink-2">{label}</label>
           {action}
         </div>
       ) : (
-        <label className="mb-1.5 block text-xs text-muted">{label}</label>
+        <label className="mb-1.5 block text-[13px] font-medium text-lm-ink-2">{label}</label>
       )}
       {children}
-      {hint ? <p className="mt-1 text-xs text-muted/80">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-lm-ink-3">{hint}</p> : null}
     </div>
   );
 }
@@ -267,14 +262,14 @@ export function PlannerItemDialog({
     >
       <div className="space-y-5">
         {published ? (
-          <div className="space-y-2 rounded-[12px] border border-positive/30 bg-positive/5 p-3 text-sm">
-            <p className="flex items-center gap-1.5 text-positive">
+          <div className="space-y-2 rounded-lm-md border border-lm-success/30 bg-lm-success-soft p-3 text-sm">
+            <p className="flex items-center gap-1.5 text-lm-success">
               <CheckCircle2 className="size-4" />
               Publicada{item?.published_at ? ` el ${new Date(item.published_at).toLocaleString("es-AR")}` : ""}.
             </p>
             {item?.post_id ? (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                <Link href={`/marca/contenido/${item.post_id}`} className="inline-flex items-center gap-1.5 text-cyan hover:underline">
+                <Link href={`/marca/contenido/${item.post_id}`} className="inline-flex items-center gap-1.5 text-lm-signal-text hover:underline">
                   Ver sus métricas
                   <ExternalLink className="size-3.5" />
                 </Link>
@@ -282,25 +277,25 @@ export function PlannerItemDialog({
                   type="button"
                   onClick={handleUnlink}
                   disabled={busy !== null}
-                  className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-ink disabled:opacity-40"
+                  className="inline-flex items-center gap-1.5 text-xs text-lm-ink-2 hover:text-lm-ink disabled:opacity-40"
                 >
                   {busy === "unlink" ? <Loader2 className="size-3.5 animate-spin" /> : <Link2Off className="size-3.5" />}
                   Desvincular
                 </button>
               </div>
             ) : (
-              <p className="text-xs text-muted">
+              <p className="text-xs text-lm-ink-2">
                 {item?.kind === "HISTORIA"
                   ? "Las historias no entran a la biblioteca de contenido, así que no tienen métricas para empalmar."
                   : "Todavía no está empalmada con sus métricas: aparece después de la próxima sincronización."}
               </p>
             )}
-            <p className="text-xs text-muted">Una pieza publicada conserva su tipo, estado y fecha; se puede seguir editando la hipótesis y las notas.</p>
+            <p className="text-xs text-lm-ink-2">Una pieza publicada conserva su tipo, estado y fecha; se puede seguir editando la hipótesis y las notas.</p>
           </div>
         ) : null}
 
         {item?.publish_error && !published ? (
-          <p className="flex items-start gap-1.5 rounded-[12px] border border-warning/30 bg-warning/5 p-3 text-xs text-warning">
+          <p className="flex items-start gap-1.5 rounded-lm-md border border-lm-line-strong bg-lm-raised p-3 text-xs text-lm-ink-2">
             <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
             El último intento de publicar falló: {item.publish_error}
           </p>
@@ -323,7 +318,7 @@ export function PlannerItemDialog({
           <Field label="Estado">
             {published ? (
               <div className="flex h-10 items-center">
-                <Badge tone="positive">Publicado</Badge>
+                <Tag size="md" className="border border-lm-success/45 text-lm-success">Publicado</Tag>
               </div>
             ) : (
               <Select value={status} onChange={(e) => setStatus(e.target.value as ContentStatus)}>
@@ -349,10 +344,10 @@ export function PlannerItemDialog({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Fecha planificada">
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} disabled={published} className={DATE_INPUT} />
+            <Input type="date" mono value={date} onChange={(e) => setDate(e.target.value)} disabled={published} />
           </Field>
           <Field label="Hora">
-            <input type="time" value={time} onChange={(e) => setTime(e.target.value)} disabled={published || !date} className={DATE_INPUT} />
+            <Input type="time" mono value={time} onChange={(e) => setTime(e.target.value)} disabled={published || !date} />
           </Field>
         </div>
 
@@ -370,9 +365,9 @@ export function PlannerItemDialog({
         </div>
 
         {item?.source_url ? (
-          <p className="rounded-[12px] border border-line/60 bg-surface/40 px-3 py-2 text-xs text-muted">
+          <p className="rounded-lm-md border border-lm-line bg-lm-surface px-3 py-2 text-xs text-lm-ink-2">
             Salió de un outlier de la competencia.{" "}
-            <a href={item.source_url} target="_blank" rel="noreferrer noopener" className="text-cyan hover:underline">
+            <a href={item.source_url} target="_blank" rel="noreferrer noopener" className="text-lm-signal-text hover:underline">
               Ver la publicación original
             </a>
           </p>
@@ -426,14 +421,14 @@ export function PlannerItemDialog({
           <Textarea value={script} onChange={(e) => setScript(e.target.value)} className="min-h-32" />
         </Field>
         {scriptCaveat ? (
-          <p className="-mt-3 flex items-start gap-1.5 rounded-[12px] border border-warning/30 bg-warning/5 p-3 text-xs text-warning">
+          <p className="-mt-3 flex items-start gap-1.5 rounded-lm-md border border-lm-line-strong bg-lm-raised p-3 text-xs text-lm-ink-2">
             <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
             {scriptCaveat}
           </p>
         ) : null}
 
         {isStory ? (
-          <p className="text-xs text-muted">Las historias no llevan caption ni hashtags: Instagram no los admite.</p>
+          <p className="text-xs text-lm-ink-2">Las historias no llevan caption ni hashtags: Instagram no los admite.</p>
         ) : (
           <>
             <Field label="Caption">
@@ -442,7 +437,7 @@ export function PlannerItemDialog({
             <Field
               label="Hashtags"
               hint={
-                <span className={composedLength > CAPTION_MAX_CHARS ? "text-danger" : undefined}>
+                <span className={composedLength > CAPTION_MAX_CHARS ? "text-lm-danger" : undefined}>
                   Caption con hashtags: {composedLength} de {CAPTION_MAX_CHARS} caracteres.
                 </span>
               }
@@ -453,8 +448,8 @@ export function PlannerItemDialog({
         )}
 
         {PUBLISH_FROM_APP_ENABLED ? (
-        <div className="space-y-2 border-t border-line/60 pt-5">
-          <h4 className="text-xs font-medium tracking-wide text-muted uppercase">Archivo</h4>
+        <div className="space-y-2 border-t border-lm-line pt-5">
+          <h4 className="text-xs font-medium tracking-wide text-lm-ink-2 uppercase">Archivo</h4>
           {item ? (
             <MediaUploader
               ownerId={ownerId}
@@ -465,21 +460,21 @@ export function PlannerItemDialog({
               disabled={published || busy !== null}
             />
           ) : (
-            <p className="text-xs text-muted">Guardá la pieza y abrila de nuevo para subir el archivo: la ruta en el bucket lleva su id.</p>
+            <p className="text-xs text-lm-ink-2">Guardá la pieza y abrila de nuevo para subir el archivo: la ruta en el bucket lleva su id.</p>
           )}
         </div>
         ) : null}
       </div>
 
-      {error ? <p className="mt-4 text-sm text-danger">{error}</p> : null}
+      {error ? <p className="mt-4 text-sm text-lm-danger">{error}</p> : null}
 
       {linking && item ? (
-        <div className="mt-4 space-y-3 rounded-[12px] border border-cyan/30 bg-cyan/5 p-4">
-          <p className="text-sm text-ink">
+        <div className="mt-4 space-y-3 rounded-lm-md border border-lm-line-strong bg-lm-raised p-4">
+          <p className="text-sm text-lm-ink">
             ¿Cuál de tus publicaciones es <strong>“{title}”</strong>?
           </p>
           {candidates.length === 0 ? (
-            <p className="text-xs text-muted">
+            <p className="text-xs text-lm-ink-2">
               No hay posts propios sin vincular de un formato compatible. Si la publicaste hace poco, sincronizá desde el dashboard de Marca y volvé a probar.
             </p>
           ) : (
@@ -487,31 +482,31 @@ export function PlannerItemDialog({
               {candidates.map((post) => (
                 <li key={post.postId}>
                   <label
-                    className={`flex cursor-pointer items-start gap-3 rounded-[12px] border p-2.5 text-sm ${
-                      selectedPostId === post.postId ? "border-cyan/60 bg-cyan/10" : "border-line/60 hover:bg-surface/40"
+                    className={`flex cursor-pointer items-start gap-3 rounded-lm-md border p-2.5 text-sm ${
+                      selectedPostId === post.postId ? "border-lm-signal/60 bg-lm-signal-soft" : "border-lm-line hover:bg-lm-surface"
                     }`}
                   >
                     <input
                       type="radio"
                       name="linkable-post"
-                      className="mt-1 accent-cyan"
+                      className="mt-1 accent-[#f2c14e]"
                       checked={selectedPostId === post.postId}
                       onChange={() => setSelectedPostId(post.postId)}
                     />
                     <span className="min-w-0">
-                      <span className="tabular block text-xs text-muted">
+                      <span className="tabular block text-xs text-lm-ink-2">
                         {post.publishedAt ? new Date(post.publishedAt).toLocaleString("es-AR") : "sin fecha"} ·{" "}
                         {KIND_LABEL[post.kind as ContentKind] ?? post.kind}
                         {post.views !== null ? ` · ${post.views.toLocaleString("es-AR")} views` : ""}
                       </span>
-                      <span className="block truncate text-ink">{post.caption?.replace(/\s+/g, " ").trim() || "Sin caption"}</span>
+                      <span className="block truncate text-lm-ink">{post.caption?.replace(/\s+/g, " ").trim() || "Sin caption"}</span>
                     </span>
                   </label>
                 </li>
               ))}
             </ul>
           )}
-          <p className="text-xs text-muted">Queda publicada con la fecha real del post y toma sus métricas. Se puede deshacer con “Desvincular”.</p>
+          <p className="text-xs text-lm-ink-2">Queda publicada con la fecha real del post y toma sus métricas. Se puede deshacer con “Desvincular”.</p>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setLinking(false)} disabled={busy === "link"}>
               Volver
@@ -523,12 +518,12 @@ export function PlannerItemDialog({
           </div>
         </div>
       ) : confirming && item ? (
-        <div className="mt-4 space-y-3 rounded-[12px] border border-cyan/30 bg-cyan/5 p-4">
-          <p className="text-sm text-ink">
+        <div className="mt-4 space-y-3 rounded-lm-md border border-lm-line-strong bg-lm-raised p-4">
+          <p className="text-sm text-lm-ink">
             Vas a publicar <strong>“{title}”</strong> en {accountUsername ? `@${accountUsername}` : "Instagram"} ahora mismo. Desde la app no se puede deshacer.
           </p>
           {missingForEvaluation.length > 0 ? (
-            <p className="flex items-start gap-1.5 text-xs text-warning">
+            <p className="flex items-start gap-1.5 text-xs text-lm-ink-2">
               <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
               Sale sin {missingForEvaluation.join(" ni ")}: después no vas a poder saber si el experimento funcionó ni contra qué.
             </p>
@@ -542,10 +537,10 @@ export function PlannerItemDialog({
               {busy === "publish" ? "Publicando…" : "Sí, publicar ahora"}
             </Button>
           </div>
-          {busy === "publish" ? <p className="text-xs text-muted">Instagram procesa el archivo antes de publicarlo: un video puede tardar hasta un minuto. No cierres esta ventana.</p> : null}
+          {busy === "publish" ? <p className="text-xs text-lm-ink-2">Instagram procesa el archivo antes de publicarlo: un video puede tardar hasta un minuto. No cierres esta ventana.</p> : null}
         </div>
       ) : (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-line/60 pt-4">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-lm-line pt-4">
           {item && !published ? (
             <Button type="button" variant="ghost" size="sm" disabled={busy !== null} onClick={handleDelete}>
               {busy === "delete" ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
@@ -556,7 +551,7 @@ export function PlannerItemDialog({
           )}
           <div className="flex flex-wrap items-center justify-end gap-2">
             {PUBLISH_FROM_APP_ENABLED && item && !published ? (
-              <span className="text-xs text-muted" title={publishProblem ?? undefined}>
+              <span className="text-xs text-lm-ink-2" title={publishProblem ?? undefined}>
                 {publishProblem ? publishProblem : null}
               </span>
             ) : null}

@@ -1,57 +1,40 @@
-import { CheckCircle2, TrendingDown, TrendingUp } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { GoalDialogButton } from "@/components/brand/goals/goal-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Card, CardBody, CardHeader, Eyebrow, Meter } from "@/components/brand/ui/card";
 import {
   formatCount,
   formatIsoDate,
   formatPerDay,
-  formatProgressLine,
+  formatPercent,
   MIN_HISTORY_DAYS,
   type GoalProgress,
 } from "@/lib/brand/goals/progress";
 import type { BrandGoal } from "@/lib/brand/goals/schema";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
+import { cn } from "@/lib/utils";
 
-function Fact({ label, children, hint }: { label: string; children: ReactNode; hint?: ReactNode }) {
+function Fact({ label, children, hint, hintTone }: { label: string; children: ReactNode; hint?: ReactNode; hintTone?: "up" }) {
   return (
-    <div>
-      <dt className="text-xs font-medium tracking-wide text-muted uppercase">{label}</dt>
-      <dd className="tabular mt-1 text-base text-ink">{children}</dd>
-      {hint ? <p className="mt-0.5 text-xs text-muted">{hint}</p> : null}
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <Eyebrow>{label}</Eyebrow>
+      <div className="font-mono text-base tabular-nums">{children}</div>
+      {hint ? <p className={cn("text-[11.5px]", hintTone === "up" ? "text-lm-success" : "text-lm-ink-3")}>{hint}</p> : null}
     </div>
   );
 }
 
-/**
- * El medidor: relleno cyan (acción y resultado), pista del mismo tono más claro
- * (skill dataviz: la pista es un escalón de la misma rampa). El número va SIEMPRE
- * al lado, en el texto de arriba — el medidor solo no dice "49 de 10.000", dice
- * "casi vacío". Con un avance chico el relleno tiene un mínimo de 4 px: sin él,
- * 0,5 % es invisible y parece que el medidor no funciona.
- */
-function Meter({ progress }: { progress: GoalProgress }) {
-  const width = progress.fraction > 0 ? `max(${(progress.fraction * 100).toFixed(2)}%, 4px)` : "0";
-  return (
-    <div
-      role="progressbar"
-      aria-label="Avance hacia la meta de seguidores"
-      aria-valuemin={0}
-      aria-valuemax={progress.target}
-      aria-valuenow={progress.current ?? 0}
-      className="h-2 w-full overflow-hidden rounded-[4px] bg-cyan/15"
-    >
-      <div className="h-full rounded-[4px] bg-cyan" style={{ width }} />
-    </div>
-  );
+/** Texto de apoyo cuando no hay un número: no va en Mono ni en tamaño de dato. */
+function Note({ children }: { children: ReactNode }) {
+  return <span className="font-lm-sans text-[12.5px] leading-[1.45] text-lm-ink-2">{children}</span>;
 }
 
 /**
  * La meta de seguidores en el dashboard (Plans/03 §3.13). Sin ritmo inventado:
  * hasta juntar MIN_HISTORY_DAYS de fotos diarias dice cuánto historial hay, y no
- * proyecta nada.
+ * proyecta nada. El número siempre va al lado de la barra: sola dice "casi
+ * vacío", no "118 de 10.000". Con un avance chico el relleno tiene un mínimo de
+ * 4 px, porque 1,2 % es invisible y parece que el medidor no funciona.
  */
 export function GoalCard({
   platform,
@@ -81,7 +64,7 @@ export function GoalCard({
           }
         />
         <CardBody>
-          <p className="text-sm text-muted">
+          <p className="text-[12.5px] leading-[1.5] text-lm-ink-2">
             {currentFollowers === null
               ? "Todavía no hay un conteo de seguidores: sincronizá la cuenta para poder definir una meta."
               : `Hoy tenés ${formatCount(currentFollowers)} seguidores.`}
@@ -95,10 +78,18 @@ export function GoalCard({
   const pace = progress.pace;
 
   return (
-    <Card>
+    <Card className="flex flex-col">
       <CardHeader
         title="Meta de seguidores"
-        description={goal.deadline ? `Plazo: ${formatIsoDate(goal.deadline)}` : "Sin plazo"}
+        description={
+          goal.deadline ? (
+            <>
+              Plazo: <span className="font-mono">{formatIsoDate(goal.deadline)}</span>
+            </>
+          ) : (
+            "Sin plazo"
+          )
+        }
         action={
           <GoalDialogButton
             platform={platform}
@@ -111,36 +102,45 @@ export function GoalCard({
           />
         }
       />
-      <CardBody className="space-y-5">
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="tabular text-2xl text-ink">
-              {progress.current !== null ? formatProgressLine(progress.current, progress.target) : `— de ${formatCount(progress.target)}`}
-            </p>
-            {achieved ? (
-              <Badge tone="positive">
-                <CheckCircle2 className="size-3.5" />
-                Meta cumplida
-              </Badge>
-            ) : progress.onTrack === true ? (
-              <Badge tone="positive">
-                <TrendingUp className="size-3.5" />
-                Vas en camino
-              </Badge>
-            ) : progress.onTrack === false ? (
-              <Badge tone="warning">
-                <TrendingDown className="size-3.5" />
-                Por debajo del ritmo necesario
-              </Badge>
+      <CardBody className="flex flex-col gap-5 p-5">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-baseline gap-2.5 font-mono">
+            <span className="text-[30px] leading-none tracking-[-0.02em] text-lm-signal-text">
+              {progress.current !== null ? formatCount(progress.current) : "—"}
+            </span>
+            <span className="text-sm text-lm-ink-3">de {formatCount(progress.target)}</span>
+            <span className="flex-1" />
+            {progress.current !== null ? (
+              <span className="text-[13px] text-lm-ink-2">{formatPercent(progress.fraction * 100)}</span>
             ) : null}
           </div>
-          <Meter progress={progress} />
+          <div
+            role="progressbar"
+            aria-label="Avance hacia la meta de seguidores"
+            aria-valuemin={0}
+            aria-valuemax={progress.target}
+            aria-valuenow={progress.current ?? 0}
+          >
+            <Meter percent={progress.fraction * 100} tone="signal" minPx={4} className="h-1 rounded-[2px]" />
+          </div>
+          {achieved ? (
+            <p className="text-xs text-lm-success">Meta cumplida</p>
+          ) : progress.onTrack === true ? (
+            <p className="text-xs text-lm-success">Vas en camino</p>
+          ) : progress.onTrack === false ? (
+            <p className="text-xs text-lm-danger">Por debajo del ritmo necesario</p>
+          ) : null}
         </div>
 
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-4 lg:grid-cols-4">
+        <dl className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Fact
             label="Faltan"
-            hint={progress.gained !== null ? `${progress.gained >= 0 ? "+" : ""}${formatCount(progress.gained)} desde que la definiste` : undefined}
+            hint={
+              progress.gained !== null
+                ? `${progress.gained >= 0 ? "↑" : "↓"} ${formatCount(Math.abs(progress.gained))} desde que la definiste`
+                : undefined
+            }
+            hintTone={progress.gained !== null && progress.gained > 0 ? "up" : undefined}
           >
             {progress.remaining !== null ? formatCount(progress.remaining) : "—"}
           </Fact>
@@ -149,36 +149,40 @@ export function GoalCard({
             label="Ritmo real"
             hint={pace ? `entre el ${formatIsoDate(pace.fromDay)} y el ${formatIsoDate(pace.toDay)}` : undefined}
           >
-            {pace ? formatPerDay(pace.perDay) : <span className="text-sm text-muted">Sin historial suficiente, {progress.historyDays} de {MIN_HISTORY_DAYS} días</span>}
+            {pace ? (
+              formatPerDay(pace.perDay)
+            ) : (
+              <Note>
+                Sin historial suficiente, {progress.historyDays} de {MIN_HISTORY_DAYS} días
+              </Note>
+            )}
           </Fact>
 
           <Fact label="Ritmo necesario">
             {progress.neededPerDay !== null ? (
               formatPerDay(progress.neededPerDay)
             ) : (
-              <span className="text-sm text-muted">
-                {achieved ? "—" : progress.deadline ? "Plazo vencido" : "Sin plazo"}
-              </span>
+              <Note>{achieved ? "—" : progress.deadline ? "Plazo vencido" : "Sin plazo"}</Note>
             )}
           </Fact>
 
           <Fact label="A este ritmo">
             {achieved ? (
-              <span className="text-sm text-muted">—</span>
+              <Note>—</Note>
             ) : progress.projection?.kind === "FECHA" ? (
               formatIsoDate(progress.projection.date)
             ) : progress.projection?.kind === "ESTANCADO" ? (
-              <span className="text-sm text-muted">No se llega: el ritmo es cero o negativo</span>
+              <Note>No se llega: el ritmo es cero o negativo</Note>
             ) : progress.projection?.kind === "LEJOS" ? (
-              <span className="text-sm text-muted">Más de 10 años</span>
+              <Note>Más de 10 años</Note>
             ) : (
-              <span className="text-sm text-muted">Sin ritmo medido</span>
+              <Note>Sin ritmo medido</Note>
             )}
           </Fact>
         </dl>
 
         {!pace && !achieved ? (
-          <p className="text-xs text-muted">
+          <p className="border-t border-lm-line pt-3.5 text-[12.5px] leading-[1.55] text-lm-ink-3">
             El ritmo sale de las fotos diarias del contador, no de un dato que entregue Instagram. Hasta tener {MIN_HISTORY_DAYS} días no se muestra: antes que una proyección inventada.
           </p>
         ) : null}

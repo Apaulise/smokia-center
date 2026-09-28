@@ -209,3 +209,11 @@ export async function getLatestBrandSyncJob(platform: BrandPlatform) {
   if (error) throw error;
   return data;
 }
+
+/** Conteo liviano de piezas publicadas, para el badge de "Biblioteca" del sidebar — sin traer filas. */
+export async function countBrandPosts(): Promise<number> {
+  const supabase = await createClient();
+  const { count, error } = await supabase.from("brand_posts").select("id", { count: "exact", head: true });
+  if (error) throw error;
+  return count ?? 0;
+}

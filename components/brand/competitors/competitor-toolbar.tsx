@@ -4,9 +4,9 @@ import { Loader2, Plus, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/leads/ui/button";
+import { Dialog } from "@/components/leads/ui/dialog";
+import { Input } from "@/components/leads/ui/field";
 import { addCompetitor, refreshAllCompetitors } from "@/lib/brand/competitors/actions";
 import {
   DEFAULT_RESULTS_LIMIT,
@@ -48,7 +48,7 @@ export function AddCompetitorButton({ variant = "primary" }: { variant?: "primar
 
   return (
     <>
-      <Button type="button" variant={variant} size="sm" onClick={() => setOpen(true)}>
+      <Button type="button" variant={variant} className="h-[34px]" onClick={() => setOpen(true)}>
         <Plus className="size-3.5" />
         Agregar cuenta
       </Button>
@@ -61,25 +61,25 @@ export function AddCompetitorButton({ variant = "primary" }: { variant?: "primar
       >
         <div className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-xs text-muted">Usuario o link del perfil</label>
+            <label className="mb-1.5 block text-[13px] font-medium text-lm-ink-2">Usuario o link del perfil</label>
             <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="@usuario o https://instagram.com/usuario" autoFocus />
             {username.trim() ? (
-              <p className={detected ? "mt-1 text-xs text-muted" : "mt-1 text-xs text-danger"}>
+              <p className={detected ? "mt-1 text-xs text-lm-ink-2" : "mt-1 text-xs text-lm-danger"}>
                 {detected ? `Se va a seguir a @${detected}.` : "No parece un usuario de Instagram."}
               </p>
             ) : null}
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs text-muted">Publicaciones a traer</label>
+            <label className="mb-1.5 block text-[13px] font-medium text-lm-ink-2">Publicaciones a traer</label>
             <Input type="number" min={1} max={MAX_RESULTS_LIMIT} value={limit} onChange={(e) => setLimit(e.target.value)} />
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-xs text-lm-ink-2">
               Apify cobra por resultado. {validLimit ? `Esta corrida cuesta unos ${usd.format(estimateRunCostUsd(parsedLimit))} (estimado).` : `Entre 1 y ${MAX_RESULTS_LIMIT}.`}{" "}
               Para probar, usá pocas: con menos de 5 publicaciones de un mismo tipo no hay rendimiento habitual contra qué comparar.
             </p>
           </div>
 
-          {error ? <p className="text-sm text-danger">{error}</p> : null}
+          {error ? <p className="text-sm text-lm-danger">{error}</p> : null}
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={busy}>
@@ -117,8 +117,8 @@ export function RefreshAllButton({ competitorCount, totalResultsLimit }: { compe
 
   return (
     <div className="flex items-center gap-3">
-      {message ? <span className="text-xs text-muted">{message}</span> : null}
-      <Button type="button" variant="secondary" size="sm" onClick={handleRefresh} disabled={busy || competitorCount === 0}>
+      {message ? <span className="text-xs text-lm-ink-2">{message}</span> : null}
+      <Button type="button" variant="secondary" className="h-[34px]" onClick={handleRefresh} disabled={busy || competitorCount === 0}>
         {busy ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
         Actualizar todas
       </Button>

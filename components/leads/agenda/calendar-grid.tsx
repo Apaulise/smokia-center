@@ -63,6 +63,7 @@ export function CalendarGrid<T extends { id: string }>({
   renderChip,
   getDragTime,
   canDrag,
+  chipClassName,
   currentMonth,
   today,
   onCreateAt,
@@ -81,6 +82,8 @@ export function CalendarGrid<T extends { id: string }>({
   getDragTime?: (item: T) => string | null;
   /** Por default toda tarjeta se arrastra. */
   canDrag?: (item: T) => boolean;
+  /** Clases extra por tarjeta (p. ej. borde punteado para lo planificado). Sin esto, la tarjeta trunca a una línea. */
+  chipClassName?: (item: T) => string;
   /** "YYYY-MM" del mes que se está mostrando — para atenuar los días de otro mes (sólo modo mes). */
   currentMonth?: string;
   today: string;
@@ -184,8 +187,9 @@ export function CalendarGrid<T extends { id: string }>({
                       }}
                       onClick={() => onEdit(item)}
                       className={cn(
-                        "flex items-start gap-1.5 truncate rounded-[8px] border px-1.5 py-1 text-left text-xs",
+                        "flex items-start gap-1.5 rounded-[8px] border px-1.5 py-1 text-left text-xs",
                         v.chip,
+                        chipClassName?.(item) ?? "truncate",
                         draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
                       )}
                     >

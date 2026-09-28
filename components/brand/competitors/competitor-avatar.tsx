@@ -24,7 +24,7 @@ export function CompetitorAvatar({
   return (
     <div
       className={cn(
-        "relative size-9 shrink-0 overflow-hidden rounded-full border border-line bg-elevated",
+        "relative size-9 shrink-0 overflow-hidden rounded-full border border-lm-line-strong bg-lm-raised",
         "flex items-center justify-center",
         className,
       )}
@@ -33,7 +33,7 @@ export function CompetitorAvatar({
         // eslint-disable-next-line @next/next/no-img-element -- URL externa de Instagram, mismo criterio que PostThumb
         <img src={url} alt="" className="size-full object-cover" onError={() => setFailedUrl(url)} />
       ) : (
-        <span aria-hidden className="text-sm text-muted uppercase">
+        <span aria-hidden className="text-sm text-lm-ink-2 uppercase">
           {username.slice(0, 1)}
         </span>
       )}

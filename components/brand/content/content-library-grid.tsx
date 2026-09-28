@@ -1,111 +1,48 @@
-import Link from "next/link";
-import { Eye, Heart, MessageCircle } from "lucide-react";
-
-import { ResultBadge } from "@/components/brand/result-badge";
-import { Badge } from "@/components/ui/badge";
+import { ReelCard, type ReelCardPost } from "@/components/brand/reel-card";
 import type { PostResult } from "@/lib/brand/insights";
-import type { Database } from "@/lib/supabase/database.types";
+import type { ContentSortField } from "@/lib/brand/queries";
 
-type LibraryPost = Database["public"]["Functions"]["brand_latest_posts"]["Returns"][number];
+const compact = new Intl.NumberFormat("es-AR", { notation: "compact" });
 
-const KIND_LABEL: Record<LibraryPost["kind"], string> = {
-  REEL: "Reel",
-  POST: "Post",
-  CARRUSEL: "Carrusel",
-  HISTORIA: "Historia",
-  VIDEO: "Video",
-  SHORT: "Short",
-};
-
-function formatCompact(value: number | null) {
-  if (value === null) return "—";
-  return new Intl.NumberFormat("es-AR", { notation: "compact" }).format(value);
+/**
+ * La card ya muestra views, likes, comentarios y watch time. Si se ordenó por
+ * otra métrica (guardados, compartidos, skip rate, seguidores ganados) se suma
+ * esa fila, para que el orden se pueda leer en la grilla.
+ */
+function extraMetric(post: ReelCardPost, sort: ContentSortField): { label: string; value: string } | null {
+  switch (sort) {
+    case "saved":
+      return { label: "Guardados", value: compact.format(post.saved ?? 0) };
+    case "shares":
+      return { label: "Compartidos", value: compact.format(post.shares ?? 0) };
+    case "new_followers":
+      return { label: "Seg. ganados", value: compact.format(post.new_followers ?? 0) };
+    case "reel_skip_rate":
+      return post.reel_skip_rate !== null ? { label: "Skip rate", value: `${post.reel_skip_rate}%` } : null;
+    default:
+      return null;
+  }
 }
 
 /** Biblioteca de contenido (Plans/03 §3.4). Sin resultados de esta combinación de filtros incluido. */
 export function ContentLibraryGrid({
   posts,
   results,
+  sort,
 }: {
-  posts: LibraryPost[];
+  posts: ReelCardPost[];
   /** Clasificación por postId (§3.11), calculada sobre el catálogo completo y no sobre lo filtrado. */
   results: Record<string, PostResult>;
+  sort: ContentSortField;
 }) {
   if (posts.length === 0) {
-    return <p className="text-sm text-muted">Ningún post coincide con estos filtros.</p>;
+    return <p className="text-[12.5px] text-lm-ink-2">Ningún post coincide con estos filtros.</p>;
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+    <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
       {posts.map((post) => (
-        <Link
-          key={post.post_id}
-          href={`/marca/contenido/${post.post_id}`}
-          className="group overflow-hidden rounded-[16px] border border-line bg-surface/60 transition-colors hover:border-cyan/40"
-        >
-          <div className="relative aspect-9/16 w-full overflow-hidden bg-elevated">
-            {post.thumbnail_url ? (
-              // eslint-disable-next-line @next/next/no-img-element -- URL externa de Instagram
-              <img
-                src={post.thumbnail_url}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                className="size-full object-cover transition-transform duration-200 group-hover:scale-105"
-              />
-            ) : (
-              <div className="flex size-full items-center justify-center text-muted">
-                <Eye className="size-6" />
-              </div>
-            )}
-            <Badge tone="cyan" className="absolute top-2 left-2 backdrop-blur-sm">
-              {KIND_LABEL[post.kind]}
-            </Badge>
-          </div>
-
-          <div className="space-y-1.5 p-3 text-xs text-muted">
-            <ResultBadge result={results[post.post_id]} className="pb-1" />
-            <p className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-1">
-                <Eye className="size-3.5" />
-                Views
-              </span>
-              <span className="tabular text-ink">{formatCompact(post.views)}</span>
-            </p>
-            <p className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-1">
-                <Heart className="size-3.5" />
-                Likes
-              </span>
-              <span className="tabular text-ink">{formatCompact(post.likes)}</span>
-            </p>
-            <p className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-1">
-                <MessageCircle className="size-3.5" />
-                Comentarios
-              </span>
-              <span className="tabular text-ink">{formatCompact(post.comments)}</span>
-            </p>
-            <div className="grid grid-cols-2 gap-x-2 border-t border-line/60 pt-1.5">
-              <span>Guardados</span>
-              <span className="tabular text-right text-ink">{formatCompact(post.saved)}</span>
-              <span>Compartidos</span>
-              <span className="tabular text-right text-ink">{formatCompact(post.shares)}</span>
-              {post.reel_skip_rate !== null ? (
-                <>
-                  <span>Skip rate</span>
-                  <span className="tabular text-right text-ink">{post.reel_skip_rate}%</span>
-                </>
-              ) : null}
-              {post.new_followers !== null ? (
-                <>
-                  <span>Seg. ganados</span>
-                  <span className="tabular text-right text-ink">{formatCompact(post.new_followers)}</span>
-                </>
-              ) : null}
-            </div>
-          </div>
-        </Link>
+        <ReelCard key={post.post_id} post={post} variant="library" result={results[post.post_id]} extra={extraMetric(post, sort)} />
       ))}
     </div>
   );

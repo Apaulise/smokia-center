@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { ChatMessage } from "./chat-message";
 import { SaveIdeaDialog } from "./save-idea-dialog";
 import { ChatThreadList } from "./thread-list";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/leads/ui/button";
 import { sendBrandChatMessage } from "@/lib/brand/actions";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
 import { createClient } from "@/lib/supabase/client";
@@ -249,7 +249,7 @@ export function BrandChatPanel({
   return (
     // Alto de pantalla completo; en mobile se descuenta la barra del menú (lg:hidden) que queda arriba.
     <div className="flex h-[calc(100dvh-61px)] min-h-[480px] overflow-hidden lg:h-dvh">
-      <aside className="hidden w-72 shrink-0 border-r border-line/60 md:block">
+      <aside className="hidden w-72 shrink-0 border-r border-lm-line md:block">
         <ChatThreadList
           threads={threads}
           activeId={threadId}
@@ -262,8 +262,8 @@ export function BrandChatPanel({
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* En mobile no hay lista lateral: la acción de nueva conversación queda acá. */}
-        <div className="flex items-center justify-between gap-3 border-b border-line/60 px-4 py-3 md:hidden">
-          <p className="truncate text-sm text-muted">{activeTitle ?? "Conversación nueva"}</p>
+        <div className="flex items-center justify-between gap-3 border-b border-lm-line px-4 py-3 md:hidden">
+          <p className="truncate text-sm text-lm-ink-2">{activeTitle ?? "Conversación nueva"}</p>
           <Button type="button" variant="ghost" size="sm" onClick={handleNewThread} disabled={messages.length === 0}>
             <Plus className="size-3.5" />
             Nueva conversación
@@ -272,13 +272,13 @@ export function BrandChatPanel({
 
         <div
           className={cn(
-            "flex-1 overflow-y-auto transition-opacity [scrollbar-color:var(--color-line)_transparent] [scrollbar-width:thin]",
+            "flex-1 overflow-y-auto transition-opacity [scrollbar-color:var(--color-lm-line-strong)_transparent] [scrollbar-width:thin]",
             loadingThread && "opacity-60",
           )}
         >
           <div className="mx-auto flex max-w-[760px] flex-col gap-7 px-4 pt-8 pb-6 sm:px-8 sm:pt-10">
             {messages.length === 0 ? (
-              <p className="py-12 text-center text-sm text-muted">
+              <p className="py-12 text-center text-sm text-lm-ink-2">
                 Pedile una idea, un guion o un caption. Puede buscar en tus posts y en la web antes de responder.
               </p>
             ) : (
@@ -297,8 +297,8 @@ export function BrandChatPanel({
 
         <div className="shrink-0 px-4 pt-3 pb-5 sm:px-8">
           <div className="mx-auto max-w-[760px]">
-            {error ? <p className="mb-2 text-xs text-danger">{error}</p> : null}
-            <div className="flex items-end gap-3 rounded-[16px] border border-line bg-elevated/80 py-3 pr-3 pl-5 transition-colors focus-within:border-cyan/40">
+            {error ? <p className="mb-2 text-xs text-lm-danger">{error}</p> : null}
+            <div className="flex items-end gap-3 rounded-lm-lg border border-lm-line-strong bg-lm-raised py-3 pr-3 pl-5 transition-colors focus-within:border-lm-signal">
               <textarea
                 ref={textareaRef}
                 rows={1}
@@ -312,14 +312,14 @@ export function BrandChatPanel({
                 }}
                 placeholder="Escribí lo que necesitás para el próximo contenido…"
                 disabled={busy}
-                className="max-h-40 flex-1 resize-none border-none bg-transparent py-1.5 text-[14.5px] leading-normal text-ink outline-none placeholder:text-muted/60 disabled:opacity-40"
+                className="max-h-40 flex-1 resize-none border-none bg-transparent py-1.5 text-[14.5px] leading-normal text-lm-ink outline-none placeholder:text-lm-ink-2/60 disabled:opacity-40"
               />
               <button
                 type="button"
                 onClick={handleSend}
                 disabled={busy || !input.trim()}
                 aria-label="Enviar mensaje"
-                className="flex size-[38px] shrink-0 items-center justify-center rounded-[10px] bg-cyan text-(--color-base) transition-colors hover:bg-cyan-soft focus-visible:ring-2 focus-visible:ring-cyan/40 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40"
+                className="flex size-[38px] shrink-0 items-center justify-center rounded-lm-md bg-lm-signal text-lm-on-signal transition-colors hover:bg-lm-signal-hover focus-visible:lm-focus disabled:pointer-events-none disabled:opacity-40"
               >
                 {busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
               </button>

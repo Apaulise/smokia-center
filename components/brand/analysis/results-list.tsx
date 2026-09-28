@@ -2,7 +2,8 @@ import Link from "next/link";
 
 import { hookText } from "@/components/brand/analysis/retention-list";
 import { PostThumb } from "@/components/brand/post-thumb";
-import { ResultBadge } from "@/components/brand/result-badge";
+import { ResultChip } from "@/components/brand/result-badge";
+import { Eyebrow } from "@/components/brand/ui/card";
 import {
   formatObjectiveValue,
   KIND_LABEL,
@@ -22,10 +23,10 @@ function BaselineLine({ baseline }: { baseline: KindBaseline }) {
   const sample = Math.max(baseline.reach?.sample ?? 0, baseline.authority?.sample ?? 0);
 
   return (
-    <li className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
-      <span className="text-ink">{KIND_LABEL[baseline.kind]}</span>
-      <span className="tabular text-muted">
-        {parts.join(" · ")} <span className="text-xs">({sample} piezas)</span>
+    <li className="flex items-baseline gap-3 border-b border-lm-line py-2.5">
+      <span className="flex-1 text-[13px] text-lm-ink">{KIND_LABEL[baseline.kind]}</span>
+      <span className="font-mono text-xs tabular-nums">
+        {parts.join(" · ")} <span className="text-lm-ink-3">({sample} piezas)</span>
       </span>
     </li>
   );
@@ -51,15 +52,15 @@ export function ResultsList({
     .slice(0, VISIBLE_POSTS);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h4 className="mb-3 text-xs font-medium tracking-wide text-muted uppercase">Tu baseline hoy</h4>
+    <div className="flex flex-col gap-[18px]">
+      <div className="flex flex-col gap-2">
+        <Eyebrow>Tu baseline hoy</Eyebrow>
         {baselines.length === 0 ? (
-          <p className="text-sm text-muted">
+          <p className="text-[12.5px] leading-normal text-lm-ink-3">
             Todavía no hay baseline: hacen falta al menos {MIN_BASELINE_SAMPLE} piezas maduras del mismo formato con datos. Hasta entonces no se clasifica nada.
           </p>
         ) : (
-          <ul className="space-y-2">
+          <ul>
             {baselines.map((baseline) => (
               <BaselineLine key={baseline.kind} baseline={baseline} />
             ))}
@@ -67,26 +68,25 @@ export function ResultsList({
         )}
       </div>
 
-      <div>
-        <h4 className="mb-3 text-xs font-medium tracking-wide text-muted uppercase">Últimas piezas</h4>
-        <ol className="space-y-3">
-          {recent.map((post) => (
-            <li key={post.postId}>
-              <Link
-                href={`/marca/contenido/${post.postId}`}
-                className="flex items-start gap-3 rounded-[12px] transition-colors hover:bg-surface/40"
-              >
-                <PostThumb url={post.thumbnailUrl} className="w-10" />
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <p className="line-clamp-2 text-sm text-ink">{hookText(post.caption)}</p>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span className="text-xs text-muted">{KIND_LABEL[post.kind]}</span>
-                    <ResultBadge result={results[post.postId]} />
-                  </div>
-                </div>
-              </Link>
-            </li>
-          ))}
+      <div className="flex flex-col gap-0.5">
+        <Eyebrow className="pb-1.5">Últimas piezas</Eyebrow>
+        <ol>
+          {recent.map((post) => {
+            const result = results[post.postId];
+            return (
+              <li key={post.postId}>
+                <Link
+                  href={`/marca/contenido/${post.postId}`}
+                  className="-mx-2 flex items-center gap-3.5 rounded-lm-sm p-2 transition-colors duration-150 hover:bg-lm-raised"
+                >
+                  <PostThumb url={post.thumbnailUrl} className="aspect-auto h-11 w-8" />
+                  <span className="min-w-0 flex-1 truncate text-[13px] text-lm-ink">{hookText(post.caption)}</span>
+                  <span className="text-[11.5px] text-lm-ink-3">{KIND_LABEL[post.kind]}</span>
+                  {result ? <ResultChip classification={result.classification} /> : null}
+                </Link>
+              </li>
+            );
+          })}
         </ol>
       </div>
     </div>

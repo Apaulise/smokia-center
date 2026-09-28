@@ -1,7 +1,6 @@
-import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Card, CardHeader } from "@/components/brand/ui/card";
 import type { NextStep } from "@/lib/brand/goals/next-steps";
 
 /**
@@ -14,34 +13,34 @@ export function NextStepsCard({ steps }: { steps: NextStep[] }) {
     <Card>
       <CardHeader
         title="Próximos pasos"
-        description="Calculados del estado real del planificador, las métricas y la base de conocimiento."
+        description="Calculados del planificador, las métricas y la base de conocimiento."
       />
-      <CardBody>
-        {steps.length === 0 ? (
-          <p className="text-sm text-muted">Nada pendiente: la cadencia, las hipótesis y la sincronización están en orden.</p>
-        ) : (
-          <ol className="space-y-4">
-            {steps.map((step, index) => (
-              <li key={step.id} className="flex items-start gap-4 border-b border-line/60 pb-4 last:border-0 last:pb-0">
-                <span className="tabular mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border border-line text-xs text-muted">
-                  {index + 1}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-ink">{step.title}</p>
-                  <p className="mt-1 text-xs text-muted">{step.detail}</p>
-                </div>
-                <Link
-                  href={step.href}
-                  className="inline-flex shrink-0 items-center gap-1.5 text-xs text-cyan hover:underline"
-                >
-                  {step.cta}
-                  <ArrowRight className="size-3.5" />
-                </Link>
-              </li>
-            ))}
-          </ol>
-        )}
-      </CardBody>
+      {steps.length === 0 ? (
+        <p className="px-5 py-[18px] text-[12.5px] leading-[1.5] text-lm-ink-2">
+          Nada pendiente: la cadencia, las hipótesis y la sincronización están en orden.
+        </p>
+      ) : (
+        <ol className="flex flex-col px-5 pt-1 pb-2">
+          {steps.map((step, index) => (
+            <li
+              key={step.id}
+              className="grid grid-cols-[24px_minmax(0,1fr)_auto] gap-x-3.5 gap-y-1 border-b border-lm-line py-4 last:border-0"
+            >
+              <span className="row-span-2 grid size-[22px] place-items-center rounded-full border border-lm-line-strong font-mono text-[11px] text-lm-ink-2">
+                {index + 1}
+              </span>
+              <span className="text-[13.5px] font-medium text-lm-ink">{step.title}</span>
+              <Link
+                href={step.href}
+                className="text-xs whitespace-nowrap text-lm-ink-2 transition-colors hover:text-lm-signal-text"
+              >
+                {step.cta} →
+              </Link>
+              <span className="col-span-2 text-[12.5px] leading-normal text-lm-ink-2">{step.detail}</span>
+            </li>
+          ))}
+        </ol>
+      )}
     </Card>
   );
 }
