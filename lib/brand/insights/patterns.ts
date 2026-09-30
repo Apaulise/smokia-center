@@ -131,7 +131,7 @@ export function computeCaptionLength(posts: AnalysisPost[]): PatternRow[] {
 
 /**
  * Retención en reels (Plans/03 §3.5, "duración vs. retención" + "hook vs.
- * skip rate"): no hay duración del video sincronizada desde Windsor, así que
+ * skip rate"): no hay duración del video sincronizada desde Instagram, así que
  * el proxy real de retención son watch time promedio y skip rate — que ya es
  * el mismo par que §3.4 usa para "qué hooks retuvieron". Se ordena por skip
  * rate ascendente (mejor) y se muestran los extremos: mejores y peores reels.

@@ -620,3 +620,18 @@ lib/settings/constants.ts                    ← windsor_api_key, anthropic_api_
 Cada `§3.x` se cierra con su propio checklist manual confirmado ítem por ítem en la app corriendo, antes de arrancar el siguiente — es la regla de `CLAUDE.md` §13 y acá pesa especialmente, porque una métrica mal mapeada no rompe el build: simplemente miente.
 
 **Criterio de cierre de la Fase 3:** planificar un reel en la app, publicarlo desde la app, y una semana después entender en la app por qué funcionó o por qué no — sin abrir Instagram Insights en ningún momento del recorrido.
+
+---
+
+## Migración de Windsor.ai a la API oficial de Meta (2026-09-30)
+
+La lectura de métricas y la publicación de Instagram dejaron de pasar por Windsor: ahora hablan directo con la Graph API (`lib/meta/client.ts`, `lib/brand/sources/instagram.ts`). Cambios de fondo:
+
+- **Credenciales en el entorno**, no en `settings`: `INSTAGRAM_ACCESS_TOKEN` e `INSTAGRAM_USER_ID` (local y Vercel). Configuración sólo tiene un botón "Probar conexión". La fila vieja `windsor_api_key` de `settings` quedó huérfana y se puede borrar.
+- **El proveedor ya no expone campos de Windsor** sino fetchers que devuelven filas normalizadas (`fetchAccounts`, `fetchMedia`, …); el motor de sync (`lib/brand/sync.ts`) no sabe de la API.
+- **Publicación por contenedores** (crear → esperar → `media_publish`). Devuelve el id exacto de lo publicado, así que el empalme por caption y horario de `link.ts` queda sólo como respaldo. Un fallo antes de `media_publish` es siempre definitivo (reintentar es seguro).
+- **Métricas que cambian**: `impressions` ya no existe (Meta la reemplazó por `views`; a nivel cuenta se guarda `views` en `impressions`, por pieza queda null); `reel_skip_rate` no la expone Meta y queda null, así que el patrón de retención sólo se apoya en el watch time promedio. Los insights por pieza y los comentarios se piden para las 60 más nuevas (una llamada por pieza).
+- **El token de larga duración vence a los 60 días** (error 190): hay que regenerarlo.
+- Verificación contra la cuenta real: `node --env-file=.env.local scripts/check-instagram.mjs`.
+
+**Estado al 2026-09-30:** verificados en la app real la conexión, la sincronización, la cuenta, las piezas, la audiencia (con países y géneros legibles) y los comentarios (con respuestas). **Pendiente: publicar de verdad en Instagram** (POST de prueba, y después un carrusel). Idea futura, sin empezar: un creador de carruseles que planifique y publique algunos por semana, apoyado en esta publicación por API.

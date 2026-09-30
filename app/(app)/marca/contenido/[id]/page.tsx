@@ -335,7 +335,8 @@ export default async function ContenidoDetallePage({ params }: { params: Promise
               <h3 className="font-lm-sans text-[15px] leading-5 font-medium">Comentarios</h3>
               {comments.length > 0 ? <span className="font-mono text-[11px] text-lm-ink-3">{comments.length}</span> : null}
             </div>
-            <div className="px-5">
+            {/* Con decenas de comentarios la lista no puede estirar la página: scroll adentro del panel. */}
+            <div className="overflow-y-auto px-5" style={{ maxHeight: 420 }}>
               {comments.length === 0 ? (
                 <p className="py-4 text-[12.5px] leading-normal text-lm-ink-2">
                   Sin comentarios sincronizados todavía. Si el post tiene comentarios en Instagram y no aparecen acá, puede que la próxima sincronización todavía no los haya traído.

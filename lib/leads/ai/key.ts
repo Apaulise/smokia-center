@@ -30,9 +30,9 @@ export async function getAnthropicApiKey(): Promise<ApiKeyResult> {
 }
 
 /**
- * La key de Google AI Studio (Gemini): enriquecimiento (§1.10) y, desde la
- * Etapa 1 de la migración, las reescrituras de tono (§1.15) — transformar un
- * texto que ya existe, no decidir qué decir.
+ * La key de Google AI Studio (Gemini): sólo el enriquecimiento (§1.10), que
+ * necesita el grounding (`google_search`) que Groq no tiene. Las reescrituras
+ * de tono se movieron a Groq el 2026-09-28 — ver `getGroqApiKey()`.
  */
 export async function getGeminiApiKey(): Promise<ApiKeyResult> {
   return getDecryptedKey(GEMINI_KEY_SETTING, "Google AI Studio (Gemini)");
@@ -40,8 +40,10 @@ export async function getGeminiApiKey(): Promise<ApiKeyResult> {
 
 /**
  * La key de Groq (Plans/migracion-fuera-de-anthropic.md, Etapa 1): apertura
- * (§1.11), análisis de respuesta (§1.12) y seguimiento (§1.16) — lo que
- * decide qué escribirle a un lead.
+ * (§1.11), análisis de respuesta (§1.12), seguimiento (§1.16) y, desde el
+ * 2026-09-28, las reescrituras de tono (§1.15) — lo que decide qué escribirle
+ * a un lead, más lo que sólo transforma un texto ya escrito sin necesitar
+ * buscar nada.
  */
 export async function getGroqApiKey(): Promise<ApiKeyResult> {
   return getDecryptedKey(GROQ_KEY_SETTING, "Groq");

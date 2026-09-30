@@ -29,6 +29,10 @@ export async function resolveStructuredJson<T>(
     return await tryOnce(null);
   } catch (firstError) {
     const detail = firstError instanceof Error ? firstError.message : String(firstError);
+    // Un rechazo del proveedor (cuota, red) no es una respuesta mal formada:
+    // reintentar sólo gasta más cuota. Se propaga tal cual.
+    if (firstError instanceof Error && /rechaz|vac[ií]a/i.test(firstError.message)) throw firstError;
+    console.warn(`[structured-output] primer intento inválido, se reintenta: ${detail.slice(0, 1500)}`);
     return tryOnce(
       `Tu respuesta anterior no era válida: ${detail}. Devolvé de nuevo el JSON completo, corrigiendo eso, sin texto extra ni explicación.`,
     );

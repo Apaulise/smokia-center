@@ -238,6 +238,8 @@ Los agregados pesados se resuelven con **funciones Postgres** (`create function`
 
 ### 1.6 Objetivo diario — diferido
 
+> **Reabierto en §1.22 (2026-09-30)**, con el ticket promedio cargado a mano en vez de la facturación real. `lib/leads/goals.ts` recién se creó ahí — el stub que este paso prometía nunca había existido.
+
 No se construye ahora. Queda un stub en `lib/leads/goals.ts` con la interfaz que después leerá la facturación real, para que al construir el Gestor de Facturación sólo haya que implementarla y encender la sección.
 
 ---
@@ -539,11 +541,107 @@ Queda explícitamente afuera, y es la segunda etapa del `SPA §33`: envío autom
 
 Primero hay que validar que el copiloto tome buenas decisiones. Automatizar un criterio que todavía no se probó es multiplicar un error.
 
+### 1.20 Centro de seguimiento
+
+> **Estado (2026-09-29): implementado y verificado en la app real — cerrado.** `lib/leads/queries.ts` (`listFollowUpQueue`), `components/leads/follow-up-queue.tsx` y `app/(app)/leads/seguimiento/page.tsx`, agregada al sidebar (`components/shell/nav.ts`) y enlazada con "Ver todos" desde el widget de atención de `/leads`. Los 7 ítems del checklist manual, ok.
+
+**No es un motor nuevo — es una pantalla sobre lo que §1.16 y §1.14 ya calculan.** Antes de este paso, la única superficie para "a quién le toca seguimiento" era el widget de atención del dashboard (`listStaleLeads`), acotado a 5 filas para caber en una card. La detección en sí — un `AHORA_NO` con fecha de retomar automática desde `analyzeLeadResponseAction` (§1.14), o el campo manual de próxima acción de la ficha (§1.3) — ya estaba construida y no se tocó.
+
+`listFollowUpQueue()` reusa la misma condición de `listStaleLeads` (estados no terminales, `next_action_at` vencido o `last_contacted_at`/`created_at` más viejo que `days`), pero con el join completo (`SELECT_LEAD_ROW`: rubro, lista, próxima acción) y sin el tope de 5. Devuelve cada lead con un flag `overdue` en vez de un string, para que la pantalla separe dos preguntas distintas en dos secciones:
+
+- **Seguimiento vencido** — tiene una fecha de retomar (`next_action_at`) ya cumplida. Ordenado por cuánto hace que venció.
+- **Sin contactar** — nunca se le escribió, o se enfrió desde el último contacto. Ordenado por antigüedad.
+
+**Decisión de implementación que el plan no fijaba: sin paginación real.** `listFollowUpQueue` trae hasta 200 filas con un solo `.limit()`, no `.range()` con controles de página como `/leads/lista`. Con el volumen actual (una sola cuenta, generación manual de listas) 200 alcanza de sobra; si el volumen crece, agregar paginación ahí es un cambio local a una función.
+
+**Verificación manual** (`CLAUDE.md` §13):
+
+1. Ir a `/leads` (dashboard): en el bloque "ATENCIÓN" aparece un link "Ver todos" al lado del título "Sin tocar hace más de 7 días".
+2. Hacer clic en "Ver todos" → navega a `/leads/seguimiento`, y la entrada "Seguimiento" aparece en el sidebar del Gestor de Leads, entre "Generar lista" y "Agenda".
+3. En un lead cualquiera, poner a mano una **próxima acción con fecha pasada** (ficha del lead, campo de próxima acción de §1.3) → guardar → volver a `/leads/seguimiento`: el lead aparece en "Seguimiento vencido", con el motivo "Vencido hace N días" (o "Vence hoy" si la fecha es de hoy).
+4. Un lead sin `next_action_at` pero sin contactar hace más de 7 días (o nunca contactado) aparece en "Sin contactar", con "N d sin contacto" o "N d sin tocar" según corresponda.
+5. Un lead en `CERRADO_GANADO`, `CERRADO_PERDIDO` o `DESCARTADO` **no aparece** en ninguna de las dos listas, aunque tenga una próxima acción vencida o esté sin tocar hace mucho.
+6. El badge de rubro muestra el color propio del rubro (o "—" si el lead no tiene rubro asignado), y el badge de estado muestra la etiqueta correcta en español.
+7. Con las dos listas vacías (o probando en una cuenta sin leads vencidos/fríos), cada sección muestra su mensaje de estado vacío en vez de una tabla en blanco.
+
+### 1.21 Alta manual de un lead (y de una lista manual vacía)
+
+> **Estado (2026-09-30): implementado y verificado en la app real — cerrado.** `lib/leads/actions.ts` (`createLeadManually`, `createEmptyLeadList`, `createManualList` como helper compartido, y `updateLeadNotes` rediseñado), `components/leads/add-lead-dialog.tsx`, `components/leads/create-list-dialog.tsx` y `components/leads/lead-notes-form.tsx` (rediseñado). Botones "Agregar lead" y "Nueva lista" en `components/leads/lists-browser.tsx` (`/leads/lista`), y las mismas dos acciones en `components/leads/empty-lists-actions.tsx` para cuando todavía no hay ninguna lista. Los 13 ítems del checklist manual, ok — incluye un bug real (nota sin log al crear un lead) y una corrección de diseño (el cuadro de notas pasó de "nota actual" a registro) encontrados y resueltos durante la propia verificación.
+
+**"Nueva lista" se sumó sobre la marcha, durante la verificación de este mismo paso**: al probar el alta de un lead, hacía falta poder crear primero una lista manual vacía sin pasar por scraping ni CSV — el `+ Crear lista nueva…` del formulario de alta ya lo resolvía al vuelo, pero sólo junto con un lead. `createManualList()` extrae esa lógica (con el chequeo de nombre duplicado que el alta de lead no tenía) para que también la use un botón "Nueva lista" independiente, en `/leads/lista` y en su estado vacío.
+
+> **Bug real encontrado y corregido, también durante la verificación:** una nota escrita en el campo "Notas" del alta manual quedaba guardada en `leads.notes`, pero sin la fila correspondiente en `lead_activities` (`type: 'NOTA'`) que sí genera `updateLeadNotes` cuando se edita una nota desde la ficha (§1.3). El síntoma: el cuadro de notas de la ficha aparecía precargado con el texto, pero al tocar "Guardar" sin cambiar nada, `updateLeadNotes` compara contra el valor anterior y —correctamente para ese caso— no duplica el log si no hay cambio; el problema es que nunca hubo un primer log. `createLeadManually` ahora escribe esa actividad al crear el lead, si vino una nota.
+
+Cubre el caso que ninguna fuente de §1.2 resuelve: un lead contactado por fuera de la app (mensaje directo, referido, alguien que se cruzó en la calle) que igual tiene que entrar al mismo seguimiento que uno scrapeado. No es un quinto proveedor — no crea `scrape_job`. La lista es obligatoria, no opcional como se pensó en la primera versión de este paso (ver abajo): siempre existente elegida en el formulario, o una nueva creada ahí mismo con sólo el nombre.
+
+**Misma deduplicación que el resto** (`computeDedupeKey`, `owner_id` + `dedupe_key`, `CLAUDE.md` §4), pero con una diferencia deliberada frente a la importación por lotes: acá un choque **no se pisa en silencio**. CSV y Apify hacen `upsert` porque reimportar la misma zona es esperable y se quiere que enriquezca lo que ya existe; una alta manual es un solo lead cargado a propósito, así que si el teléfono o el sitio ya están en la base, la acción devuelve un error nombrando el lead existente en vez de sobreescribirlo.
+
+**Estado inicial editable, con `CONTACTADO` por defecto** — quien carga el lead ya lo contactó por su cuenta, así que arrancar en `NUEVO` sería falso. Si el estado elegido no es `NUEVO`, se escribe además una fila en `lead_activities` (`CAMBIO_ESTADO`, de `NUEVO` al estado elegido) y se fija `last_contacted_at = ahora`, igual que cualquier otro cambio de estado (§1.3) — así el lead no aparece como "sin contactar" en el centro de seguimiento (§1.20) apenas se lo carga.
+
+> **Corrección encontrada en la verificación manual (2026-09-29): la lista pasó de opcional a obligatoria.** La primera versión de este paso dejaba "Sin lista" como opción (`lead_list_id = null`, soportado por el esquema de §1.1) y redirigía a la ficha del lead recién creado para no perderlo de vista al crearlo. El checklist mostró el problema real: `/leads/lista/[id]` (§1.3) es por lista, no hay una vista de "todos los leads" cruzando listas, así que apenas se salía de esa ficha el lead quedaba inencontrable salvo por el buscador global (`searchCommandPalette`), que no alcanza como flujo principal. La opción elegida fue sacar "Sin lista" del formulario: si no hay una lista que sirva, el mismo formulario crea una con `source: 'MANUAL'` (ya estaba en el enum `lead_source` desde la migración inicial, sin usar hasta este paso) y sólo pide el nombre. El redirect a la ficha se mantuvo — sigue siendo útil para arrancar a trabajar el lead apenas se lo carga, aunque ya no sea la única forma de encontrarlo.
+
+**Verificación manual** (`CLAUDE.md` §13):
+
+1. En `/leads/lista` (con al menos una lista existente), aparece el botón "Agregar lead" al lado de "Generar lista".
+2. Completar sólo el nombre (dejando la lista en la que quedó seleccionada por defecto) y guardar → redirige a la ficha del lead recién creado (`/leads/[id]`), con estado "Contactado", sin rubro, colgado de esa lista.
+3. Completar todos los campos (teléfono, email, sitio, ciudad, rubro, lista existente, estado, notas) y guardar → redirige a la ficha, y desde `/leads/lista/[id]` de la lista elegida el lead aparece con el rubro y las notas guardadas.
+4. Elegir "+ Crear lista nueva…", escribir un nombre y guardar → se crea una lista nueva con ese nombre (visible en `/leads/lista`, con la fuente que muestra "CSV / manual") y el lead queda colgado de ella.
+5. Repetir el alta con el **mismo teléfono** que un lead ya cargado → el diálogo no se cierra ni redirige, y muestra el error nombrando el lead existente; no se crea un duplicado ni una lista de más.
+6. Cargar un lead dejando el estado en "Nuevo" → no se escribe ninguna fila en `lead_activities`, y el lead **sí** aparece en "Sin contactar" del centro de seguimiento (§1.20).
+7. Cargar un lead con estado "Contactado" (el default) → se escribe una actividad de cambio de estado NUEVO → CONTACTADO en su timeline, y el lead **no** aparece en el centro de seguimiento.
+8. Botón "Nueva lista" al lado de "Agregar lead" → crear una lista sólo con nombre (sin rubro) → aparece en `/leads/lista` con 0 leads, sin haber tocado Apify ni CSV.
+9. Repetir "Nueva lista" con un nombre que ya existe → error "Ya existe una lista con ese nombre.", no se crea una segunda.
+10. Con la cuenta sin ninguna lista (estado vacío de `/leads/lista`), aparecen los dos botones — "Nueva lista vacía" y "Generar lista" — y el primero crea la lista y la pantalla pasa a mostrarla en vez de quedarse en el estado vacío. *(Verificado por lectura de código, no en vivo — hacerlo en vivo implicaba vaciar listas reales.)*
+11. Cargar un lead nuevo con una nota → en su ficha, el timeline muestra esa nota como actividad (`NOTA`), no sólo en el cuadro de texto — confirma el fix del bug de abajo.
+12. En la ficha de cualquier lead, escribir una nota en el cuadro "Nueva nota" y guardar → queda en la actividad, y **el cuadro se vacía** (no vuelve a mostrar lo que se acaba de guardar). Recargar la página: sigue vacío.
+13. Guardar sólo la "Próxima acción" con el cuadro de nota vacío → se actualiza la fecha y no se agrega ninguna actividad `NOTA` vacía ni se borra la última nota guardada (`leads.notes`, que sigue usándose como "más reciente" para el CSV de §1.3).
+
+> **Bug real encontrado y corregido durante esta misma verificación (ítem 3, 2026-09-29):** una nota escrita en el campo "Notas" del alta manual quedaba guardada en `leads.notes`, pero sin la fila correspondiente en `lead_activities` (`type: 'NOTA'`) que sí genera `updateLeadNotes` cuando se edita una nota desde la ficha (§1.3). `createLeadManually` ahora escribe esa actividad al crear el lead, si vino una nota.
+>
+> **Decisión de diseño que salió de este mismo bug, y que cambia el comportamiento en toda la app (no sólo el alta manual):** el cuadro de "Notas" de la ficha mostraba siempre la última nota guardada, precargada — el mismo motivo por el que el bug de arriba pasó desapercibido (el texto ya estaba ahí, así que "Guardar" sin tocarlo parecía no hacer nada). Se decidió que el cuadro pase a ser **un registro**: se escribe una nota, se guarda, queda en el timeline, y el cuadro se vacía para la siguiente — igual que cualquier otra actividad, en vez de funcionar como un campo "nota actual". `leads.notes` se sigue actualizando (con la nota más reciente, para el CSV de §1.3), pero ya no se usa como valor inicial del formulario, y un guardado sin nota nueva no lo toca. `updateLeadNotes` (`lib/leads/actions.ts`) y `LeadNotesForm` (`components/leads/lead-notes-form.tsx`) se reescribieron para esto.
+>
+> El primer lead cargado con el bug original todavía activo (Daniel Seisdedos, id `4535f6dd-c8b7-4e0c-8c9a-ebad281c3b70`) no se pudo corregir con un `insert` directo en `lead_activities` — dos intentos por `curl` con la service role key quedaron bloqueados por el clasificador de seguridad de Claude Code, y el `insert` manual por SQL Editor que se le pidió al usuario tampoco llegó a aplicarse. Se resolvió por la vía normal de la app: editar la nota existente (un carácter alcanza) y guardar, lo que sí dispara el log porque el texto cambió.
+
+### 1.22 Cadena de ejecución (reabre §1.6)
+
+> **Estado (2026-09-30): implementado, verificación manual PENDIENTE.** Migraciones `20260930120000_sales_goals.sql` y `20260930130000_execution_metrics_booking_window.sql` (aplicadas con `db push`, tipos regenerados), `lib/leads/execution/{chain,blend,queries,actions,summary}.ts`, `lib/leads/goals.ts`, `components/leads/execution/{goal-form-dialog,daily-contacts-chart}.tsx` y `app/(app)/leads/objetivo/page.tsx`, agregada al sidebar. Tile "Hoy" en el dashboard `/leads`.
+
+Lleva a la app la planilla "Mi cadena de ejecución": de un objetivo de facturación mensual, un ticket promedio y tres tasas, cuántos **contactos por día** hacen falta — y que esas tasas, cargadas a ojo, se corrijan solas con lo que pasa de verdad.
+
+**La cadena**, idéntica a la planilla (`buildChain`, pura): clientes = ⌈facturación / ticket⌉ → llamadas = ⌈clientes / cierre⌉ → agendas = ⌈llamadas / asistencia⌉ → contactos/mes = ⌈agendas / agenda⌉ → contactos/día = ⌈contactos/mes / días hábiles⌉ → contactos/semana = contactos/día × días por semana. Con 2000 / 500 / 15 % / 75 % / 10 % / 20 / 6 da 4 · 27 · 36 · 360 · 18 · 108.
+
+**Ticket a ojo, no facturación real.** El Gestor de Facturación es la Fase 2 y no se adelanta (`CLAUDE.md` §2). La facturación del mes se muestra como *estimada* (ganados × ticket) a través de `RevenueSource` en `lib/leads/goals.ts`; cuando exista Facturación se implementa otra fuente ahí.
+
+**Un contacto es el primer toque saliente a un lead**, venga de donde venga — la vista `lead_first_contacts` toma el `min()` de: mensaje del vendedor confirmado (§1.11), actividad WhatsApp / email / llamada (§1.3), o cambio de estado que lo saca de `NUEVO`/`LISTO` (alta manual de §1.21). Un segundo mensaje al mismo lead no suma.
+
+**Las tres tasas observadas** (`leads_execution_metrics`, ventana 7 / 30 / 90 días):
+
+- *Agenda*: de los leads con primer contacto en una ventana **corrida 7 días hacia atrás** (`BOOKING_LAG_DAYS`), cuántos llegaron a una reunión (turno cargado o estado de reunión en adelante alguna vez). Se corre en vez de recortarse porque un contacto de ayer todavía no tuvo tiempo de agendar — la primera versión recortaba, y con la ventana de 7 días la cohorte quedaba siempre vacía (de ahí la segunda migración).
+- *Asistencia*: turnos colgados de un lead, ya pasados: `REALIZADA / (REALIZADA + NO_ASISTIO)`. Los que quedaron en "agendada" sin marcar no cuentan.
+- *Cierre*: de los leads con reunión realizada en la ventana, cuántos llegaron a `CERRADO_GANADO`.
+
+**Mezcla automática** (`blendRate`): `usada = (k · supuesta + éxitos) / (k + n)`. La tasa del usuario vale como `k` observaciones imaginarias — 50 para agenda, 10 para asistencia y cierre, proporcional al volumen natural de cada etapa. Con n = 0 manda el supuesto; con n ≫ k manda lo real. La pantalla muestra supuesta · observada (con éxitos/n) · usada · peso de los datos, y marca "muestra chica" por debajo de `RATE_MIN_SAMPLE`, con el mismo criterio que `ANGLE_MIN_SAMPLE` (§1.19). La cadena aparece dos veces: con tus tasas y con las ajustadas, que es la que manda.
+
+**Una sola meta activa** (índice único parcial, como `brand_goals` de `Plans/03 §3.13`); `sales_define_goal` archiva la anterior y crea la nueva en una transacción, así queda el historial.
+
+**Verificación manual** (`CLAUDE.md` §13):
+
+1. `/leads/objetivo` sin objetivo → estado vacío con "Definir objetivo"; el dashboard `/leads` muestra el tile "Hoy —" con el link "Definir objetivo".
+2. Definir el objetivo con los valores prellenados (2000 / 500 / 10 % / 75 % / 15 % / 20 / 6) → la cadena da 4 · 27 · 36 · 360 · 18 · 108 en la columna "Con tus tasas".
+3. Registrar un WhatsApp en un lead nunca contactado → "Hoy" sube en 1. Registrar otro mensaje al mismo lead → no sube.
+4. Confirmar una apertura del copiloto en otro lead nunca contactado → sube en 1. Alta manual de un lead en `CONTACTADO` (§1.21) → sube en 1.
+5. Una tasa sin datos muestra "sin datos", 0/0, y la usada es igual a tu supuesto.
+6. Marcar un turno pasado como realizado y otro como no asistió → la asistencia observada muestra 50 % (1/2, "muestra chica") y la usada se mueve apenas desde 75 % (≈ 70,8 %).
+7. Cambiar 7d / 30d / 90d → cambian las observadas, las usadas y la columna ajustada.
+8. "Editar objetivo" con otros valores → la cadena se recalcula; en la base queda una sola fila `ACTIVA` y la anterior `ARCHIVADA`.
+9. El gráfico "Contactos por día" muestra los días del mes con la línea de objetivo; los días que llegaron al objetivo en amarillo, tooltip por barra.
+10. El sidebar muestra "Objetivo" debajo de "Dashboard", y el tile "Hoy X / Y" del dashboard lleva a `/leads/objetivo` con los mismos números.
+
 ---
 
 ## Fases siguientes (fuera de alcance ahora)
 
-- **Fase 2 — Gestor de Facturación.** Al terminarlo, se implementa §1.6 y se enciende la sección de objetivo diario en Leads
+- **Fase 2 — Gestor de Facturación.** Al terminarlo, se implementa una `RevenueSource` real en `lib/leads/goals.ts` y la facturación de la cadena de ejecución (§1.22) deja de ser estimada
 - **Fase 3 — Gestor de Marca Personal**
 - **Fase 4 — Panel principal.** Recién con los tres gestores vivos: agrega las métricas de las tres patas del negocio
 

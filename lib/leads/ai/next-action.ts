@@ -30,6 +30,19 @@ export interface NextBestAction {
 }
 
 /**
+ * Acciones que implican escribirle algo al prospecto ahora (§1.12). Quedan
+ * afuera `WAIT` (esperar respuesta humana), `DISQUALIFY` (no se responde) y
+ * `FOLLOW_UP` (espera a la fecha de retomar — SeguimientoComposer se encarga
+ * cuando llega, §1.16). Se usa como respaldo cuando el analizador vuelve
+ * `suggested_reply.has_reply = false` a pesar de que esta acción sí corresponde.
+ */
+const REPLY_WORTHY_ACTIONS = new Set<LeadNextAction>(["ASK_QUESTION", "EXPLAIN_SERVICE", "ASK_FOR_MEETING", "CLOSE_LEAD"]);
+
+export function isReplyWorthyAction(action: LeadNextAction): boolean {
+  return REPLY_WORTHY_ACTIONS.has(action);
+}
+
+/**
  * `SEND_INFORMATION` no sale de acá: es casi siempre una salida cortés (SPA
  * §12, "mandame información") y decidir mandarla es una lectura de contexto
  * que este árbol no tiene forma confiable de automatizar. Queda como opción

@@ -17,14 +17,19 @@ export interface NormalizedAccountSnapshot {
   followersCount: number | null;
   followsCount: number | null;
   mediaCount: number | null;
+}
+
+/** Las métricas "de un día" de una cuenta, antes de mapearlas a `brand_account_metrics`. */
+export interface NormalizedDailyMetrics {
+  externalId: string;
+  /** YYYY-MM-DD del día al que corresponden (no "hoy"). */
+  date: string;
   reach: number | null;
   impressions: number | null;
   profileViews: number | null;
   newFollowers: number | null;
   accountsEngaged: number | null;
   totalInteractions: number | null;
-  /** Payload original de la fila, tal cual la devolvió el conector. */
-  raw: unknown;
 }
 
 /** Pieza de contenido normalizada, antes de mapearla a `brand_posts` / `brand_post_metrics`. */
@@ -47,7 +52,7 @@ export interface NormalizedPost {
   reelAvgWatchTimeMs: number | null;
   reelSkipRate: number | null;
   newFollowers: number | null;
-  /** Payload original de la fila, tal cual la devolvió el conector. */
+  /** Payload original, tal cual lo devolvió la API. */
   raw: unknown;
 }
 
@@ -81,9 +86,6 @@ export interface PublishMedia {
 }
 
 export interface PublishParams {
-  apiKey: string;
-  /** Username de la cuenta (`brand_accounts.username`): con eso se resuelve la cuenta en Windsor. */
-  accountUsername: string | null;
   kind: BrandPostKind;
   caption: string | null;
   /** Uno para reel/post/historia; de 2 a 10 para un carrusel. */
@@ -91,53 +93,62 @@ export interface PublishParams {
 }
 
 export interface PublishResult {
-  /** El id de la pieza en la plataforma. Null si el conector no lo devolvió — la sincronización la empalma después. */
+  /** El id de la pieza en la plataforma. Null si la plataforma no lo devolvió — la sincronización la empalma después. */
   externalId: string | null;
-  /** Lo que respondió el conector, para mostrarlo tal cual. */
+  /** Lo que respondió la plataforma, para mostrarlo tal cual. */
   message: string | null;
 }
 
 /**
- * Una fuente de métricas de marca corrida contra Windsor.ai.
+ * Una fuente de métricas de marca, hablada contra la API oficial de la
+ * plataforma (Instagram: Graph API de Meta — lib/meta/client.ts).
  *
  * Igual que `LeadSourceProvider` en lib/providers/types.ts: sumar una
  * plataforma es un archivo nuevo + una línea en el registro, nunca una
- * pantalla editada (ver CLAUDE.md §9 y Plans/03 §3.1).
+ * pantalla editada (ver CLAUDE.md §9 y Plans/03 §3.1). Cada plataforma resuelve
+ * sus credenciales y su paginación adentro; el motor de sync sólo ve filas ya
+ * normalizadas.
  */
 export interface BrandSourceProvider {
   id: BrandPlatform;
   label: string;
-  /** Slug del conector en Windsor, ej. "instagram". */
-  connector: string;
-  /** Field ids de Windsor para el snapshot de cuenta (`fields=` de la consulta de lectura). */
-  accountFields: string[];
-  /**
-   * Field ids "por día" del snapshot de cuenta (ej. `follower_count_1d`).
-   * Se consultan aparte de `accountFields`: mezclarlos con los totales hace
-   * que Windsor decomponga la respuesta por día y los totales vuelvan null.
-   * Windsor devuelve una fila por día de una ventana reciente por default.
-   */
-  accountDailyFields?: string[];
-  /** Field ids de Windsor para cada pieza de contenido. */
-  mediaFields: string[];
-  /**
-   * Un `[name, size]` de campos de Windsor por dimensión de audiencia (ver
-   * `capabilities.audience`). Se consulta una dimensión por vez: Windsor
-   * devuelve una fila por bucket (ej. un rango etario), y mezclar dos
-   * dimensiones en la misma consulta produciría un cruce ambiguo.
-   */
-  audienceFields?: Partial<Record<BrandAudienceDimension, [string, string]>>;
-  /** Field ids de Windsor para comentarios (debe incluir el id de la pieza — ver Plans/03 §3.4). */
-  commentFields?: string[];
   capabilities: {
     audience: boolean;
     stories: boolean;
     publish: BrandPostKind[];
   };
-  mapAccount(row: unknown): NormalizedAccountSnapshot | null;
-  mapMedia(row: unknown): NormalizedPost | null;
-  /** `row` ya viene escopeado a una sola dimensión (ver `audienceFields`). */
-  mapAudience?(dimension: BrandAudienceDimension, row: unknown): NormalizedAudienceRow | null;
-  mapComment?(row: unknown): NormalizedComment | null;
+  /** Hay credenciales cargadas para esta plataforma (no dice si son válidas). */
+  isConfigured(): boolean;
+  /** Identidad + totales "a hoy" de cada cuenta. */
+  fetchAccounts(): Promise<NormalizedAccountSnapshot[]>;
+  /** Métricas por día de una ventana reciente, una fila por cuenta y día. */
+  fetchDailyMetrics?(): Promise<NormalizedDailyMetrics[]>;
+  /**
+   * Las piezas de contenido con sus métricas. Una pieza fuera de la ventana en
+   * la que se piden métricas vuelve con TODAS en null, y el motor de sync no le
+   * escribe fila de métricas de hoy (ver `hasAnyMetric`).
+   */
+  fetchMedia(): Promise<NormalizedPost[]>;
+  /** Todas las dimensiones de audiencia de la cuenta. Vacío si la plataforma no las da (ej. menos de 100 seguidores). */
+  fetchAudience?(): Promise<NormalizedAudienceRow[]>;
+  /** Comentarios de las piezas dadas. */
+  fetchComments?(posts: NormalizedPost[]): Promise<NormalizedComment[]>;
   publish?(params: PublishParams): Promise<PublishResult>;
+}
+
+/** Una pieza sin ninguna métrica no debe escribir una fila de "hoy": pisaría con nulls la última foto buena. */
+export function hasAnyMetric(post: NormalizedPost): boolean {
+  return [
+    post.reach,
+    post.impressions,
+    post.views,
+    post.likes,
+    post.comments,
+    post.shares,
+    post.saved,
+    post.reelTotalWatchTimeMs,
+    post.reelAvgWatchTimeMs,
+    post.reelSkipRate,
+    post.newFollowers,
+  ].some((value) => value !== null);
 }

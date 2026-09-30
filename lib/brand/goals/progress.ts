@@ -6,7 +6,7 @@ import { addDays, daysBetween } from "./days";
  * calculan acá y no se le piden al modelo.
  *
  * El ritmo sale de las fotos diarias de `brand_account_metrics.followers_count`
- * porque Windsor sólo da el conteo de HOY, y `follower_count_1d` (nuevos por
+ * porque Instagram sólo da el conteo de HOY, y `follower_count` (nuevos por
  * día) llega null mientras la cuenta tenga pocos seguidores.
  */
 

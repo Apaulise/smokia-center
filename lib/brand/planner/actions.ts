@@ -7,11 +7,9 @@ import { generateScriptFromIdea } from "@/lib/brand/ai/script";
 import { buildScriptContext } from "@/lib/brand/ai/script-context";
 import { getBrandSource } from "@/lib/brand/sources/registry";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
-import { decrypt } from "@/lib/crypto";
-import { WINDSOR_KEY_SETTING } from "@/lib/settings/constants";
 import { createClient, requireUser } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/database.types";
-import { WindsorActionError } from "@/lib/windsor/client";
+import { MetaApiError } from "@/lib/meta/client";
 
 import { isPublishableKind, validateFileForKind, validateMediaForPublish, type MediaFile } from "./rules";
 import {
@@ -411,17 +409,6 @@ export async function unlinkPublishedItem(itemId: string): Promise<PlannerResult
   return { ok: true };
 }
 
-async function getWindsorApiKey(): Promise<PlannerResult<{ apiKey: string }>> {
-  const supabase = await createClient();
-  const { data: row } = await supabase.from("settings").select("value_encrypted").eq("key", WINDSOR_KEY_SETTING).maybeSingle();
-  if (!row) return { ok: false, message: "Falta cargar la API key de Windsor en Configuración." };
-  try {
-    return { ok: true, apiKey: decrypt(row.value_encrypted) };
-  } catch {
-    return { ok: false, message: "La API key de Windsor guardada no se pudo leer. Volvé a cargarla en Configuración." };
-  }
-}
-
 export type PublishResult = PlannerResult<{ linked: boolean; message: string | null }>;
 
 /**
@@ -432,9 +419,9 @@ export type PublishResult = PlannerResult<{ linked: boolean; message: string | n
  *    ayuda, no una garantía.
  * 2. Un candado (`publish_started_at`) contra el doble clic: publicar dos
  *    veces es publicar dos posts.
- * 3. Si no llega respuesta de Windsor (corte, timeout), NO se sabe si salió.
- *    El candado no se libera y el mensaje manda a mirar Instagram antes de
- *    reintentar. Sólo un rechazo explícito de Windsor libera el candado.
+ * 3. Si no llega respuesta de Instagram en el último paso (corte, timeout), NO se
+ *    sabe si salió. El candado no se libera y el mensaje manda a mirar Instagram
+ *    antes de reintentar. Sólo un rechazo explícito libera el candado.
  */
 export async function publishPlannerItem(id: string): Promise<PublishResult> {
   await requireUser();
@@ -461,16 +448,9 @@ export async function publishPlannerItem(id: string): Promise<PublishResult> {
     return { ok: false, message: `El caption con los hashtags suma ${caption.length} caracteres y el máximo es ${CAPTION_MAX_CHARS}.` };
   }
 
-  const key = await getWindsorApiKey();
-  if (!key.ok) return key;
-
-  const { data: account } = await supabase
-    .from("brand_accounts")
-    .select("username")
-    .eq("platform", item.platform)
-    .order("last_synced_at", { ascending: false, nullsFirst: false })
-    .limit(1)
-    .maybeSingle();
+  if (!provider.isConfigured()) {
+    return { ok: false, message: "Faltan INSTAGRAM_ACCESS_TOKEN e INSTAGRAM_USER_ID en las variables de entorno." };
+  }
 
   // El candado: sólo lo toma quien encuentre la pieza sin publicar y sin otro intento reciente.
   const lockExpiry = new Date(Date.now() - PUBLISH_LOCK_MINUTES * 60_000).toISOString();
@@ -497,8 +477,6 @@ export async function publishPlannerItem(id: string): Promise<PublishResult> {
   let message: string | null;
   try {
     const result = await provider.publish({
-      apiKey: key.apiKey,
-      accountUsername: account?.username ?? null,
       kind: item.kind,
       caption,
       media: urls,
@@ -507,7 +485,7 @@ export async function publishPlannerItem(id: string): Promise<PublishResult> {
     message = result.message;
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Error desconocido publicando.";
-    const definitive = error instanceof WindsorActionError && error.definitive;
+    const definitive = error instanceof MetaApiError && error.definitive;
 
     await supabase
       .from("brand_content_items")

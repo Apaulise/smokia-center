@@ -104,6 +104,27 @@ export async function listLeadActivities(leadId: string) {
   return data ?? [];
 }
 
+export type LeadNoteRow = Pick<Database["public"]["Tables"]["lead_activities"]["Row"], "content" | "occurred_at">;
+
+/**
+ * Las notas manuales del lead (tipo `NOTA` de `lead_activities`), más viejas
+ * primero — para el copiloto (Plan §1.7 y ss.). Alguien que anota "esto lo
+ * contestó un bot" o "ya tienen una solución armada" está corrigiendo al
+ * sistema con algo que sólo un humano puede ver; sin esto esa nota se queda
+ * en el timeline y el próximo análisis o mensaje sugerido no la conoce.
+ */
+export async function listLeadNotes(leadId: string): Promise<LeadNoteRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("lead_activities")
+    .select("content, occurred_at")
+    .eq("lead_id", leadId)
+    .eq("type", "NOTA")
+    .order("occurred_at", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function listUpcomingAppointmentsForLead(leadId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -434,6 +455,33 @@ export async function listStaleLeads(days = 7, limit = 5) {
     .limit(limit);
   if (error) throw error;
   return data ?? [];
+}
+
+export type FollowUpQueueLead = LeadWithRelations & { overdue: boolean };
+
+/**
+ * Cola completa de seguimiento de `/leads/seguimiento` (Plan §1.20): misma
+ * condición que `listStaleLeads` (el widget del dashboard usa esa, acotada a
+ * 5), pero sin el tope, con el join completo de `SELECT_LEAD_ROW` y separable
+ * en "vencido" / "sin contactar" con el flag `overdue`.
+ */
+export async function listFollowUpQueue(days = 7, limit = 200) {
+  const supabase = await createClient();
+  const threshold = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("leads")
+    .select(SELECT_LEAD_ROW)
+    .not("status", "in", "(CERRADO_GANADO,CERRADO_PERDIDO,DESCARTADO)")
+    .or(`last_contacted_at.lt.${threshold},and(last_contacted_at.is.null,created_at.lt.${threshold}),next_action_at.lte.${now}`)
+    .order("last_contacted_at", { ascending: true, nullsFirst: true })
+    .limit(limit);
+  if (error) throw error;
+  const rows = (data ?? []) as LeadWithRelations[];
+  return rows.map((lead) => ({
+    ...lead,
+    overdue: Boolean(lead.next_action_at && new Date(lead.next_action_at) <= new Date(now)),
+  })) satisfies FollowUpQueueLead[];
 }
 
 // ── Agenda (Plan §1.5) ───────────────────────────────────────────────────────

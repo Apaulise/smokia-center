@@ -5,16 +5,27 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/leads/ui/button";
-import { CopilotLabel, SmokeLines } from "@/components/leads/ui/copilot";
+import { CopilotChip, CopilotLabel, SmokeLines } from "@/components/leads/ui/copilot";
 import { ANGLE_LABEL, type SalesAngle } from "@/lib/leads/ai/angles";
 import { enrichOneLead } from "@/lib/leads/ai/actions";
-import type { EnrichmentResult } from "@/lib/leads/ai/enrich";
+import type { EnrichmentResult, WebPresenceStatus } from "@/lib/leads/ai/enrich";
 
 const CONFIDENCE_LABEL: Record<EnrichmentResult["confidence"], string> = {
   BAJA: "Confianza baja",
   MEDIA: "Confianza media",
   ALTA: "Confianza alta",
 };
+
+const WEB_PRESENCE_LABEL: Record<WebPresenceStatus, string> = {
+  DOMINIO_PROPIO: "Sitio propio",
+  DOMINIO_GRATUITO_O_CONSTRUCTOR: "Sitio en dominio gratuito/constructor",
+  SOLO_REDES_SOCIALES: "Sin sitio — sólo redes",
+  SIN_PRESENCIA_DIGITAL: "Sin presencia digital",
+  SIN_VERIFICAR: "Presencia web sin verificar",
+};
+
+/** Estados donde vale la pena ofrecer un sitio de cortesía — el motivo por el que este chip existe. */
+const WEB_PRESENCE_OPPORTUNITY: Set<WebPresenceStatus> = new Set(["SOLO_REDES_SOCIALES", "SIN_PRESENCIA_DIGITAL"]);
 
 function List({ title, items }: { title: string; items: string[] }) {
   if (items.length === 0) return null;
@@ -60,6 +71,9 @@ export function EnrichPanel({ leadId, enrichment }: { leadId: string; enrichment
     );
   }
 
+  // Fallback para análisis guardados antes de sumarse este campo (blob opaco, sin migración de datos viejos).
+  const webPresenceStatus: WebPresenceStatus = enrichment?.webPresence?.status ?? "SIN_VERIFICAR";
+
   return (
     <div className="flex flex-col gap-3">
       {enrichment ? (
@@ -80,6 +94,20 @@ export function EnrichPanel({ leadId, enrichment }: { leadId: string; enrichment
           ) : null}
           <List title="Señales de operación" items={enrichment.operationSignals} />
           <List title="Señales de tecnología" items={enrichment.technologySignals} />
+          {webPresenceStatus !== "SIN_VERIFICAR" ? (
+            <div>
+              <CopilotLabel>Presencia web</CopilotLabel>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <CopilotChip variant={WEB_PRESENCE_OPPORTUNITY.has(webPresenceStatus) ? "signal" : "pain"}>
+                  {WEB_PRESENCE_LABEL[webPresenceStatus]}
+                </CopilotChip>
+                {WEB_PRESENCE_OPPORTUNITY.has(webPresenceStatus) ? (
+                  <span className="text-[13px] text-lm-signal-text">Oportunidad: sitio de cortesía</span>
+                ) : null}
+              </div>
+              {enrichment.webPresence?.detail ? <p className="mt-1 text-[13px] text-lm-ink-2">{enrichment.webPresence.detail}</p> : null}
+            </div>
+          ) : null}
           {enrichment.possiblePains.length > 0 ? (
             <div>
               <CopilotLabel>Posibles dolores (hipótesis, sin confirmar)</CopilotLabel>

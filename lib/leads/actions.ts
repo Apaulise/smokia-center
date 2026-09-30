@@ -12,7 +12,7 @@ import type { AppointmentStatus } from "@/lib/leads/appointments";
 import { computeDedupeKey } from "@/lib/leads/dedupe";
 import { buildIcsCalendar } from "@/lib/leads/ics";
 import { type CommandPaletteResults, listAppointmentsForIcs, searchCommandPalette } from "@/lib/leads/queries";
-import { STATUS_LABEL, type LeadStatus } from "@/lib/leads/status";
+import { LEAD_STATUSES, STATUS_LABEL, type LeadStatus } from "@/lib/leads/status";
 import { mapCsvRow, parseCsv } from "@/lib/providers/csv";
 import { getProvider } from "@/lib/providers/registry";
 import type { LeadSource } from "@/lib/providers/types";
@@ -303,6 +303,192 @@ export async function importCsvLeads(
   return { ok: true, message: `Se importaron ${newCount} leads nuevos${suffix}.` };
 }
 
+// ── Listas manuales, vacías o con un lead (Plan §1.21) ──────────────────────
+
+/**
+ * Una lista sin proveedor de por medio (`source: 'MANUAL'`, en el enum desde
+ * la migración inicial): "Nueva lista" vacía, o la que arma al vuelo el alta
+ * manual de un lead cuando no hay una que sirva. `lead_count` queda en 0 a
+ * propósito — la UI nunca lo lee para mostrar el conteo (usa el join
+ * `leads(count)` de `listLeadListsOverview`, que si se ajusta al borrar), así
+ * que no hace falta pisarlo cuando el primer lead entra un instante después.
+ */
+async function createManualList(
+  userId: string,
+  name: string,
+  industryId: string | null,
+): Promise<{ id: string } | { error: string }> {
+  if (await isDuplicateListName(name)) {
+    return { error: "Ya existe una lista con ese nombre." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("lead_lists")
+    .insert({ owner_id: userId, name, source: "MANUAL", status: "COMPLETADO", lead_count: 0, industry_id: industryId })
+    .select("id")
+    .single();
+  if (error || !data) return { error: "No se pudo crear la lista." };
+  return { id: data.id };
+}
+
+const emptyListSchema = z.object({
+  name: z.string().trim().min(2, "Ponele un nombre a la lista.").max(80, "Nombre muy largo."),
+  industryId: z.string().trim().uuid().optional().or(z.literal("")),
+});
+
+/** "Nueva lista" de `/leads/lista`: una lista manual vacía, sin scraping ni CSV, para ir cargándole leads uno por uno. */
+export async function createEmptyLeadList(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const user = await requireUser();
+
+  const parsed = emptyListSchema.safeParse({
+    name: formData.get("name"),
+    industryId: formData.get("industryId") || undefined,
+  });
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+  }
+
+  const result = await createManualList(user.id, parsed.data.name, parsed.data.industryId || null);
+  if ("error" in result) return { ok: false, message: result.error };
+
+  revalidatePath("/leads/lista");
+  return { ok: true, message: "Lista creada." };
+}
+
+// ── Alta manual de un lead (Plan §1.21) ─────────────────────────────────────
+
+export type CreateLeadState = { ok: true; leadId: string } | { ok: false; message: string } | null;
+
+const manualLeadSchema = z.object({
+  name: z.string().trim().min(2, "Ponele un nombre al lead.").max(120, "Nombre muy largo."),
+  phone: z.string().trim().max(40).optional().or(z.literal("")),
+  email: z.string().trim().max(160).optional().or(z.literal("")),
+  website: z.string().trim().max(200).optional().or(z.literal("")),
+  city: z.string().trim().max(100).optional().or(z.literal("")),
+  industryId: z.string().trim().uuid().optional().or(z.literal("")),
+  leadListId: z.string().trim().uuid().optional().or(z.literal("")),
+  newListName: z.string().trim().max(80).optional().or(z.literal("")),
+  status: z.string().refine((value): value is LeadStatus => (LEAD_STATUSES as string[]).includes(value), "Estado inválido."),
+  notes: z.string().trim().max(2000).optional().or(z.literal("")),
+});
+
+/**
+ * Un lead contactado por fuera de la app (mensaje directo, referido, etc.) y
+ * cargado a mano para que entre al mismo seguimiento que uno scrapeado — no
+ * hay proveedor de por medio, así que no crea `scrape_job`. La lista es
+ * obligatoria: un lead "suelto" no tenía ninguna pantalla que lo mostrara
+ * después de crearlo (`/leads/lista/[id]` es por lista), así que si no hay
+ * una que sirva, esta misma acción crea una (`source: 'MANUAL'`, ya
+ * contemplado en el enum desde la migración inicial) con sólo un nombre.
+ * Misma deduplicación que el resto (`owner_id` + `dedupe_key`, CLAUDE.md §4),
+ * pero acá un choque no se pisa en silencio como en la importación por
+ * lotes: es un solo lead cargado a propósito, así que se avisa en vez de
+ * sobreescribir.
+ */
+export async function createLeadManually(_prevState: CreateLeadState, formData: FormData): Promise<CreateLeadState> {
+  const user = await requireUser();
+
+  const parsed = manualLeadSchema.safeParse({
+    name: formData.get("name"),
+    phone: formData.get("phone") || undefined,
+    email: formData.get("email") || undefined,
+    website: formData.get("website") || undefined,
+    city: formData.get("city") || undefined,
+    industryId: formData.get("industryId") || undefined,
+    leadListId: formData.get("leadListId") || undefined,
+    newListName: formData.get("newListName") || undefined,
+    status: formData.get("status"),
+    notes: formData.get("notes") || undefined,
+  });
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+  }
+  if (!parsed.data.leadListId && !parsed.data.newListName) {
+    return { ok: false, message: "Elegí una lista o creá una nueva." };
+  }
+
+  const phone = parsed.data.phone || null;
+  const email = parsed.data.email || null;
+  const website = parsed.data.website || null;
+  const city = parsed.data.city || null;
+  const industryId = parsed.data.industryId || null;
+  const notes = parsed.data.notes || null;
+
+  const dedupeKey = computeDedupeKey({ name: parsed.data.name, phone, website, city, raw: null });
+
+  const supabase = await createClient();
+
+  const { data: existing } = await supabase
+    .from("leads")
+    .select("id, name")
+    .eq("dedupe_key", dedupeKey)
+    .maybeSingle();
+  if (existing) {
+    return {
+      ok: false,
+      message: `Ya hay un lead con ese teléfono o sitio: "${existing.name}". Buscalo en Listas en vez de cargarlo de nuevo.`,
+    };
+  }
+
+  let leadListId = parsed.data.leadListId || null;
+  if (!leadListId) {
+    // Validado arriba: sin leadListId, newListName no puede estar vacío.
+    const result = await createManualList(user.id, parsed.data.newListName as string, industryId);
+    if ("error" in result) return { ok: false, message: result.error };
+    leadListId = result.id;
+  }
+
+  const { data: inserted, error } = await supabase
+    .from("leads")
+    .insert({
+      owner_id: user.id,
+      name: parsed.data.name,
+      phone,
+      email,
+      website,
+      city,
+      industry_id: industryId,
+      lead_list_id: leadListId,
+      status: parsed.data.status,
+      notes,
+      dedupe_key: dedupeKey,
+      last_contacted_at: parsed.data.status === "NUEVO" ? null : new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+  if (error || !inserted) {
+    return { ok: false, message: "No se pudo cargar el lead." };
+  }
+
+  if (parsed.data.status !== "NUEVO") {
+    await supabase.from("lead_activities").insert({
+      owner_id: user.id,
+      lead_id: inserted.id,
+      type: "CAMBIO_ESTADO",
+      from_status: "NUEVO",
+      to_status: parsed.data.status,
+    });
+  }
+
+  // Misma regla que `updateLeadNotes`: la nota deja rastro en el timeline.
+  // Necesario acá porque, a diferencia de ese formulario, ésta es la
+  // primera vez que la nota existe — no hay un "antes" con el que compararla.
+  if (notes) {
+    await supabase.from("lead_activities").insert({
+      owner_id: user.id,
+      lead_id: inserted.id,
+      type: "NOTA",
+      content: notes,
+    });
+  }
+
+  revalidatePath("/leads/lista");
+  revalidatePath("/leads");
+  revalidatePath("/leads/seguimiento");
+  return { ok: true, leadId: inserted.id };
+}
+
 // ── Previsualización de listas (Plan §1.3) ──────────────────────────────────
 
 const renameListSchema = z.object({
@@ -583,20 +769,21 @@ export async function updateLeadNotes(
   if (!parsed.success) return { ok: false, message: "Datos inválidos." };
 
   const supabase = await createClient();
-  const { data: before } = await supabase
-    .from("leads")
-    .select("notes")
-    .eq("id", parsed.data.leadId)
-    .maybeSingle();
+  const newNote = parsed.data.notes?.trim() || null;
 
-  const newNotes = parsed.data.notes || null;
+  const update: Database["public"]["Tables"]["leads"]["Update"] = {
+    next_action_at: parsed.data.nextActionAt ? new Date(parsed.data.nextActionAt).toISOString() : null,
+  };
+  // El cuadro es un registro, no un campo "nota actual" (corrección de
+  // diseño, Plan §1.21): un guardado sin texto nuevo (por ejemplo, para
+  // tocar sólo la próxima acción) no debe borrar la última nota guardada en
+  // `leads.notes` — ese campo queda como caché de "la más reciente" para
+  // el CSV, y sólo se pisa cuando hay una nota nueva de verdad.
+  if (newNote) update.notes = newNote;
 
   const { data, error } = await supabase
     .from("leads")
-    .update({
-      notes: newNotes,
-      next_action_at: parsed.data.nextActionAt ? new Date(parsed.data.nextActionAt).toISOString() : null,
-    })
+    .update(update)
     .eq("id", parsed.data.leadId)
     .select("id");
   if (error) return { ok: false, message: "No se pudo guardar." };
@@ -605,17 +792,16 @@ export async function updateLeadNotes(
   // escrito nada.
   if (!data || data.length === 0) return { ok: false, message: "No se encontró el lead." };
 
-  // Guardar la nota no deja rastro visible en ningún otro lado de la ficha —
-  // se queda en el mismo cuadro de texto que ya se estaba mirando. Un registro
-  // en el timeline es la prueba de que quedó grabado. Sólo si cambió: si no,
-  // cada click en "Guardar" (por ejemplo al tocar sólo la próxima acción)
-  // duplicaría la misma nota en el historial.
-  if (newNotes && newNotes !== before?.notes) {
+  // Toda nota no vacía queda en el timeline — es el historial completo, no
+  // sólo la prueba de que se guardó. El cuadro se vacía del lado del cliente
+  // después de esto (`LeadNotesForm`), así que cada guardado es siempre una
+  // nota nueva: no hace falta comparar contra la anterior.
+  if (newNote) {
     await supabase.from("lead_activities").insert({
       owner_id: user.id,
       lead_id: parsed.data.leadId,
       type: "NOTA",
-      content: newNotes,
+      content: newNote,
     });
   }
 

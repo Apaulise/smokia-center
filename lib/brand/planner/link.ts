@@ -4,9 +4,9 @@
 // sincronización, con el cliente admin y el owner_id que resuelve quien
 // llama — igual que el resto de lib/brand/sync.ts (CLAUDE.md §4).
 //
-// Por qué hay dos caminos: la documentación de Windsor sólo garantiza un
-// mensaje de texto al publicar, no el id de lo publicado. Cuando el id viene,
-// el empalme es exacto. Cuando no, se busca por caption y horario, y sólo se
+// Por qué hay dos caminos: `media_publish` devuelve el id de lo publicado, pero puede no
+// llegar (un corte justo en esa respuesta). Cuando el id viene, el empalme es
+// exacto. Cuando no, se busca por caption y horario, y sólo se
 // enlaza si el candidato es ÚNICO: dos reels con el mismo caption a la misma
 // hora es un empate, y un empalme equivocado le pondría a una hipótesis las
 // métricas de otra pieza — peor que no empalmar.

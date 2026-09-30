@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Loader2, MessageSquareText, RefreshCw, Send, Sparkles } from "lucide-react";
+import { Check, Copy, Loader2, MessageCircle, MessageSquareText, RefreshCw, Send, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -19,6 +19,9 @@ import {
   type AnalyzeActionState,
   type OpeningActionState,
 } from "@/lib/leads/ai/actions";
+import type { AnalyzeOutput } from "@/lib/leads/ai/schemas";
+import { buildWhatsappLink } from "@/lib/leads/templates";
+import type { LeadMessageRow } from "@/lib/leads/queries";
 import type { LeadStatus } from "@/lib/leads/status";
 
 type Channel = "WHATSAPP" | "EMAIL" | "INSTAGRAM";
@@ -31,6 +34,35 @@ function composerModeFor(status: LeadStatus, nextActionAt: string | null): "aper
   if (status === "NUEVO" || status === "LISTO") return "apertura";
   if (status === "AHORA_NO" && nextActionAt && new Date(nextActionAt) <= new Date()) return "seguimiento";
   return "analizar";
+}
+
+/**
+ * El texto editable de un borrador de IA, distinguiendo quién lo cambió
+ * (Plan §1.20.1). Un botón de tono reescribe con la IA y corre la línea de
+ * base: sólo lo que teclea el humano cuenta como ejemplo de estilo, porque si
+ * no el modelo terminaría aprendiendo de su propia salida.
+ */
+function useAiDraft(initial = "") {
+  const [text, setText] = useState(initial);
+  const [baseline, setBaseline] = useState(initial);
+  const [editedByHuman, setEditedByHuman] = useState(false);
+
+  return {
+    text,
+    /** Generar, regenerar o reescribir por tono: sigue siendo texto de la IA. */
+    fromAi(next: string) {
+      setText(next);
+      setBaseline(next);
+      setEditedByHuman(false);
+    },
+    /** El `onChange` del textarea — acá sí escribió la persona. */
+    fromHuman(next: string) {
+      setText(next);
+      setEditedByHuman(true);
+    },
+    /** Lo que viaja al confirmar: `undefined` si no hubo edición manual. */
+    generatedContent: editedByHuman ? baseline : undefined,
+  };
 }
 
 function ChannelSegmented({ channel, onChange }: { channel: Channel; onChange: (c: Channel) => void }) {
@@ -55,34 +87,57 @@ export function LeadComposer({
   leadId,
   status,
   nextActionAt,
-  hasPhone,
+  phone,
   hasInstagram,
+  messages,
+  nextBestActionReason,
 }: {
   leadId: string;
   status: LeadStatus;
   nextActionAt: string | null;
-  hasPhone: boolean;
+  phone: string | null;
   hasInstagram: boolean;
+  /** Últimos mensajes, para recuperar una respuesta sugerida sin confirmar todavía (ver `AnalizarComposer`). */
+  messages: LeadMessageRow[];
+  nextBestActionReason: string | null;
 }) {
   const mode = composerModeFor(status, nextActionAt);
 
   if (mode === "apertura") {
-    return <AperturaComposer leadId={leadId} hasPhone={hasPhone} hasInstagram={hasInstagram} />;
+    return <AperturaComposer leadId={leadId} phone={phone} hasInstagram={hasInstagram} />;
   }
   if (mode === "seguimiento") {
-    return <SeguimientoComposer leadId={leadId} />;
+    return <SeguimientoComposer leadId={leadId} phone={phone} />;
   }
-  return <AnalizarComposer leadId={leadId} />;
+  return <AnalizarComposer leadId={leadId} phone={phone} messages={messages} nextBestActionReason={nextBestActionReason} />;
 }
 
-function AperturaComposer({ leadId, hasPhone, hasInstagram }: { leadId: string; hasPhone: boolean; hasInstagram: boolean }) {
+/**
+ * Si el último mensaje del hilo es del lead, ya tiene análisis guardado y ese
+ * análisis proponía una respuesta, esa respuesta sigue pendiente de
+ * confirmar — todavía no se mandó nada después. Se usa para reconstruir el
+ * panel al entrar a la ficha, así "Analizar otra respuesta" (que sólo
+ * limpia la pantalla, nunca borra nada de la base) o un cierre accidental de
+ * la pestaña no dejan a nadie sin forma de volver a ver ese mensaje.
+ */
+function findPendingReply(messages: LeadMessageRow[], nextActionReason: string | null): Analysis | null {
+  const last = messages[messages.length - 1];
+  if (!last || last.sender !== "LEAD" || !last.analysis) return null;
+  const analysis = last.analysis as AnalyzeOutput;
+  if (!analysis.suggested_reply?.has_reply || !analysis.suggested_reply.message) return null;
+  return { ok: true, analysis, nextActionReason: nextActionReason ?? "" };
+}
+
+function AperturaComposer({ leadId, phone, hasInstagram }: { leadId: string; phone: string | null; hasInstagram: boolean }) {
+  const hasPhone = Boolean(phone);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [confirming, setConfirming] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [message, setMessage] = useState("");
+  const body = useAiDraft();
   const [channel, setChannel] = useState<Channel>(hasPhone ? "WHATSAPP" : hasInstagram ? "INSTAGRAM" : "EMAIL");
   const [copied, setCopied] = useState(false);
+  const [savedAsExample, setSavedAsExample] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function handleGenerate() {
@@ -95,12 +150,12 @@ function AperturaComposer({ leadId, hasPhone, hasInstagram }: { leadId: string; 
         return;
       }
       setDraft(result.opening);
-      setMessage(result.opening.message);
+      body.fromAi(result.opening.message);
     });
   }
 
   function handleCopy() {
-    void navigator.clipboard.writeText(message).then(() => {
+    void navigator.clipboard.writeText(body.text).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -109,14 +164,23 @@ function AperturaComposer({ leadId, hasPhone, hasInstagram }: { leadId: string; 
   function handleConfirm() {
     if (!draft) return;
     setError(null);
+    const edited = Boolean(body.generatedContent);
     startTransition(async () => {
-      const result = await confirmLeadOpening({ leadId, message, angle: draft.angle as SalesAngle, variant: draft.variant, channel });
+      const result = await confirmLeadOpening({
+        leadId,
+        message: body.text,
+        angle: draft.angle as SalesAngle,
+        variant: draft.variant,
+        channel,
+        generatedContent: body.generatedContent,
+      });
       if (!result?.ok) {
         setError(result?.message ?? "No se pudo confirmar el envío.");
         return;
       }
       setDraft(null);
       setConfirming(false);
+      setSavedAsExample(edited);
       router.refresh();
     });
   }
@@ -129,6 +193,7 @@ function AperturaComposer({ leadId, hasPhone, hasInstagram }: { leadId: string; 
         </ComposerHead>
         <ComposerBody>
           <p className="text-lm-ink-2">Generá el primer mensaje para este negocio: contexto verificable + una pregunta.</p>
+          {savedAsExample ? <p className="mt-2 text-xs text-lm-ink-3">Se guardó tu versión como ejemplo de estilo.</p> : null}
           {error ? <p className="mt-2 text-lm-danger">{error}</p> : null}
         </ComposerBody>
         <ComposerFoot>
@@ -162,8 +227,8 @@ function AperturaComposer({ leadId, hasPhone, hasInstagram }: { leadId: string; 
             <p className="text-lm-ink">{draft.question}</p>
           </div>
         </div>
-        <Textarea value={message} onChange={(e) => setMessage(e.target.value)} className="min-h-24" />
-        <RewriteButtons message={message} onRewrite={setMessage} disabled={pending} />
+        <Textarea value={body.text} onChange={(e) => body.fromHuman(e.target.value)} className="min-h-24" />
+        <RewriteButtons message={body.text} onRewrite={body.fromAi} disabled={pending} />
         {error ? <p className="text-lm-danger">{error}</p> : null}
 
         {confirming ? (
@@ -174,7 +239,7 @@ function AperturaComposer({ leadId, hasPhone, hasInstagram }: { leadId: string; 
               <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(false)} disabled={pending}>
                 Volver
               </Button>
-              <Button type="button" variant="primary" size="sm" onClick={handleConfirm} disabled={pending || !message.trim()}>
+              <Button type="button" variant="primary" size="sm" onClick={handleConfirm} disabled={pending || !body.text.trim()}>
                 {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" strokeWidth={1.5} />}
                 {pending ? "Guardando…" : "Sí, ya lo mandé"}
               </Button>
@@ -184,6 +249,18 @@ function AperturaComposer({ leadId, hasPhone, hasInstagram }: { leadId: string; 
       </ComposerBody>
       {!confirming ? (
         <ComposerFoot>
+          {channel === "WHATSAPP" && phone ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={pending || !body.text.trim()}
+              onClick={() => window.open(buildWhatsappLink(phone, body.text), "_blank")}
+            >
+              <MessageCircle className="size-3.5" strokeWidth={1.5} />
+              Abrir WhatsApp
+            </Button>
+          ) : null}
           <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={handleCopy}>
             <Copy className="size-3.5" strokeWidth={1.5} />
             {copied ? "Copiado" : "Copiar"}
@@ -192,7 +269,7 @@ function AperturaComposer({ leadId, hasPhone, hasInstagram }: { leadId: string; 
             <RefreshCw className="size-3.5" strokeWidth={1.5} />
             Regenerar
           </Button>
-          <Button type="button" variant="primary" size="sm" disabled={pending || !message.trim()} onClick={() => setConfirming(true)}>
+          <Button type="button" variant="primary" size="sm" disabled={pending || !body.text.trim()} onClick={() => setConfirming(true)}>
             <Send className="size-3.5" strokeWidth={1.5} />
             Confirmar y marcar como enviado
             <Kbd className="ml-1">⌘↵</Kbd>
@@ -208,12 +285,25 @@ const RESPONSE_TYPE_LABEL: Record<"AUTORESPUESTA" | "HUMANA", string> = {
   HUMANA: "Respondió una persona",
 };
 
-function AnalizarComposer({ leadId }: { leadId: string }) {
+function AnalizarComposer({
+  leadId,
+  phone,
+  messages,
+  nextBestActionReason,
+}: {
+  leadId: string;
+  phone: string | null;
+  messages: LeadMessageRow[];
+  nextBestActionReason: string | null;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [text, setText] = useState("");
   const [channel, setChannel] = useState<Channel>("WHATSAPP");
-  const [result, setResult] = useState<Analysis | null>(null);
+  const pendingReply = findPendingReply(messages, nextBestActionReason);
+  // Arranca mostrando la respuesta sugerida pendiente si la hay (ver `findPendingReply`) — no en blanco.
+  const [result, setResult] = useState<Analysis | null>(pendingReply);
+  const [dismissed, setDismissed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function handleAnalyze() {
@@ -225,6 +315,7 @@ function AnalizarComposer({ leadId }: { leadId: string }) {
         return;
       }
       setResult(response);
+      setDismissed(false);
       setText("");
       router.refresh();
     });
@@ -286,6 +377,7 @@ function AnalizarComposer({ leadId }: { leadId: string }) {
             {result.analysis.suggested_reply.has_reply && result.analysis.suggested_reply.message ? (
               <SuggestedReplyBox
                 leadId={leadId}
+                phone={phone}
                 initialMessage={result.analysis.suggested_reply.message}
                 onConfirmed={() => setResult(null)}
               />
@@ -297,16 +389,39 @@ function AnalizarComposer({ leadId }: { leadId: string }) {
       </ComposerBody>
       <ComposerFoot>
         {result ? (
-          <Button type="button" variant="ghost" size="sm" onClick={() => setResult(null)}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setResult(null);
+              setDismissed(true);
+            }}
+          >
             <RefreshCw className="size-3.5" strokeWidth={1.5} />
             Analizar otra respuesta
           </Button>
         ) : (
-          <Button type="button" variant="primary" disabled={pending || !text.trim()} onClick={handleAnalyze}>
-            {pending ? <Loader2 className="size-3.5 animate-spin" /> : <MessageSquareText className="size-3.5" strokeWidth={1.5} />}
-            {pending ? "Analizando…" : "Analizar"}
-            <Kbd className="ml-1">⌘↵</Kbd>
-          </Button>
+          <>
+            {dismissed && pendingReply ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setResult(pendingReply);
+                  setDismissed(false);
+                }}
+              >
+                Volver a la respuesta sugerida
+              </Button>
+            ) : null}
+            <Button type="button" variant="primary" disabled={pending || !text.trim()} onClick={handleAnalyze}>
+              {pending ? <Loader2 className="size-3.5 animate-spin" /> : <MessageSquareText className="size-3.5" strokeWidth={1.5} />}
+              {pending ? "Analizando…" : "Analizar"}
+              <Kbd className="ml-1">⌘↵</Kbd>
+            </Button>
+          </>
         )}
       </ComposerFoot>
     </Composer>
@@ -315,28 +430,40 @@ function AnalizarComposer({ leadId }: { leadId: string }) {
 
 function SuggestedReplyBox({
   leadId,
+  phone,
   initialMessage,
   onConfirmed,
 }: {
   leadId: string;
+  phone: string | null;
   initialMessage: string;
   onConfirmed?: () => void;
 }) {
-  const [message, setMessage] = useState(initialMessage);
+  const body = useAiDraft(initialMessage);
 
   return (
     <div className="flex flex-col gap-2">
       <p className="text-xs text-lm-ink-3">Mensaje sugerido — editable</p>
-      <Textarea value={message} onChange={(e) => setMessage(e.target.value)} className="min-h-20" />
-      <RewriteButtons message={message} onRewrite={setMessage} />
-      <SuggestedReplyConfirm leadId={leadId} message={message} onConfirmed={onConfirmed} />
+      <Textarea value={body.text} onChange={(e) => body.fromHuman(e.target.value)} className="min-h-20" />
+      <RewriteButtons message={body.text} onRewrite={body.fromAi} />
+      <SuggestedReplyConfirm
+        leadId={leadId}
+        message={body.text}
+        kind="RESPUESTA"
+        generatedContent={body.generatedContent}
+        phone={phone}
+        onConfirmed={onConfirmed}
+      />
     </div>
   );
 }
 
-function SeguimientoComposer({ leadId }: { leadId: string }) {
+function SeguimientoComposer({ leadId, phone }: { leadId: string; phone: string | null }) {
   const [pending, startTransition] = useTransition();
-  const [message, setMessage] = useState<string | null>(null);
+  // `generated` marca si hay borrador en pantalla; el texto vive en `body`,
+  // que además recuerda cuál fue la última versión escrita por la IA (§1.20.1).
+  const [generated, setGenerated] = useState(false);
+  const body = useAiDraft();
   const [cannotReason, setCannotReason] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -349,7 +476,10 @@ function SeguimientoComposer({ leadId }: { leadId: string }) {
         setError(result.message);
         return;
       }
-      setMessage(result.message);
+      // "Regenerar" pisa la línea de base: el par que importa es contra el
+      // borrador que quedó en pantalla, no contra el primero que salió.
+      body.fromAi(result.message ?? "");
+      setGenerated(Boolean(result.message));
       setCannotReason(result.cannotGenerateReason);
     });
   }
@@ -363,23 +493,30 @@ function SeguimientoComposer({ leadId }: { leadId: string }) {
         <p className="text-lm-ink-2">Le llegó la fecha de retomar a un &quot;ahora no&quot; — el mensaje va a citar la conversación anterior.</p>
         {error ? <p className="text-lm-danger">{error}</p> : null}
 
-        {message ? (
+        {generated ? (
           <div className="flex flex-col gap-2">
-            <Textarea value={message} onChange={(e) => setMessage(e.target.value)} className="min-h-20" />
-            <RewriteButtons message={message} onRewrite={setMessage} disabled={pending} />
+            <Textarea value={body.text} onChange={(e) => body.fromHuman(e.target.value)} className="min-h-20" />
+            <RewriteButtons message={body.text} onRewrite={body.fromAi} disabled={pending} />
           </div>
         ) : cannotReason ? (
           <p className="rounded-lm-sm border border-lm-line-strong bg-lm-raised p-3 text-xs text-lm-ink-2">{cannotReason}</p>
         ) : null}
       </ComposerBody>
       <ComposerFoot>
-        {message ? (
+        {generated ? (
           <>
             <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={handleGenerate}>
               {pending ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" strokeWidth={1.5} />}
               Regenerar
             </Button>
-            <SuggestedReplyConfirm leadId={leadId} message={message} onConfirmed={() => setMessage(null)} />
+            <SuggestedReplyConfirm
+              leadId={leadId}
+              message={body.text}
+              kind="SEGUIMIENTO"
+              generatedContent={body.generatedContent}
+              phone={phone}
+              onConfirmed={() => setGenerated(false)}
+            />
           </>
         ) : (
           <Button type="button" variant="primary" disabled={pending} onClick={handleGenerate}>

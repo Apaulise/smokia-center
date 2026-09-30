@@ -1,6 +1,6 @@
 /**
- * Lectura defensiva de filas de Windsor: son `unknown` porque un conector
- * devuelve los campos que se le pidieron y cambia de forma sin avisar, mismo
+ * Lectura defensiva de respuestas de la Graph API: son `unknown` porque una API
+ * externa cambia de forma sin avisar, mismo
  * criterio que lib/providers/utils.ts para Apify (CLAUDE.md §5). Se duplica
  * en vez de importarse de ahí para no acoplar Marca a un módulo de Leads.
  */

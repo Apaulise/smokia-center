@@ -10,12 +10,7 @@ import { Field, Input, Select, Textarea } from "@/components/leads/ui/field";
 import { logContactActivity } from "@/lib/leads/actions";
 import type { LeadWithRelations } from "@/lib/leads/queries";
 import { LEAD_STATUSES, STATUS_LABEL, type LeadActivityType, type LeadStatus } from "@/lib/leads/status";
-import { buildMailtoLink, buildWhatsappLink, resolveTemplate } from "@/lib/leads/templates";
-import type { Database } from "@/lib/supabase/database.types";
-
-type Template = Database["public"]["Tables"]["message_templates"]["Row"];
-
-const DEFAULT_MESSAGE = "Hola {{nombre}}, te escribo de Awareness AI.";
+import { buildMailtoLink, buildWhatsappLink } from "@/lib/leads/templates";
 
 const CONTACT_LABEL: Record<"WHATSAPP" | "EMAIL" | "LLAMADA", string> = {
   WHATSAPP: "WhatsApp",
@@ -23,23 +18,28 @@ const CONTACT_LABEL: Record<"WHATSAPP" | "EMAIL" | "LLAMADA", string> = {
   LLAMADA: "Llamada",
 };
 
-/** Acciones rápidas del header del lead (Design System §07): 32px, secundarias. */
-export function ContactActions({ lead, templates }: { lead: LeadWithRelations; templates: Template[] }) {
+/**
+ * Acciones rápidas del header del lead (Design System §07): 32px, secundarias.
+ *
+ * WhatsApp/Email acá abren con un saludo genérico fijo, sólo para tener el
+ * chat/mail a mano — el mensaje de verdad (apertura, seguimiento, respuesta)
+ * se redacta con el copiloto en `LeadComposer` y se manda desde ahí, con su
+ * propio botón "Abrir WhatsApp" ya con el texto redactado.
+ */
+export function ContactActions({ lead }: { lead: LeadWithRelations }) {
   const [dialogType, setDialogType] = useState<"WHATSAPP" | "EMAIL" | "LLAMADA" | null>(null);
 
-  const vars = { nombre: lead.name, rubro: lead.industries?.name, ciudad: lead.city };
-  const whatsappTemplate = templates.find((t) => t.channel === "WHATSAPP")?.body ?? DEFAULT_MESSAGE;
-  const emailTemplate = templates.find((t) => t.channel === "EMAIL")?.body ?? DEFAULT_MESSAGE;
+  const defaultMessage = `Hola ${lead.name}, te escribo de Awareness AI.`;
 
   function openWhatsapp() {
     if (!lead.phone) return;
-    window.open(buildWhatsappLink(lead.phone, resolveTemplate(whatsappTemplate, vars)), "_blank");
+    window.open(buildWhatsappLink(lead.phone, defaultMessage), "_blank");
     setDialogType("WHATSAPP");
   }
 
   function openEmail() {
     if (!lead.email) return;
-    window.location.href = buildMailtoLink(lead.email, "Contacto — Awareness AI", resolveTemplate(emailTemplate, vars));
+    window.location.href = buildMailtoLink(lead.email, "Contacto — Awareness AI", defaultMessage);
     setDialogType("EMAIL");
   }
 

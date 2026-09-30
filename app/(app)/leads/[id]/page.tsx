@@ -27,7 +27,6 @@ import {
 } from "@/lib/leads/queries";
 import { formatAddress } from "@/lib/leads/address";
 import { LEAD_STATUSES } from "@/lib/leads/status";
-import { listMessageTemplates } from "@/lib/settings/queries";
 
 export async function generateMetadata({ params }: PageProps<"/leads/[id]">) {
   const { id } = await params;
@@ -47,12 +46,11 @@ export default async function LeadFichaPage({ params }: PageProps<"/leads/[id]">
   const lead = await getLead(id);
   if (!lead) notFound();
 
-  const [activities, messages, signals, appointments, templates, intel, navIds] = await Promise.all([
+  const [activities, messages, signals, appointments, intel, navIds] = await Promise.all([
     listLeadActivities(id),
     listLeadMessages(id),
     listLeadSignals(id),
     listUpcomingAppointmentsForLead(id),
-    listMessageTemplates(),
     getLeadIntel(id),
     lead.lead_lists ? listLeadIdsForNav(lead.lead_lists.id) : Promise.resolve([id]),
   ]);
@@ -100,7 +98,7 @@ export default async function LeadFichaPage({ params }: PageProps<"/leads/[id]">
               </>
             ) : null}
           </p>
-          <ContactActions lead={lead} templates={templates} />
+          <ContactActions lead={lead} />
         </div>
       </div>
 
@@ -166,7 +164,7 @@ export default async function LeadFichaPage({ params }: PageProps<"/leads/[id]">
           </InfoSection>
 
           <InfoSection eyebrow="Notas" divider>
-            <LeadNotesForm leadId={lead.id} notes={lead.notes} nextActionAt={lead.next_action_at} />
+            <LeadNotesForm leadId={lead.id} nextActionAt={lead.next_action_at} />
           </InfoSection>
         </div>
 
@@ -176,8 +174,10 @@ export default async function LeadFichaPage({ params }: PageProps<"/leads/[id]">
             leadId={lead.id}
             status={lead.status}
             nextActionAt={lead.next_action_at}
-            hasPhone={Boolean(lead.phone)}
+            phone={lead.phone}
             hasInstagram={Boolean(lead.instagram_url)}
+            messages={messages}
+            nextBestActionReason={intel?.next_best_action_reason ?? null}
           />
           <MessageThread messages={messages} activities={activities} />
         </div>

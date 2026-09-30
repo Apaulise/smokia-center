@@ -1,6 +1,6 @@
 import { ANGLE_LABEL, ANGLE_RULE, type SalesAngle } from "@/lib/leads/ai/angles";
-import type { EnrichmentResult } from "@/lib/leads/ai/enrich";
-import type { LeadSignalRow } from "@/lib/leads/queries";
+import type { EnrichmentResult, WebPresenceStatus } from "@/lib/leads/ai/enrich";
+import type { LeadMessageRow, LeadNoteRow, LeadSignalRow } from "@/lib/leads/queries";
 
 /**
  * El "bloque de estado" del copiloto (Plan §1.7): perfil del vendedor, estado
@@ -29,14 +29,30 @@ export interface LeadMemory {
   next_action?: string;
 }
 
+/** SPA §8 no lo pide, pero es un HECHO citable como cualquier señal de tecnología cuando está confirmado — nunca en SIN_VERIFICAR. */
+const WEB_PRESENCE_LABEL: Record<WebPresenceStatus, string> = {
+  DOMINIO_PROPIO: "tiene sitio propio en dominio propio",
+  DOMINIO_GRATUITO_O_CONSTRUCTOR: "tiene sitio, pero en dominio gratuito o de un constructor (Wix, Google Sites, Linktree y similares) — no es un dominio propio",
+  SOLO_REDES_SOCIALES: "no tiene sitio propio: sólo usa Instagram/Facebook como presencia online — posible oportunidad de ofrecer un sitio simple de cortesía",
+  SIN_PRESENCIA_DIGITAL: "no se encontró ninguna presencia digital — posible oportunidad de ofrecer un sitio simple de cortesía",
+  SIN_VERIFICAR: "sin verificar",
+};
+
 function formatEnrichment(enrichment: EnrichmentResult | null): string {
   if (!enrichment) return "Sin enriquecer todavía: no hay análisis previo del negocio.";
+  if (!enrichment.grounded) {
+    return `SIN VERIFICAR: la búsqueda web de este negocio no encontró nada real (falló el grounding). No hay ningún servicio, señal de operación ni señal de tecnología confirmados.\nResumen (genérico, no verificado — no lo cites como si lo hubieras visto): ${enrichment.businessSummary}\nConfianza del análisis: BAJA`;
+  }
   const lines = [
     `Resumen: ${enrichment.businessSummary}`,
-    enrichment.detectedServices.length > 0 ? `Servicios detectados: ${enrichment.detectedServices.join(", ")}` : null,
+    enrichment.detectedServices.length > 0 ? `Servicios detectados (HECHO, verificado en la búsqueda): ${enrichment.detectedServices.join(", ")}` : null,
     enrichment.possibleDecisionMaker ? `Posible decisor: ${enrichment.possibleDecisionMaker}` : null,
-    enrichment.operationSignals.length > 0 ? `Señales de operación: ${enrichment.operationSignals.join("; ")}` : null,
-    enrichment.technologySignals.length > 0 ? `Señales de tecnología: ${enrichment.technologySignals.join("; ")}` : null,
+    enrichment.operationSignals.length > 0 ? `Señales de operación (HECHO, verificado en la búsqueda): ${enrichment.operationSignals.join("; ")}` : null,
+    enrichment.technologySignals.length > 0 ? `Señales de tecnología (HECHO, verificado en la búsqueda): ${enrichment.technologySignals.join("; ")}` : null,
+    // `enrichment.webPresence` puede faltar en análisis guardados antes de sumarse este campo (blob opaco, sin migración de datos viejos).
+    enrichment.webPresence && enrichment.webPresence.status !== "SIN_VERIFICAR"
+      ? `Presencia web (HECHO, verificado en la búsqueda): ${WEB_PRESENCE_LABEL[enrichment.webPresence.status]}${enrichment.webPresence.detail ? ` — ${enrichment.webPresence.detail}` : ""}`
+      : null,
     `Confianza del análisis: ${enrichment.confidence}`,
   ].filter(Boolean);
   return lines.join("\n");
@@ -73,12 +89,21 @@ function formatMemory(memory: LeadMemory | null): string {
   return lines.join("\n");
 }
 
+function formatNotes(notes: LeadNoteRow[]): string {
+  if (notes.length === 0) return "(sin notas manuales todavía.)";
+  return notes
+    .map((note) => `  - [${new Date(note.occurred_at).toLocaleDateString("es-AR")}] ${note.content}`)
+    .join("\n");
+}
+
 export function buildLeadStateBlock(params: {
   salesProfile: string;
   lead: LeadContext;
   enrichment: EnrichmentResult | null;
   memory: LeadMemory | null;
   signals: LeadSignalRow[];
+  /** Notas que el vendedor fue anotando a mano (§1.21) — corrigen o completan lo que el resto del contexto no puede ver. */
+  notes: LeadNoteRow[];
 }): string {
   return `## Perfil del vendedor (lo único de lo que podés afirmar experiencia y casos reales — SPA §13)
 ${params.salesProfile.trim() || "(vacío: no afirmes ninguna experiencia, cliente ni resultado propio.)"}
@@ -97,7 +122,34 @@ ${formatEnrichment(params.enrichment)}
 ${formatSignals(params.signals)}
 
 ## Memoria del lead (SPA §20)
-${formatMemory(params.memory)}`;
+${formatMemory(params.memory)}
+
+## Notas manuales del vendedor
+Lo que anotó una persona mirando la conversación — pesa más que una inferencia tuya sobre el mismo hecho. Por ejemplo, si una nota dice que una respuesta rápida fue un chatbot o una solución ya armada, tratala como tal aunque el mensaje en sí no lo diga.
+${formatNotes(params.notes)}`;
+}
+
+/** Tope del historial: alcanza para leer la respuesta en contexto sin inflar el prompt con toda la conversación. */
+const CONVERSATION_LIMIT = 12;
+
+/**
+ * El hilo ya enviado/recibido, en orden (SPA §10). Sin esto el analizador lee
+ * la respuesta suelta: "Queda pendiente" contestando "¿suelen hacer
+ * seguimiento o queda pendiente?" es información sobre cómo trabajan, no un
+ * "ahora no" — y eso sólo se ve con la pregunta al lado. Los borradores del
+ * vendedor sin confirmar no se mandaron, así que no son parte del hilo.
+ */
+export type ConversationMessage = Pick<LeadMessageRow, "sender" | "confirmed" | "kind" | "channel" | "content">;
+
+export function buildConversationBlock(messages: ConversationMessage[]): string {
+  const thread = messages.filter((m) => m.sender === "LEAD" || m.confirmed).slice(-CONVERSATION_LIMIT);
+  if (thread.length === 0) return "## Conversación hasta ahora\n(ningún mensaje registrado todavía)";
+  const lines = thread.map((m) => {
+    const who = m.sender === "LEAD" ? "PROSPECTO" : "VENDEDOR";
+    const kind = m.kind ? ` · ${m.kind}` : "";
+    return `[${who}${kind} · ${m.channel}]\n${m.content.trim()}`;
+  });
+  return `## Conversación hasta ahora (más vieja primero)\n${lines.join("\n\n")}`;
 }
 
 /** El ángulo ya se eligió en TypeScript (lib/leads/ai/opening.ts) — esto sólo se lo informa al modelo, no se lo pregunta. */

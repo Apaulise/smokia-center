@@ -60,7 +60,7 @@ export default async function AnalisisPage() {
           <EmptyState
             icon={<KeyRound className="size-5" />}
             title="Todavía no hay una cuenta conectada"
-            description="Cargá tu API key de Windsor.ai en Configuración y sincronizá para poder analizar tu contenido."
+            description="Cargá las credenciales de Instagram en el entorno (ver Configuración) y sincronizá para poder analizar tu contenido."
             action={
               <ButtonLink href="/configuracion" variant="primary">
                 Ir a Configuración

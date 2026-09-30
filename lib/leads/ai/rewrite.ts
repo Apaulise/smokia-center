@@ -1,15 +1,17 @@
 import { resolveStructuredJson } from "@/lib/ai/structured-output";
-import { generateGeminiJson } from "@/lib/gemini/client";
+import { generateGroqJson } from "@/lib/groq/client";
 import type { RewriteTone } from "@/lib/leads/ai/rewrite-tones";
-import { REWRITE_GEMINI_SCHEMA, RewriteSchema } from "@/lib/leads/ai/schemas";
+import { REWRITE_GROQ_SCHEMA, RewriteSchema } from "@/lib/leads/ai/schemas";
 import { getSalesOS } from "@/lib/leads/ai/sales-os";
 
 /**
  * Reescrituras de tono (Plan §1.15, SPA §24): `MÁS CORTO`, `MÁS INFORMAL`,
- * `MÁS DIRECTO`. Va a Gemini, no Groq — transformar un texto que ya existe no
- * es decidir qué decir (Plan §1.7, "Reparto de modelos"; migrado en
- * Plans/migracion-fuera-de-anthropic.md, Etapa 1). La lista de tonos vive
- * en `rewrite-tones.ts`, sin dependencias de servidor (ver ese archivo).
+ * `MÁS DIRECTO`. Va a Groq (movido de Gemini el 2026-09-28: no necesita
+ * buscar nada, y compartía la key con el enriquecimiento — que sí consume el
+ * saldo de facturación de Gemini vía `google_search`. Que se agote ese saldo
+ * ya no debería frenar el rewrite. Ver Plans/migracion-fuera-de-anthropic.md).
+ * La lista de tonos vive en `rewrite-tones.ts`, sin dependencias de servidor
+ * (ver ese archivo).
  */
 
 const TONE_INSTRUCTION: Record<RewriteTone, string> = {
@@ -28,12 +30,13 @@ export async function rewriteMessage(params: { apiKey: string; message: string; 
   const basePrompt = `Reescribí este mensaje. ${TONE_INSTRUCTION[params.tone]} No agregues información nueva ni cambies lo que pregunta o propone — sólo el tono y el largo.\n\nMensaje original:\n"""\n${params.message.trim()}\n"""`;
 
   const parsed = await resolveStructuredJson(RewriteSchema, (repairNote) =>
-    generateGeminiJson({
+    generateGroqJson({
       apiKey: params.apiKey,
       system: getSalesOS(),
       prompt: repairNote ? `${basePrompt}\n\n${repairNote}` : basePrompt,
-      schema: REWRITE_GEMINI_SCHEMA,
-      maxOutputTokens: 1000,
+      schema: REWRITE_GROQ_SCHEMA,
+      schemaName: "rewrite",
+      maxTokens: 1000,
     }),
   );
   return parsed.message;

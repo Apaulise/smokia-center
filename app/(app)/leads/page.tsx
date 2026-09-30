@@ -1,10 +1,12 @@
 import { Radar } from "lucide-react";
+import Link from "next/link";
 
 import { ActivityTimelineChart } from "@/components/leads/dashboard/activity-timeline-chart";
 import { AngleExperimentsTable } from "@/components/leads/dashboard/angle-experiments";
 import { StaleLeadsList, UpcomingAppointments } from "@/components/leads/dashboard/attention-panel";
 import { IndustryDistributionChart } from "@/components/leads/dashboard/industry-distribution";
 import { ListPerformanceTable } from "@/components/leads/dashboard/list-performance";
+import { StyleLoopTile } from "@/components/leads/dashboard/style-loop";
 import { ButtonLink } from "@/components/leads/ui/button";
 import { EmptyState } from "@/components/leads/ui/feedback";
 import { Kpi, KpiRow } from "@/components/leads/ui/kpi-row";
@@ -22,6 +24,8 @@ import {
   listStaleLeads,
   listUpcomingAppointments,
 } from "@/lib/leads/queries";
+import { getStyleStats } from "@/lib/leads/ai/style/queries";
+import { getExecutionSummary } from "@/lib/leads/execution/summary";
 import { buildProspectingStages, totalResponseRate } from "@/lib/leads/prospecting-rates";
 
 export const metadata = { title: "Gestor de Leads · Awareness AI" };
@@ -39,7 +43,7 @@ export default async function LeadsDashboardPage({
   const { period: periodParam } = await searchParams;
   const period: Period = periodParam === "7d" || periodParam === "90d" ? periodParam : "30d";
 
-  const [funnel, exitsFunnel, angleExperiments, timeline, byIndustry, listPerformance, appointments, staleLeads] =
+  const [funnel, exitsFunnel, angleExperiments, timeline, byIndustry, listPerformance, appointments, staleLeads, styleStats, execution] =
     await Promise.all([
       getProspectingFunnel(),
       getLeadsFunnel(),
@@ -49,6 +53,9 @@ export default async function LeadsDashboardPage({
       getListPerformance(),
       listUpcomingAppointments(),
       listStaleLeads(STALE_DAYS),
+      getStyleStats(),
+      // Misma ventana por defecto que /leads/objetivo, para que el "Hoy" coincida (Plan §1.22).
+      getExecutionSummary(30),
     ]);
 
   const now = new Date();
@@ -133,6 +140,29 @@ export default async function LeadsDashboardPage({
         />
 
         <KpiRow>
+          {execution ? (
+            <Kpi
+              label="Hoy"
+              value={
+                <Link href="/leads/objetivo" className="hover:text-lm-signal-text">
+                  {execution.today.contacts} / {execution.adjustedChain.contactsPerDay}
+                </Link>
+              }
+              delta="contactos · ver cadena"
+              trend={execution.today.contacts >= execution.adjustedChain.contactsPerDay ? "up" : "neutral"}
+            />
+          ) : (
+            <Kpi
+              label="Hoy"
+              muted
+              value="—"
+              delta={
+                <Link href="/leads/objetivo" className="underline underline-offset-2 hover:text-lm-ink">
+                  Definir objetivo
+                </Link>
+              }
+            />
+          )}
           <Kpi label="Leads" value={funnel.total_leads} />
           <Kpi label="Contactados" value={funnel.contacts_sent} delta={`${Math.round((funnel.contacts_sent / funnel.total_leads) * 100)} % del total`} />
           <Kpi label="Reuniones" value={funnel.meetings} signal delta={funnel.meetings > 0 ? "acumulado" : "—"} muted={funnel.meetings === 0} />
@@ -175,11 +205,27 @@ export default async function LeadsDashboardPage({
           <AngleExperimentsTable rows={angleExperiments} />
         </Section>
 
+        <Section
+          eyebrow="ESTILO"
+          title="Cuánto corregís a la IA"
+          description="Tus ediciones sobre los borradores son lo que el agente usa para aprender a escribir como vos (Plan §1.20)."
+        >
+          <StyleLoopTile stats={styleStats} />
+        </Section>
+
         <div className="grid grid-cols-1 gap-9 lg:grid-cols-2">
           <Section eyebrow="AGENDA" title="Próximas reuniones">
             <UpcomingAppointments appointments={appointments} />
           </Section>
-          <Section eyebrow="ATENCIÓN" title={`Sin tocar hace más de ${STALE_DAYS} días`}>
+          <Section
+            eyebrow="ATENCIÓN"
+            title={`Sin tocar hace más de ${STALE_DAYS} días`}
+            action={
+              <ButtonLink href="/leads/seguimiento" variant="ghost" size="sm">
+                Ver todos
+              </ButtonLink>
+            }
+          >
             <StaleLeadsList leads={staleLeads} />
           </Section>
         </div>

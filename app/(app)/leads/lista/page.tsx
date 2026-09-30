@@ -1,10 +1,11 @@
 import { ListChecks } from "lucide-react";
 
+import { EmptyListsActions } from "@/components/leads/empty-lists-actions";
 import { ListsBrowser } from "@/components/leads/lists-browser";
-import { ButtonLink } from "@/components/leads/ui/button";
 import { EmptyState } from "@/components/leads/ui/feedback";
 import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
 import { listLeadListsOverview } from "@/lib/leads/queries";
+import { listIndustries } from "@/lib/settings/queries";
 
 export const metadata = { title: "Listas de leads · Awareness AI" };
 
@@ -20,7 +21,7 @@ export default async function LeadsListaPage({
 }) {
   const { view: viewParam } = await searchParams;
   const view = viewParam === "grilla" ? "grilla" : "tabla";
-  const lists = await listLeadListsOverview();
+  const [lists, industries] = await Promise.all([listLeadListsOverview(), listIndustries()]);
 
   return (
     <>
@@ -32,11 +33,11 @@ export default async function LeadsListaPage({
           <EmptyState
             icon={<ListChecks className="size-5" strokeWidth={1.5} />}
             title="Todavía no generaste ninguna lista"
-            description="Generá una lista por rubro y zona, o importá un CSV, para empezar a trabajarla."
-            action={<ButtonLink href="/leads/generar" variant="primary">Generar lista</ButtonLink>}
+            description="Generá una lista por rubro y zona, importá un CSV, o creá una vacía para cargarla a mano."
+            action={<EmptyListsActions industries={industries ?? []} />}
           />
         ) : (
-          <ListsBrowser lists={lists} view={view} />
+          <ListsBrowser lists={lists} view={view} industries={industries ?? []} />
         )}
       </div>
     </>

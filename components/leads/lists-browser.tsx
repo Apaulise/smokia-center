@@ -1,14 +1,19 @@
 "use client";
 
-import { LayoutGrid, Search, TableProperties } from "lucide-react";
+import { LayoutGrid, Plus, Search, TableProperties } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { AddLeadDialog } from "@/components/leads/add-lead-dialog";
+import { CreateListDialog } from "@/components/leads/create-list-dialog";
 import { LeadListCard } from "@/components/leads/lead-list-card";
 import { ListsTable } from "@/components/leads/lists-table";
-import { ButtonLink } from "@/components/leads/ui/button";
+import { Button, ButtonLink } from "@/components/leads/ui/button";
 import { Input } from "@/components/leads/ui/field";
 import { SegmentedLink } from "@/components/leads/ui/tabs";
 import type { LeadListOverviewRow } from "@/lib/leads/queries";
+import type { Database } from "@/lib/supabase/database.types";
+
+type Industry = Database["public"]["Tables"]["industries"]["Row"];
 
 /**
  * Cuerpo de /leads/lista con listas (Design System §03: buscador + toggle de
@@ -17,8 +22,18 @@ import type { LeadListOverviewRow } from "@/lib/leads/queries";
  * ida y vuelta al servidor). El estado vacío (cero listas) lo sigue
  * resolviendo la page directamente, antes de montar esto.
  */
-export function ListsBrowser({ lists, view }: { lists: LeadListOverviewRow[]; view: "tabla" | "grilla" }) {
+export function ListsBrowser({
+  lists,
+  view,
+  industries,
+}: {
+  lists: LeadListOverviewRow[];
+  view: "tabla" | "grilla";
+  industries: Industry[];
+}) {
   const [query, setQuery] = useState("");
+  const [addingLead, setAddingLead] = useState(false);
+  const [creatingList, setCreatingList] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -48,6 +63,14 @@ export function ListsBrowser({ lists, view }: { lists: LeadListOverviewRow[]; vi
             Grilla
           </SegmentedLink>
         </div>
+        <Button type="button" variant="secondary" onClick={() => setCreatingList(true)}>
+          <Plus className="size-3.5" strokeWidth={1.5} />
+          Nueva lista
+        </Button>
+        <Button type="button" variant="secondary" onClick={() => setAddingLead(true)}>
+          <Plus className="size-3.5" strokeWidth={1.5} />
+          Agregar lead
+        </Button>
         <ButtonLink href="/leads/generar" variant="primary">
           Generar lista
         </ButtonLink>
@@ -64,6 +87,11 @@ export function ListsBrowser({ lists, view }: { lists: LeadListOverviewRow[]; vi
       ) : (
         <ListsTable lists={filtered} />
       )}
+
+      {creatingList ? <CreateListDialog industries={industries} onClose={() => setCreatingList(false)} /> : null}
+      {addingLead ? (
+        <AddLeadDialog industries={industries} lists={lists} onClose={() => setAddingLead(false)} />
+      ) : null}
     </div>
   );
 }

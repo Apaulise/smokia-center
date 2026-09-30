@@ -16,3 +16,20 @@ export function getContentOS(): string {
   }
   return cached;
 }
+
+/**
+ * Sólo las secciones pedidas (`## N.`), literales y en orden, más el título.
+ * Para llamados que corren contra un tope de tokens/minuto chico (Groq free:
+ * 8000) donde mandar los 31 capítulos no entra. Nunca reescribe texto: recorta.
+ */
+export function getContentOSSections(numbers: number[]): string {
+  const wanted = new Set(numbers);
+  const kept: string[] = [];
+  let keep = true; // el título y lo previo a la sección 1 se conservan
+  for (const line of getContentOS().split("\n")) {
+    const match = /^## (\d+)\./.exec(line);
+    if (match) keep = wanted.has(Number(match[1]));
+    if (keep) kept.push(line);
+  }
+  return kept.join("\n");
+}

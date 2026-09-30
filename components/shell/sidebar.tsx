@@ -120,7 +120,8 @@ export function Sidebar({ email, badges }: { email?: string; badges?: Record<str
         >
           {collapsed ? null : (
             <Link href="/leads" className="flex items-center gap-2 text-[15px] font-semibold text-lm-ink">
-              <Image src="/logo-mark.png" alt="" width={26} height={26} className="h-[26px] w-auto shrink-0" priority />
+              {/* 230×400 real: declarar el ratio real evita el warning de Next por width/height que no matchean el CSS. */}
+              <Image src="/logo-mark.png" alt="" width={15} height={26} className="h-[26px] w-auto shrink-0" priority />
               Awareness AI
             </Link>
           )}

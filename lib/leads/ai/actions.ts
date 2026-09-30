@@ -10,13 +10,23 @@ import { enrichLead, type EnrichmentInput, type EnrichmentResult } from "@/lib/l
 import { generateFollowup } from "@/lib/leads/ai/follow-up";
 import { getGeminiApiKey, getGroqApiKey } from "@/lib/leads/ai/key";
 import { rebuildLeadMemory } from "@/lib/leads/ai/memory";
-import { computeNextBestAction } from "@/lib/leads/ai/next-action";
+import { computeNextBestAction, isReplyWorthyAction } from "@/lib/leads/ai/next-action";
 import { generateOpening, type GeneratedOpening } from "@/lib/leads/ai/opening";
 import type { LeadContext, LeadMemory } from "@/lib/leads/ai/prompts";
+import { generateNextReply } from "@/lib/leads/ai/reply";
 import { rewriteMessage } from "@/lib/leads/ai/rewrite";
 import { REWRITE_TONES, type RewriteTone } from "@/lib/leads/ai/rewrite-tones";
+import { editDistance } from "@/lib/leads/ai/style/diff";
 import type { AnalyzeOutput } from "@/lib/leads/ai/schemas";
-import { getLead, getLeadAngleCounts30d, getLeadIntel, listLeadSignals, type LeadSignalRow } from "@/lib/leads/queries";
+import {
+  getLead,
+  getLeadAngleCounts30d,
+  getLeadIntel,
+  listLeadMessages,
+  listLeadNotes,
+  listLeadSignals,
+  type LeadSignalRow,
+} from "@/lib/leads/queries";
 import { hasConfirmedPain, planSignalWrites, type SignalPatch } from "@/lib/leads/signals";
 import { nextStage } from "@/lib/leads/stage-engine";
 import { getSalesProfile } from "@/lib/settings/queries";
@@ -252,10 +262,11 @@ export async function generateLeadOpening(leadId: string): Promise<OpeningAction
   const lead = await getLead(leadId);
   if (!lead) return { ok: false, message: "Lead no encontrado." };
 
-  const [salesProfile, intel, signals, angleCounts] = await Promise.all([
+  const [salesProfile, intel, signals, notes, angleCounts] = await Promise.all([
     getSalesProfile(),
     getLeadIntel(leadId),
     listLeadSignals(leadId),
+    listLeadNotes(leadId),
     getLeadAngleCounts30d(),
   ]);
 
@@ -267,6 +278,7 @@ export async function generateLeadOpening(leadId: string): Promise<OpeningAction
       enrichment: (intel?.enrichment as EnrichmentResult | null) ?? null,
       memory: (intel?.memory as LeadMemory | null) ?? null,
       signals,
+      notes,
       angleCounts,
     });
     return { ok: true, opening };
@@ -275,12 +287,25 @@ export async function generateLeadOpening(leadId: string): Promise<OpeningAction
   }
 }
 
+/**
+ * Las columnas del bucle de estilo (§1.20.1) para un insert en
+ * `lead_messages`. Sin borrador no hay par que guardar: el mensaje se
+ * registra igual, pero sin material de entrenamiento.
+ */
+function styleColumns(generatedContent: string | undefined, sent: string) {
+  if (!generatedContent) return {};
+  return { generated_content: generatedContent, edit_distance: editDistance(generatedContent, sent) };
+}
+
 const confirmOpeningSchema = z.object({
   leadId: z.string().uuid(),
   message: z.string().trim().min(1).max(600),
   angle: z.string(),
   variant: z.number().int().min(1).max(9),
   channel: z.enum(["WHATSAPP", "EMAIL", "INSTAGRAM"]).default("WHATSAPP"),
+  // El borrador de la IA sobre el que el humano escribió (§1.20.1). Sólo
+  // llega cuando hubo edición manual: un rewrite de tono no es señal de estilo.
+  generatedContent: z.string().trim().max(600).optional(),
 });
 
 /**
@@ -294,6 +319,7 @@ export async function confirmLeadOpening(input: {
   angle: SalesAngle;
   variant: number;
   channel?: "WHATSAPP" | "EMAIL" | "INSTAGRAM";
+  generatedContent?: string;
 }): Promise<ActionState> {
   const user = await requireUser();
   const parsed = confirmOpeningSchema.safeParse(input);
@@ -314,6 +340,8 @@ export async function confirmLeadOpening(input: {
     generated_by: "IA",
     angle: parsed.data.angle,
     variant: parsed.data.variant,
+    kind: "APERTURA",
+    ...styleColumns(parsed.data.generatedContent, parsed.data.message),
     confirmed: true,
     confirmed_at: now,
     occurred_at: now,
@@ -374,45 +402,38 @@ export async function analyzeLeadResponseAction(input: {
   const lead = await getLead(parsed.data.leadId);
   if (!lead) return { ok: false, message: "Lead no encontrado." };
 
-  const [salesProfile, intel, existingSignals] = await Promise.all([
+  const [salesProfile, intel, existingSignals, notes, conversation] = await Promise.all([
     getSalesProfile(),
     getLeadIntel(parsed.data.leadId),
     listLeadSignals(parsed.data.leadId),
+    listLeadNotes(parsed.data.leadId),
+    listLeadMessages(parsed.data.leadId),
   ]);
   const enrichment = (intel?.enrichment as EnrichmentResult | null) ?? null;
   const memory = (intel?.memory as LeadMemory | null) ?? null;
+  const leadContext = toLeadContext(lead);
 
   let analysis: AnalyzeOutput;
   try {
     analysis = await analyzeLeadResponse({
       apiKey: keyResult.apiKey,
       salesProfile,
-      lead: toLeadContext(lead),
+      lead: leadContext,
       enrichment,
       memory,
       signals: existingSignals,
+      notes,
+      conversation,
       responseText: parsed.data.responseText,
     });
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "No se pudo analizar la respuesta." };
   }
 
-  const supabase = await createClient();
   const now = new Date().toISOString();
 
-  // 1. El mensaje entrante, con el análisis colgado de su propia fila.
-  const { error: messageError } = await supabase.from("lead_messages").insert({
-    owner_id: user.id,
-    lead_id: parsed.data.leadId,
-    sender: "LEAD",
-    channel: parsed.data.channel,
-    content: parsed.data.responseText,
-    analysis: analysis as unknown as Json,
-    occurred_at: now,
-  });
-  if (messageError) return { ok: false, message: "No se pudo registrar el mensaje entrante." };
-
-  // 2. Señales: insertar o actualizar según corresponda (§1.13), sin retroceder nunca de estado.
+  // Señales: se resuelven en memoria antes de tocar la base (§1.13), porque
+  // hacen falta para decidir la próxima acción antes de persistir el mensaje.
   const patches: SignalPatch[] = analysis.crm_update.signals.map((signal) => ({
     kind: signal.kind,
     status: signal.status,
@@ -425,37 +446,6 @@ export async function analyzeLeadResponseAction(input: {
     alreadySolved: signal.already_solved,
   }));
   const writes = planSignalWrites(existingSignals, patches);
-  for (const write of writes) {
-    if (write.action === "insert") {
-      await supabase.from("lead_signals").insert({
-        owner_id: user.id,
-        lead_id: parsed.data.leadId,
-        kind: write.kind,
-        status: write.status,
-        title: write.title,
-        description: write.description,
-        evidence: write.evidence,
-        business_impact: write.business_impact,
-        trigger_event: write.trigger_event,
-        timing: write.timing,
-        already_solved: write.already_solved,
-      });
-    } else {
-      await supabase
-        .from("lead_signals")
-        .update({
-          status: write.status,
-          title: write.title,
-          description: write.description,
-          evidence: write.evidence,
-          business_impact: write.business_impact,
-          trigger_event: write.trigger_event,
-          timing: write.timing,
-          already_solved: write.already_solved,
-        })
-        .eq("id", write.id);
-    }
-  }
 
   // La lista de señales resultante, en memoria — sin otro viaje a la base para lo que sigue.
   const updatedSignals: LeadSignalRow[] = existingSignals.map((row) => {
@@ -494,7 +484,7 @@ export async function analyzeLeadResponseAction(input: {
     });
   }
 
-  // 3. CRMStateEngine (§1.8): nunca retrocede, nunca decide un cierre.
+  // CRMStateEngine (§1.8): nunca retrocede, nunca decide un cierre.
   const painConfirmed = hasConfirmedPain(updatedSignals);
   const newStatus = nextStage(lead.status, {
     responseType: analysis.analysis.response_type,
@@ -505,7 +495,8 @@ export async function analyzeLeadResponseAction(input: {
     notNow: analysis.analysis.not_now,
   });
 
-  // 4. Memoria reescrita (§1.14) y 5. próxima acción (§1.14).
+  // Memoria reescrita y próxima acción (§1.14) — determinística, antes de
+  // saber si hace falta completar la respuesta sugerida (ver abajo).
   const newMemory = rebuildLeadMemory({ current: memory, enrichment, analysis, signals: updatedSignals });
   const nextAction = computeNextBestAction({
     responseType: analysis.analysis.response_type,
@@ -515,6 +506,94 @@ export async function analyzeLeadResponseAction(input: {
     notNow: analysis.analysis.not_now,
   });
 
+  // Respaldo (§1.12/§1.14): el prompt de analyzeLeadResponse (analyze.ts) sólo
+  // le pide al modelo "proponé la próxima pregunta — una sola (SPA §9)" — no
+  // conoce las instrucciones por acción de ACTION_INSTRUCTION (reply.ts), que
+  // sólo recibe esta llamada de respaldo. Cuando next-best-action (recién
+  // calculado acá, en TypeScript, después de la corrida) da EXPLAIN_SERVICE,
+  // ASK_FOR_MEETING o CLOSE_LEAD, lo que trajo el análisis es casi siempre una
+  // pregunta de descubrimiento más — coherente con SU prompt, pero la acción
+  // equivocada para lo que de verdad corresponde ahora. Encontrado en un caso
+  // real: interés 5/10 con dolor confirmado (condiciones de SPA §14
+  // cumplidas), y el análisis sugirió seguir preguntando por la gestión de
+  // turnos en vez de pedir la reunión. Por eso el respaldo no espera a que el
+  // análisis venga vacío: corre siempre que la acción no sea ASK_QUESTION,
+  // que es la única para la que el prompt de análisis sí está armado.
+  const needsSpecializedReply = nextAction.action !== "ASK_QUESTION";
+  if (
+    isReplyWorthyAction(nextAction.action) &&
+    (needsSpecializedReply || !analysis.suggested_reply.has_reply || !analysis.suggested_reply.message.trim())
+  ) {
+    try {
+      const fallback = await generateNextReply({
+        apiKey: keyResult.apiKey,
+        salesProfile,
+        lead: leadContext,
+        enrichment,
+        memory: newMemory,
+        signals: updatedSignals,
+        notes,
+        nextAction,
+        whatHappened: analysis.analysis.what_happened,
+        conversation: [
+          ...conversation,
+          { sender: "LEAD", confirmed: true, kind: null, channel: parsed.data.channel, content: parsed.data.responseText },
+        ],
+      });
+      analysis = { ...analysis, suggested_reply: { has_reply: true, message: fallback.message } };
+    } catch {
+      // Si también falla el respaldo, queda como vino del análisis — el humano escribe a mano.
+    }
+  }
+
+  const supabase = await createClient();
+
+  // 1. El mensaje entrante, con el análisis (ya con la respuesta sugerida completa) colgado de su propia fila.
+  const { error: messageError } = await supabase.from("lead_messages").insert({
+    owner_id: user.id,
+    lead_id: parsed.data.leadId,
+    sender: "LEAD",
+    channel: parsed.data.channel,
+    content: parsed.data.responseText,
+    analysis: analysis as unknown as Json,
+    occurred_at: now,
+  });
+  if (messageError) return { ok: false, message: "No se pudo registrar el mensaje entrante." };
+
+  // 2. Señales: insertar o actualizar según corresponda (§1.13), sin retroceder nunca de estado.
+  for (const write of writes) {
+    if (write.action === "insert") {
+      await supabase.from("lead_signals").insert({
+        owner_id: user.id,
+        lead_id: parsed.data.leadId,
+        kind: write.kind,
+        status: write.status,
+        title: write.title,
+        description: write.description,
+        evidence: write.evidence,
+        business_impact: write.business_impact,
+        trigger_event: write.trigger_event,
+        timing: write.timing,
+        already_solved: write.already_solved,
+      });
+    } else {
+      await supabase
+        .from("lead_signals")
+        .update({
+          status: write.status,
+          title: write.title,
+          description: write.description,
+          evidence: write.evidence,
+          business_impact: write.business_impact,
+          trigger_event: write.trigger_event,
+          timing: write.timing,
+          already_solved: write.already_solved,
+        })
+        .eq("id", write.id);
+    }
+  }
+
+  // 3/4/5. Memoria, próxima acción y estado — ya calculados arriba, sólo se persisten.
   await supabase.from("lead_intel").upsert(
     {
       owner_id: user.id,
@@ -561,13 +640,13 @@ const rewriteSchema = z.object({
   tone: z.enum(REWRITE_TONES),
 });
 
-/** Botones "MÁS CORTO" / "MÁS INFORMAL" / "MÁS DIRECTO" (SPA §24): Sonnet 5, no persiste nada. */
+/** Botones "MÁS CORTO" / "MÁS INFORMAL" / "MÁS DIRECTO" (SPA §24): Groq, no persiste nada. */
 export async function rewriteLeadMessage(message: string, tone: RewriteTone): Promise<RewriteActionState> {
   await requireUser();
   const parsed = rewriteSchema.safeParse({ message, tone });
   if (!parsed.success) return { ok: false, message: "Datos inválidos." };
 
-  const keyResult = await getGeminiApiKey();
+  const keyResult = await getGroqApiKey();
   if (!keyResult.ok) return { ok: false, message: keyResult.message };
 
   try {
@@ -583,6 +662,8 @@ const confirmMessageSchema = z.object({
   message: z.string().trim().min(1).max(600),
   channel: z.enum(["WHATSAPP", "EMAIL", "INSTAGRAM"]).default("WHATSAPP"),
   generatedBy: z.enum(["IA", "HUMANO"]).default("IA"),
+  kind: z.enum(["RESPUESTA", "SEGUIMIENTO"]).optional(),
+  generatedContent: z.string().trim().max(600).optional(),
 });
 
 /**
@@ -597,6 +678,8 @@ export async function confirmMessageSent(input: {
   message: string;
   channel?: "WHATSAPP" | "EMAIL" | "INSTAGRAM";
   generatedBy?: "IA" | "HUMANO";
+  kind?: "RESPUESTA" | "SEGUIMIENTO";
+  generatedContent?: string;
 }): Promise<ActionState> {
   const user = await requireUser();
   const parsed = confirmMessageSchema.safeParse(input);
@@ -606,6 +689,9 @@ export async function confirmMessageSent(input: {
   const { data: lead } = await supabase.from("leads").select("id").eq("id", parsed.data.leadId).maybeSingle();
   if (!lead) return { ok: false, message: "Lead no encontrado." };
 
+  // El CHECK de la base sólo admite borrador en mensajes de la IA.
+  const generatedContent = parsed.data.generatedBy === "IA" ? parsed.data.generatedContent : undefined;
+
   const now = new Date().toISOString();
   const { error } = await supabase.from("lead_messages").insert({
     owner_id: user.id,
@@ -614,6 +700,8 @@ export async function confirmMessageSent(input: {
     channel: parsed.data.channel,
     content: parsed.data.message,
     generated_by: parsed.data.generatedBy,
+    kind: parsed.data.kind ?? null,
+    ...styleColumns(generatedContent, parsed.data.message),
     confirmed: true,
     confirmed_at: now,
     occurred_at: now,
@@ -643,7 +731,12 @@ export async function generateLeadFollowup(leadId: string): Promise<FollowUpActi
   const lead = await getLead(leadId);
   if (!lead) return { ok: false, message: "Lead no encontrado." };
 
-  const [salesProfile, intel, signals] = await Promise.all([getSalesProfile(), getLeadIntel(leadId), listLeadSignals(leadId)]);
+  const [salesProfile, intel, signals, notes] = await Promise.all([
+    getSalesProfile(),
+    getLeadIntel(leadId),
+    listLeadSignals(leadId),
+    listLeadNotes(leadId),
+  ]);
 
   try {
     const followUp = await generateFollowup({
@@ -653,6 +746,7 @@ export async function generateLeadFollowup(leadId: string): Promise<FollowUpActi
       enrichment: (intel?.enrichment as EnrichmentResult | null) ?? null,
       memory: (intel?.memory as LeadMemory | null) ?? null,
       signals,
+      notes,
     });
     return { ok: true, message: followUp.message, cannotGenerateReason: followUp.cannot_generate_reason };
   } catch (error) {

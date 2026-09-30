@@ -1,5 +1,6 @@
 import { getApifyAccountLimits, type ApifyAccountLimits } from "@/lib/apify/client";
 import { decrypt, maskSecret } from "@/lib/crypto";
+import { getMetaCredentials } from "@/lib/meta/client";
 import type { LeadSource } from "@/lib/providers/types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -9,7 +10,6 @@ import {
   GEMINI_KEY_SETTING,
   GROQ_KEY_SETTING,
   SALES_PROFILE_SETTING,
-  WINDSOR_KEY_SETTING,
 } from "./constants";
 
 const ACTOR_KEY_PREFIX = "apify_actor_";
@@ -58,8 +58,9 @@ export async function getApifyCredit(): Promise<ApifyAccountLimits | null> {
   }
 }
 
-export async function getWindsorKeyStatus() {
-  return getKeyStatus(WINDSOR_KEY_SETTING);
+/** Si hay credenciales de Instagram en el entorno. No dice si el token sigue vigente: eso lo prueba el botón de Configuración. */
+export function getInstagramConnectionStatus() {
+  return { configured: getMetaCredentials() !== null };
 }
 
 export async function getAnthropicKeyStatus() {
@@ -131,12 +132,3 @@ export async function getActorOverrides(): Promise<Partial<Record<LeadSource, st
   return overrides;
 }
 
-export async function listMessageTemplates() {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("message_templates")
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return data;
-}

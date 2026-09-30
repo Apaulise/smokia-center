@@ -1,6 +1,6 @@
 /**
  * Cliente HTTP crudo contra la API de Google AI Studio (Gemini) — sin SDK,
- * espejo de lib/windsor/client.ts.
+ * espejo de lib/meta/client.ts.
  *
  * Existe para las tareas del módulo que no justifican un modelo caro: hoy,
  * puntuar qué tan aprovechable es una publicación ajena para la marca
@@ -114,6 +114,19 @@ export interface GeminiGroundedParams {
   maxOutputTokens?: number;
 }
 
+export interface GeminiGroundedResult {
+  text: string;
+  /**
+   * Si el modelo efectivamente buscó o leyó algo real, según los metadatos
+   * que Gemini devuelve por fuera del texto. `google_search` y `url_context`
+   * son herramientas que el modelo puede decidir NO usar — sin este chequeo,
+   * un texto en prosa perfectamente convincente puede salir enteramente del
+   * conocimiento de entrenamiento (genérico para el rubro) sin que nada lo
+   * distinga de un hecho verificado. Ver el llamador en enrich.ts.
+   */
+  grounded: boolean;
+}
+
 /**
  * Pase A del enriquecimiento (Plan §1.10): `google_search` + `url_context`,
  * salida en prosa. **`google_search` y `responseSchema` no conviven** —
@@ -124,7 +137,7 @@ export interface GeminiGroundedParams {
  * esta función nunca acepta un `schema`: la estructura sale en un segundo
  * pase, sin herramientas, sobre el texto que esto devuelve.
  */
-export async function generateGeminiGrounded(params: GeminiGroundedParams): Promise<string> {
+export async function generateGeminiGrounded(params: GeminiGroundedParams): Promise<GeminiGroundedResult> {
   const model = params.model ?? GEMINI_MODEL;
 
   const response = await fetch(`${GEMINI_BASE}/models/${encodeURIComponent(model)}:generateContent`, {
@@ -146,9 +159,23 @@ export async function generateGeminiGrounded(params: GeminiGroundedParams): Prom
   }
 
   const body = (await response.json()) as {
-    candidates?: { content?: { parts?: { text?: string }[] } }[];
+    candidates?: {
+      content?: { parts?: { text?: string }[] };
+      groundingMetadata?: { groundingChunks?: unknown[]; webSearchQueries?: string[] };
+      urlContextMetadata?: { urlMetadata?: { urlRetrievalStatus?: string }[] };
+    }[];
   };
-  const text = body.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
+  const candidate = body.candidates?.[0];
+  const text = candidate?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
   if (!text.trim()) throw new Error("Gemini devolvió una respuesta vacía (¿no encontró nada de este negocio?).");
-  return text;
+
+  const searched = Boolean(
+    (candidate?.groundingMetadata?.groundingChunks?.length ?? 0) > 0 ||
+      (candidate?.groundingMetadata?.webSearchQueries?.length ?? 0) > 0,
+  );
+  const readUrl = Boolean(
+    candidate?.urlContextMetadata?.urlMetadata?.some((entry) => entry.urlRetrievalStatus === "URL_RETRIEVAL_STATUS_SUCCESS"),
+  );
+
+  return { text, grounded: searched || readUrl };
 }

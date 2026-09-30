@@ -22,7 +22,7 @@ Mismo criterio que ya usaba el reparto Opus/Sonnet original (Plans/01 §1.7, "Re
 | 2 | `lib/leads/ai/opening.ts` | `generateOpening()` | `claude-opus-5` | **Groq** | `OpeningSchema` |
 | 3 | `lib/leads/ai/follow-up.ts` | `generateFollowup()` | `claude-opus-5` | **Groq** | `FollowUpSchema` |
 | 4 | `lib/brand/ai/recommendations.ts` | `generateBrandRecommendations()` | `claude-opus-5` | **Groq** | `RecommendationsOutputSchema` |
-| 5 | `lib/leads/ai/rewrite.ts` | `rewriteMessage()` | `claude-sonnet-5` | **Gemini** | `RewriteSchema` |
+| 5 | `lib/leads/ai/rewrite.ts` | `rewriteMessage()` | `claude-sonnet-5` | ~~Gemini~~ **Groq** (2026-09-28, ver nota abajo) | `RewriteSchema` |
 | 6 | `lib/brand/ai/script.ts` | `generateScriptFromIdea()` | `claude-sonnet-5` | **Gemini** | `ScriptSchema` |
 | 7 | `lib/brand/ai/outlier-idea.ts` | `generateIdeaFromOutlier()` | `claude-sonnet-5` | **Gemini** | `OutlierIdeaSchema` |
 
@@ -185,3 +185,5 @@ Al enriquecer un lead (§1.10, `lib/leads/ai/enrich.ts`) Gemini devuelve *"You e
 - **A vigilar:** el pase A usa `google_search` + `url_context`, que Google cobra por consulta con grounding. Mirar la pantalla *Gasto* después de las primeras pruebas.
 - **Alternativa descartada por ahora:** un proyecto nuevo sin facturación (free tier), porque probablemente no incluye grounding, que es lo que el enriquecimiento necesita.
 - `lib/gemini/client.ts` → `geminiErrorMessage()` ahora agrega al error el `quotaId`, el modelo y el `retryDelay` (o el `details` crudo) para distinguir cuota por minuto, por día o de facturación.
+
+**Actualización (2026-09-28):** el mismo agotamiento de saldo tiraba abajo también el rewrite de tono (`rewriteMessage()`), porque compartía la key de Gemini con el enriquecimiento aunque no usa `google_search`/`url_context` — no tiene motivo para depender de esa facturación. Se movió a Groq (fila 5 de la tabla de arriba, `REWRITE_GROQ_SCHEMA` en `lib/leads/ai/schemas.ts`, `getGroqApiKey()` en `lib/leads/ai/actions.ts`). El enriquecimiento sigue en Gemini y sigue necesitando saldo cargado — eso no cambió.

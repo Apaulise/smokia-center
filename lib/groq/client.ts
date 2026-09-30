@@ -1,6 +1,6 @@
 /**
  * Cliente HTTP crudo contra la API de Groq — sin SDK, espejo de
- * lib/gemini/client.ts y lib/windsor/client.ts (la convención del repo para
+ * lib/gemini/client.ts y lib/meta/client.ts (la convención del repo para
  * proveedores free-tier). API compatible con OpenAI Chat Completions.
  *
  * Existe para lo que hoy exige más criterio (Plans/migracion-fuera-de-anthropic,

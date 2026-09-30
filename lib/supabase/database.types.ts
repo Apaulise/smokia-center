@@ -1288,14 +1288,18 @@ export type Database = {
           confirmed_at: string | null
           content: string
           created_at: string
+          edit_distance: number | null
           generated_by:
             | Database["public"]["Enums"]["lead_message_generator"]
             | null
+          generated_content: string | null
           id: string
+          kind: Database["public"]["Enums"]["lead_message_kind"] | null
           lead_id: string
           occurred_at: string
           owner_id: string
           sender: Database["public"]["Enums"]["lead_message_sender"]
+          style_excluded: boolean
           variant: number | null
         }
         Insert: {
@@ -1306,14 +1310,18 @@ export type Database = {
           confirmed_at?: string | null
           content: string
           created_at?: string
+          edit_distance?: number | null
           generated_by?:
             | Database["public"]["Enums"]["lead_message_generator"]
             | null
+          generated_content?: string | null
           id?: string
+          kind?: Database["public"]["Enums"]["lead_message_kind"] | null
           lead_id: string
           occurred_at?: string
           owner_id: string
           sender: Database["public"]["Enums"]["lead_message_sender"]
+          style_excluded?: boolean
           variant?: number | null
         }
         Update: {
@@ -1324,14 +1332,18 @@ export type Database = {
           confirmed_at?: string | null
           content?: string
           created_at?: string
+          edit_distance?: number | null
           generated_by?:
             | Database["public"]["Enums"]["lead_message_generator"]
             | null
+          generated_content?: string | null
           id?: string
+          kind?: Database["public"]["Enums"]["lead_message_kind"] | null
           lead_id?: string
           occurred_at?: string
           owner_id?: string
           sender?: Database["public"]["Enums"]["lead_message_sender"]
+          style_excluded?: boolean
           variant?: number | null
         }
         Relationships: [
@@ -1547,6 +1559,54 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_goals: {
+        Row: {
+          avg_ticket: number
+          booking_rate: number
+          close_rate: number
+          created_at: string
+          currency: string
+          id: string
+          monthly_revenue_target: number
+          owner_id: string
+          show_rate: number
+          status: Database["public"]["Enums"]["sales_goal_status"]
+          updated_at: string
+          working_days_per_month: number
+          working_days_per_week: number
+        }
+        Insert: {
+          avg_ticket: number
+          booking_rate: number
+          close_rate: number
+          created_at?: string
+          currency?: string
+          id?: string
+          monthly_revenue_target: number
+          owner_id: string
+          show_rate: number
+          status?: Database["public"]["Enums"]["sales_goal_status"]
+          updated_at?: string
+          working_days_per_month: number
+          working_days_per_week: number
+        }
+        Update: {
+          avg_ticket?: number
+          booking_rate?: number
+          close_rate?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          monthly_revenue_target?: number
+          owner_id?: string
+          show_rate?: number
+          status?: Database["public"]["Enums"]["sales_goal_status"]
+          updated_at?: string
+          working_days_per_month?: number
+          working_days_per_week?: number
+        }
+        Relationships: []
+      }
       sales_knowledge: {
         Row: {
           body: string | null
@@ -1697,7 +1757,13 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      lead_first_contacts: {
+        Row: {
+          first_contact_at: string | null
+          lead_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       brand_account_summary: {
@@ -1808,6 +1874,13 @@ export type Database = {
           name: string
         }[]
       }
+      leads_daily_contacts: {
+        Args: { p_from: string; p_to: string; p_tz?: string }
+        Returns: {
+          contacts: number
+          day: string
+        }[]
+      }
       leads_dashboard_summary: {
         Args: never
         Returns: {
@@ -1816,6 +1889,20 @@ export type Database = {
           scheduled: number
           total_leads: number
           won: number
+        }[]
+      }
+      leads_execution_metrics: {
+        Args: { p_booking_lag_days?: number; p_from: string; p_to: string }
+        Returns: {
+          booked: number
+          booking_cohort: number
+          contacts: number
+          held_leads: number
+          human_responses: number
+          meetings_held: number
+          meetings_no_show: number
+          won_from_held: number
+          won_in_window: number
         }[]
       }
       leads_funnel_by_status: {
@@ -1852,6 +1939,18 @@ export type Database = {
           total_responses: number
           won: number
         }[]
+      }
+      sales_define_goal: {
+        Args: {
+          p_booking_rate: number
+          p_close_rate: number
+          p_days_per_month: number
+          p_days_per_week: number
+          p_revenue: number
+          p_show_rate: number
+          p_ticket: number
+        }
+        Returns: string
       }
     }
     Enums: {
@@ -1911,6 +2010,7 @@ export type Database = {
         | "APRENDIZAJES"
       lead_knowledge_origin: "PROPIO" | "MERCADO" | "HIPOTESIS"
       lead_message_generator: "IA" | "HUMANO"
+      lead_message_kind: "APERTURA" | "RESPUESTA" | "SEGUIMIENTO"
       lead_message_sender: "VENDEDOR" | "LEAD"
       lead_next_action:
         | "ASK_QUESTION"
@@ -1953,6 +2053,7 @@ export type Database = {
         | "CERRADO_PERDIDO"
         | "DESCARTADO"
       message_channel: "WHATSAPP" | "EMAIL" | "INSTAGRAM"
+      sales_goal_status: "ACTIVA" | "ARCHIVADA"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2145,6 +2246,7 @@ export const Constants = {
       ],
       lead_knowledge_origin: ["PROPIO", "MERCADO", "HIPOTESIS"],
       lead_message_generator: ["IA", "HUMANO"],
+      lead_message_kind: ["APERTURA", "RESPUESTA", "SEGUIMIENTO"],
       lead_message_sender: ["VENDEDOR", "LEAD"],
       lead_next_action: [
         "ASK_QUESTION",
@@ -2190,6 +2292,7 @@ export const Constants = {
         "DESCARTADO",
       ],
       message_channel: ["WHATSAPP", "EMAIL", "INSTAGRAM"],
+      sales_goal_status: ["ACTIVA", "ARCHIVADA"],
     },
   },
 } as const

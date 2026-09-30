@@ -29,7 +29,7 @@ import type { BrandPlatform } from "@/lib/brand/sources/types";
 const PLATFORM_LABEL: Record<BrandPlatform, string> = { INSTAGRAM: "Instagram", YOUTUBE: "YouTube" };
 
 /**
- * Windsor no es en vivo: el cron sincroniza una vez por día (plan Hobby de
+ * Las métricas de Instagram no son en vivo: el cron sincroniza una vez por día (plan Hobby de
  * Vercel) y abrir /marca/generar dispara como mucho una sincronización si la
  * última completada tiene más de AUTO_SYNC_MIN_HOURS. Sin esta línea el
  * modelo lee `brand_post_metrics` como si fuera el conteo de Instagram en
@@ -38,17 +38,26 @@ const PLATFORM_LABEL: Record<BrandPlatform, string> = { INSTAGRAM: "Instagram", 
  */
 function formatSyncFreshness(lastSyncedAt: string | null): string {
   if (!lastSyncedAt) {
-    return "Última sincronización de métricas con Windsor: nunca. Los números de abajo pueden no existir todavía o estar muy desactualizados — no los presentes como el estado actual de la cuenta.";
+    return "Última sincronización de métricas con Instagram: nunca. Los números de abajo pueden no existir todavía o estar muy desactualizados — no los presentes como el estado actual de la cuenta.";
   }
   const minutes = Math.round((Date.now() - new Date(lastSyncedAt).getTime()) / 60000);
   const relative = minutes < 60 ? `hace ${minutes} min` : minutes < 1440 ? `hace ${Math.round(minutes / 60)} h` : `hace ${Math.round(minutes / 1440)} d`;
-  return `Última sincronización de métricas con Windsor: ${relative}. Los números de reach/views/likes/guardados de abajo son de esa foto, no en vivo — pueden haber subido bastante desde entonces, sobre todo en piezas publicadas en las últimas horas o días. Si Agus dice que un número ya cambió, confiá en lo que dice en vez de insistir con el dato viejo, y aclará que tu lectura es "a la última sincronización" cuando cites una cifra de una pieza reciente.`;
+  return `Última sincronización de métricas con Instagram: ${relative}. Los números de reach/views/likes/guardados de abajo son de esa foto, no en vivo — pueden haber subido bastante desde entonces, sobre todo en piezas publicadas en las últimas horas o días. Si Agus dice que un número ya cambió, confiá en lo que dice en vez de insistir con el dato viejo, y aclará que tu lectura es "a la última sincronización" cuando cites una cifra de una pieza reciente.`;
 }
+
+/**
+ * Los ids son UUIDs y se repiten en cada fila: son lo más caro del prompt en
+ * tokens. Alcanza con unos pocos por fila como evidencia citable — el tope es
+ * por el límite de tokens/minuto de Groq free (8000).
+ */
+const MAX_IDS_PER_ROW = 3;
+/** Mejores y peores piezas que se listan en el análisis (por el mismo tope). */
+const MAX_POSTS_LISTED = 5;
 
 function formatRows(rows: PatternRow[]): string {
   if (rows.length === 0) return "  (sin datos suficientes todavía)";
   return rows
-    .map((r) => `  - ${r.label}: ${r.displayValue} (muestra: ${r.sampleSize} post${r.sampleSize === 1 ? "" : "s"}, postIds: [${r.postIds.join(", ")}])`)
+    .map((r) => `  - ${r.label}: ${r.displayValue} (muestra: ${r.sampleSize} post${r.sampleSize === 1 ? "" : "s"}, postIds: [${r.postIds.slice(0, MAX_IDS_PER_ROW).join(", ")}])`)
     .join("\n");
 }
 
@@ -109,9 +118,9 @@ export function formatHypothesisTests(tests: PublishedHypothesis[], results: Rec
         test.post_id ? `postId=${test.post_id}` : "todavía sin empalmar con sus métricas (no se puede concluir nada)",
         result ?? (test.post_id ? "sin clasificar todavía (recién publicada o sin baseline)" : null),
         test.parent_item_id ? "es variante de un ganador (explotación)" : "experimento nuevo (exploración)",
-        `hipótesis="${(test.hypothesis ?? "").replace(/\s+/g, " ").slice(0, 400)}"`,
-        test.hook ? `hook="${test.hook.slice(0, 160)}"` : null,
-        test.angle ? `ángulo="${test.angle.slice(0, 160)}"` : null,
+        `hipótesis="${(test.hypothesis ?? "").replace(/\s+/g, " ").slice(0, 250)}"`,
+        test.hook ? `hook="${test.hook.slice(0, 100)}"` : null,
+        test.angle ? `ángulo="${test.angle.slice(0, 100)}"` : null,
       ].filter(Boolean);
       return `  - ${parts.join(", ")}`;
     })
@@ -169,10 +178,10 @@ ${formatRows(insights.retention.rows)}
 ${formatBaselines(insights.baselines)}
 
 ## Mejor contenido del período
-${insights.topPosts.map((p) => formatPost(p, insights.results[p.postId])).join("\n") || "  (sin datos suficientes)"}
+${insights.topPosts.slice(0, MAX_POSTS_LISTED).map((p) => formatPost(p, insights.results[p.postId])).join("\n") || "  (sin datos suficientes)"}
 
 ## Peor contenido del período
-${insights.bottomPosts.map((p) => formatPost(p, insights.results[p.postId])).join("\n") || "  (sin datos suficientes)"}${hypothesesSection}
+${insights.bottomPosts.slice(0, MAX_POSTS_LISTED).map((p) => formatPost(p, insights.results[p.postId])).join("\n") || "  (sin datos suficientes)"}${hypothesesSection}
 
 Analizá esto siguiendo el §29 del SOC: qué sabemos, qué sospechamos, qué no sabemos todavía — y de ahí, qué duplicarías (REPETIR), qué reducirías (CORTAR) y qué testearías ahora (PROBAR). Nunca recalcules ni inventes aritmética: los números de arriba ya están bien, tu trabajo es la lectura.
 

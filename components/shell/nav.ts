@@ -34,8 +34,10 @@ export const MODULES: NavModule[] = [
     available: true,
     children: [
       { href: "/leads", label: "Dashboard", exact: true },
+      { href: "/leads/objetivo", label: "Objetivo" },
       { href: "/leads/lista", label: "Listas" },
       { href: "/leads/generar", label: "Generar lista" },
+      { href: "/leads/seguimiento", label: "Seguimiento" },
       { href: "/leads/agenda", label: "Agenda" },
       { href: "/leads/conocimiento", label: "Memoria de ventas" },
     ],

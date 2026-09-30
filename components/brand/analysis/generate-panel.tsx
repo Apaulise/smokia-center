@@ -11,7 +11,7 @@ import type { BrandPlatform } from "@/lib/brand/sources/types";
 
 /**
  * "Generar análisis" (§3.5). Sin Realtime a propósito: a diferencia de
- * Windsor (sync-panel.tsx), acá la Server Action no vuelve hasta que Claude
+ * la API de Instagram (sync-panel.tsx), acá la Server Action no vuelve hasta que Claude
  * termina — el estado "pending" del botón ES el progreso, no hay una fila de
  * job que seguir.
  *

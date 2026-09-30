@@ -5,10 +5,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { decrypt, encrypt } from "@/lib/crypto";
-import { instagramProvider } from "@/lib/brand/sources/instagram";
 import { generateGeminiJson } from "@/lib/gemini/client";
 import { generateGroqJson } from "@/lib/groq/client";
-import { queryWindsorConnector } from "@/lib/windsor/client";
+import { getMetaCredentials, graphGet } from "@/lib/meta/client";
 import type { LeadSource } from "@/lib/providers/types";
 import { createClient, requireUser } from "@/lib/supabase/server";
 import { slugify } from "@/lib/utils";
@@ -20,7 +19,6 @@ import {
   GEMINI_KEY_SETTING,
   GROQ_KEY_SETTING,
   SALES_PROFILE_SETTING,
-  WINDSOR_KEY_SETTING,
   actorOverrideKey,
 } from "./constants";
 
@@ -114,83 +112,29 @@ export async function testApifyConnection(
   }
 }
 
-// ── Windsor.ai API key ───────────────────────────────────────────────────
+// ── Instagram (Graph API de Meta) ────────────────────────────────────────
 
-const windsorKeySchema = z.object({
-  apiKey: z.string().trim().min(10, "La API key parece incompleta."),
-});
-
-export async function saveWindsorKey(
-  _prevState: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  const user = await requireUser();
-  const parsed = windsorKeySchema.safeParse({ apiKey: formData.get("apiKey") });
-  if (!parsed.success) {
-    return { ok: false, message: firstIssue(parsed.error, "API key inválida.") };
-  }
-
-  const supabase = await createClient();
-  const { error } = await supabase.from("settings").upsert(
-    {
-      owner_id: user.id,
-      key: WINDSOR_KEY_SETTING,
-      value_encrypted: encrypt(parsed.data.apiKey),
-    },
-    { onConflict: "owner_id,key" },
-  );
-
-  if (error) return { ok: false, message: "No se pudo guardar la key." };
-
-  revalidatePath("/configuracion");
-  return { ok: true, message: "API key guardada." };
-}
-
-export async function deleteWindsorKey() {
-  const supabase = await createClient();
-  await supabase.from("settings").delete().eq("key", WINDSOR_KEY_SETTING);
-  revalidatePath("/configuracion");
-}
-
-export async function testWindsorConnection(
+/**
+ * Las credenciales de Instagram viven en variables de entorno, no en `settings`
+ * (ver lib/meta/client.ts): no hay nada que guardar ni borrar desde la app, sólo
+ * verificar que el token siga andando. Los tokens largos vencen a los 60 días.
+ */
+export async function testInstagramConnection(
   _prevState: ActionState,
   _formData: FormData,
 ): Promise<ActionState> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("settings")
-    .select("value_encrypted")
-    .eq("key", WINDSOR_KEY_SETTING)
-    .maybeSingle();
+  await requireUser();
 
-  if (!data) return { ok: false, message: "Todavía no cargaste una API key." };
-
-  let apiKey: string;
-  try {
-    apiKey = decrypt(data.value_encrypted);
-  } catch {
-    return { ok: false, message: "La key guardada no se pudo leer. Volvé a cargarla." };
+  const credentials = getMetaCredentials();
+  if (!credentials) {
+    return { ok: false, message: "Faltan INSTAGRAM_ACCESS_TOKEN e INSTAGRAM_USER_ID en las variables de entorno." };
   }
 
   try {
-    // Windsor no tiene un endpoint genérico de "quién soy": se prueba contra
-    // el conector de Instagram, que es el único conectado en esta fase.
-    const rows = await queryWindsorConnector({
-      apiKey,
-      connector: instagramProvider.connector,
-      fields: ["account_id"],
-      maxRows: 1,
-    });
-
-    return {
-      ok: true,
-      message:
-        rows.length > 0
-          ? "Conexión exitosa."
-          : "La key es válida, pero Windsor todavía no tiene ninguna cuenta de Instagram conectada.",
-    };
+    const row = (await graphGet(credentials, credentials.userId, { fields: "username" })) as { username?: string };
+    return { ok: true, message: row.username ? `Conectado como @${row.username}.` : "Conexión exitosa." };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No se pudo contactar a Windsor." };
+    return { ok: false, message: error instanceof Error ? error.message : "No se pudo contactar a Instagram." };
   }
 }
 
@@ -510,48 +454,6 @@ export async function seedDefaultIndustries() {
     })),
     { onConflict: "owner_id,slug", ignoreDuplicates: true },
   );
-  revalidatePath("/configuracion");
-}
-
-// ── Plantillas de mensajes ───────────────────────────────────────────────
-
-const templateSchema = z.object({
-  name: z.string().trim().min(2, "Nombre muy corto.").max(60, "Nombre muy largo."),
-  channel: z.enum(["WHATSAPP", "EMAIL"]),
-  body: z.string().trim().min(1, "El mensaje no puede estar vacío.").max(2000, "Mensaje muy largo."),
-});
-
-export async function createTemplate(
-  _prevState: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  const user = await requireUser();
-  const parsed = templateSchema.safeParse({
-    name: formData.get("name"),
-    channel: formData.get("channel"),
-    body: formData.get("body"),
-  });
-  if (!parsed.success) {
-    return { ok: false, message: firstIssue(parsed.error, "Dato inválido.") };
-  }
-
-  const supabase = await createClient();
-  const { error } = await supabase.from("message_templates").insert({
-    owner_id: user.id,
-    name: parsed.data.name,
-    channel: parsed.data.channel,
-    body: parsed.data.body,
-  });
-
-  if (error) return { ok: false, message: "No se pudo crear la plantilla." };
-
-  revalidatePath("/configuracion");
-  return { ok: true, message: "Plantilla creada." };
-}
-
-export async function deleteTemplate(id: string) {
-  const supabase = await createClient();
-  await supabase.from("message_templates").delete().eq("id", id);
   revalidatePath("/configuracion");
 }
 

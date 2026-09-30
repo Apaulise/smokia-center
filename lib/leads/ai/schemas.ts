@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import type { GeminiSchema } from "@/lib/gemini/client";
 import type { GroqJsonSchema } from "@/lib/groq/client";
 
 /**
@@ -159,6 +158,27 @@ export const ANALYZE_GROQ_SCHEMA: GroqJsonSchema = {
   additionalProperties: false,
 };
 
+// ── Respaldo de respuesta cuando el next-best-action exige una (§1.12/§1.14) ──
+// El modelo puede volver `suggested_reply.has_reply = false` aunque
+// `computeNextBestAction()` (next-action.ts) ya haya decidido en TypeScript
+// que sí corresponde responder (p. ej. EXPLAIN_SERVICE con dolor confirmado).
+// Este esquema es el de la segunda corrida de respaldo — siempre pide un
+// mensaje, porque a esta altura la decisión de responder ya no es del modelo.
+
+export const NextReplySchema = z.object({
+  message: z.string().trim().min(1).max(600),
+});
+export type NextReplyOutput = z.infer<typeof NextReplySchema>;
+
+export const NEXT_REPLY_GROQ_SCHEMA: GroqJsonSchema = {
+  type: "object",
+  properties: {
+    message: { type: "string" },
+  },
+  required: ["message"],
+  additionalProperties: false,
+};
+
 // ── Reescrituras de tono (§1.15) ─────────────────────────────────────────────
 
 export const RewriteSchema = z.object({
@@ -166,13 +186,21 @@ export const RewriteSchema = z.object({
 });
 export type RewriteOutput = z.infer<typeof RewriteSchema>;
 
-/** Va a Gemini, no Groq: reescribir un texto que ya existe no es decidir (Plan §1.7). */
-export const REWRITE_GEMINI_SCHEMA: GeminiSchema = {
+/**
+ * Movido de Gemini a Groq (2026-09-28): el enriquecimiento y el rewrite
+ * compartían la key de Gemini, y el grounding (`google_search`) del
+ * enriquecimiento se cobra contra la facturación de ese proyecto — cuando el
+ * prepago se agota, tira abajo también al rewrite aunque no necesite
+ * grounding. Reescribir un texto que ya existe no exige buscar nada, así que
+ * no hay motivo para que dependa del mismo saldo.
+ */
+export const REWRITE_GROQ_SCHEMA: GroqJsonSchema = {
   type: "object",
   properties: {
     message: { type: "string" },
   },
   required: ["message"],
+  additionalProperties: false,
 };
 
 // ── Follow-up (§1.16) ─────────────────────────────────────────────────────────

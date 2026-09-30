@@ -42,7 +42,7 @@ function formatRelative(iso: string) {
  * que comparten un proveedor en vez de dos suscripciones a Realtime.
  *
  * A diferencia de scrape_jobs, acá la corrida ya terminó cuando la Server
- * Action devuelve — Windsor es pull síncrono, no hay proceso en background
+ * Action devuelve — la API de Instagram es pull síncrono, no hay proceso en background
  * que esperar. Realtime sirve para verla si el cron dispara una mientras la
  * pantalla está abierta, no para mostrar el progreso de este click.
  */

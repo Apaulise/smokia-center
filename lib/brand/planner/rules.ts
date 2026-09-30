@@ -5,10 +5,8 @@
  * forma de descubrir que el video duraba 16 minutos) y el servidor para
  * revalidar antes de publicar.
  *
- * Los números salen de las descripciones de las acciones del conector de
- * Windsor (`create_video_post`, `create_image_post`, `create_story`,
- * `create_carousel_post`), no de la documentación de Meta: es lo que el
- * conector efectivamente acepta.
+ * Los números salen de los límites de la Content Publishing API de Meta
+ * (Reels, imágenes, historias y carruseles).
  */
 
 export type MediaType = "IMAGE" | "VIDEO";

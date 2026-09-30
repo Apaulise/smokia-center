@@ -1,45 +1,32 @@
-// Sincronización con Windsor.ai — la parte idempotente del flujo (Plans/03
-// §3.2). Se dispara desde tres lados: el botón "Sincronizar ahora", el
-// chequeo al abrir /marca, y el cron. Las tres pisan el mismo día sin
-// duplicar nada porque todo se escribe con upsert sobre la clave única de
-// cada tabla (post_id+captured_on, account_id+captured_on, etc.).
+// Sincronización con la API oficial de la plataforma (Instagram: Graph API de
+// Meta) — la parte idempotente del flujo (Plans/03 §3.2). Se dispara desde tres
+// lados: el botón "Sincronizar ahora", el chequeo al abrir /marca, y el cron.
+// Las tres pisan el mismo día sin duplicar nada porque todo se escribe con
+// upsert sobre la clave única de cada tabla (post_id+captured_on,
+// account_id+captured_on, etc.).
 //
-// Usa el cliente admin siempre, sin importar quién la dispara: a diferencia
-// de Apify, Windsor es pull (no hay webhook que autenticar), pero un cron no
-// tiene sesión de usuario, así que necesita el mismo bypass de RLS que
-// lib/apify/reconcile.ts — con el owner_id resuelto por quien llama y escrito
-// explícito en cada fila (CLAUDE.md §4).
+// Usa el cliente admin siempre, sin importar quién la dispara: es pull (no hay
+// webhook que autenticar), pero un cron no tiene sesión de usuario, así que
+// necesita el mismo bypass de RLS que lib/apify/reconcile.ts — con el owner_id
+// resuelto por quien llama y escrito explícito en cada fila (CLAUDE.md §4).
 //
-// LÍMITE CONOCIDO: no se manda `select_accounts` a Windsor. Se probó contra
-// una cuenta real y el `account_id` que devuelve el campo NO es el id que
-// Windsor espera ahí (usa un id de "cuenta configurada" distinto, que no se
-// expone por ningún field de lectura). Con una sola cuenta por plataforma —
-// el caso de hoy — Windsor igual devuelve sólo lo suyo sin ese filtro. Si se
-// conecta una segunda cuenta de la misma plataforma, esto hay que
-// resolverlo primero (ver error `account_not_available` de Windsor, que sí
-// lista el id correcto) o la sincronización va a mezclar cuentas.
+// Las credenciales son las del proveedor (variables de entorno, ver
+// lib/meta/client.ts): la app es de un solo dueño y el token es de SU cuenta.
+// Por eso el owner_id sólo decide dónde se escribe, no con qué cuenta se lee.
 //
-// Sin date_from/date_to, Windsor devuelve sólo una ventana reciente angosta
-// (probado: 1-2 posts en vez de los 7 reales de la cuenta). Por eso el
-// contenido y la audiencia se piden con un rango amplio y fijo — no hay
-// volumen para que traer todo de una sea un problema en esta escala.
-const HISTORY_START = "2010-01-01";
-
+// Cuánto historial trae cada consulta lo decide el proveedor (ver
+// INSIGHTS_WINDOW en lib/brand/sources/instagram.ts).
 import { linkPublishedItems } from "@/lib/brand/planner/link";
 import { getBrandSource } from "@/lib/brand/sources/registry";
-import type {
-  BrandAudienceDimension,
-  BrandPlatform,
-  NormalizedAudienceRow,
-  NormalizedComment,
-  NormalizedPost,
+import {
+  hasAnyMetric,
+  type BrandPlatform,
+  type NormalizedAudienceRow,
+  type NormalizedComment,
+  type NormalizedPost,
 } from "@/lib/brand/sources/types";
-import { asRecord, firstString } from "@/lib/brand/sources/utils";
-import { decrypt } from "@/lib/crypto";
-import { WINDSOR_KEY_SETTING } from "@/lib/settings/constants";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database, Json } from "@/lib/supabase/database.types";
-import { queryWindsorConnector } from "@/lib/windsor/client";
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -71,12 +58,6 @@ export interface BrandSyncOptions {
   skipIfCompletedWithinHours?: number;
 }
 
-function extractDate(raw: unknown, fallback: string): string {
-  const row = asRecord(raw);
-  if (!row) return fallback;
-  return firstString(row, ["date"]) ?? fallback;
-}
-
 export async function runBrandSync(
   ownerId: string,
   platform: BrandPlatform,
@@ -88,22 +69,12 @@ export async function runBrandSync(
     return { status: "FALLIDO", itemsImported: 0, error: `Plataforma desconocida: ${platform}` };
   }
 
-  const { data: settingsRow } = await admin
-    .from("settings")
-    .select("value_encrypted")
-    .eq("owner_id", ownerId)
-    .eq("key", WINDSOR_KEY_SETTING)
-    .maybeSingle();
-
-  if (!settingsRow) {
-    return { status: "FALLIDO", itemsImported: 0, error: "Falta la API key de Windsor." };
-  }
-
-  let apiKey: string;
-  try {
-    apiKey = decrypt(settingsRow.value_encrypted);
-  } catch {
-    return { status: "FALLIDO", itemsImported: 0, error: "La API key guardada no se pudo leer." };
+  if (!provider.isConfigured()) {
+    return {
+      status: "FALLIDO",
+      itemsImported: 0,
+      error: "Faltan las credenciales de Instagram (INSTAGRAM_ACCESS_TOKEN e INSTAGRAM_USER_ID).",
+    };
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -154,19 +125,25 @@ export async function runBrandSync(
     let itemsImported = 0;
 
     // 1a. Identidad + totales "a hoy" — una fila esperada por cuenta.
-    const identityRows = await queryWindsorConnector({
-      apiKey,
-      connector: provider.connector,
-      fields: provider.accountFields,
-    });
+    const accounts = await provider.fetchAccounts();
 
     const accountIds = new Map<string, string>();
     let latestFollowers: number | null = null;
 
-    for (const raw of identityRows) {
-      const snapshot = provider.mapAccount(raw);
-      if (!snapshot) continue;
+    for (const snapshot of accounts) {
       if (snapshot.followersCount !== null) latestFollowers = Math.max(latestFollowers ?? 0, snapshot.followersCount);
+
+      // Si esta cuenta ya estaba guardada con otro id externo (venía de otra fuente de datos),
+      // se la re-apunta en vez de crear una nueva: el historial cuelga del id interno.
+      if (snapshot.username) {
+        await admin
+          .from("brand_accounts")
+          .update({ external_id: snapshot.externalId })
+          .eq("owner_id", ownerId)
+          .eq("platform", platform)
+          .eq("username", snapshot.username)
+          .neq("external_id", snapshot.externalId);
+      }
 
       const { data: account, error } = await admin
         .from("brand_accounts")
@@ -213,74 +190,44 @@ export async function runBrandSync(
         .lte("target_followers", latestFollowers);
     }
 
-    // 1b. Métricas diarias — consulta separada (ver comment del header),
-    // upsert por la fecha real de cada fila, no por "hoy".
-    if (provider.accountDailyFields && accountIds.size > 0) {
-      const dailyRows = await queryWindsorConnector({
-        apiKey,
-        connector: provider.connector,
-        fields: provider.accountDailyFields,
-      });
-
-      for (const raw of dailyRows) {
-        const snapshot = provider.mapAccount(raw);
-        if (!snapshot) continue;
-        const accountId = accountIds.get(snapshot.externalId);
-        if (!accountId) continue;
+    // 1b. Métricas diarias — upsert por la fecha real de cada fila, no por "hoy".
+    if (provider.fetchDailyMetrics && accountIds.size > 0) {
+      for (const day of await provider.fetchDailyMetrics()) {
+        const dayAccountId = accountIds.get(day.externalId);
+        if (!dayAccountId) continue;
 
         await admin.from("brand_account_metrics").upsert(
           {
             owner_id: ownerId,
-            account_id: accountId,
-            captured_on: extractDate(raw, today),
-            reach: snapshot.reach,
-            impressions: snapshot.impressions,
-            profile_views: snapshot.profileViews,
-            new_followers: snapshot.newFollowers,
-            accounts_engaged: snapshot.accountsEngaged,
-            total_interactions: snapshot.totalInteractions,
+            account_id: dayAccountId,
+            captured_on: day.date,
+            reach: day.reach,
+            impressions: day.impressions,
+            profile_views: day.profileViews,
+            new_followers: day.newFollowers,
+            accounts_engaged: day.accountsEngaged,
+            total_interactions: day.totalInteractions,
           },
           { onConflict: "account_id,captured_on" },
         );
       }
     }
 
-    for (const accountId of accountIds.values()) {
-      itemsImported += await syncMedia({
-        admin,
-        ownerId,
-        accountId,
-        apiKey,
-        connector: provider.connector,
-        mediaFields: provider.mediaFields,
-        mapMedia: provider.mapMedia,
-        today,
-      });
+    // Una cuenta por plataforma (la del token): el contenido y la audiencia son de esa cuenta.
+    const accountId = accountIds.size === 1 ? [...accountIds.values()][0] : null;
+    let posts: NormalizedPost[] = [];
 
-      if (provider.capabilities.audience && provider.audienceFields && provider.mapAudience) {
-        await syncAudience({
-          admin,
-          ownerId,
-          accountId,
-          apiKey,
-          connector: provider.connector,
-          audienceFields: provider.audienceFields,
-          mapAudience: provider.mapAudience,
-          today,
-        });
+    if (accountId) {
+      posts = await provider.fetchMedia();
+      itemsImported += await syncMedia({ admin, ownerId, accountId, posts, today });
+
+      if (provider.capabilities.audience && provider.fetchAudience) {
+        await syncAudience({ admin, ownerId, accountId, rows: await provider.fetchAudience(), today });
       }
     }
 
-    if (provider.commentFields && provider.mapComment && accountIds.size > 0) {
-      itemsImported += await syncComments({
-        admin,
-        ownerId,
-        apiKey,
-        connector: provider.connector,
-        commentFields: provider.commentFields,
-        mapComment: provider.mapComment,
-        today,
-      });
+    if (provider.fetchComments && posts.length > 0) {
+      itemsImported += await syncComments({ admin, ownerId, comments: await provider.fetchComments(posts) });
     }
 
     // Empalma lo publicado desde el planificador con su fila recién importada
@@ -312,31 +259,16 @@ async function syncMedia(params: {
   admin: Admin;
   ownerId: string;
   accountId: string;
-  apiKey: string;
-  connector: string;
-  mediaFields: string[];
-  mapMedia: (row: unknown) => NormalizedPost | null;
+  posts: NormalizedPost[];
   today: string;
 }): Promise<number> {
-  const { admin, ownerId, accountId, apiKey, connector, mediaFields, mapMedia, today } = params;
+  const { admin, ownerId, accountId, today } = params;
 
-  const mediaRows = await queryWindsorConnector({
-    apiKey,
-    connector,
-    fields: mediaFields,
-    dateFrom: HISTORY_START,
-    dateTo: today,
-  });
-
-  // Un Map por external_id: si Windsor repite la misma pieza, un upsert con
-  // filas repetidas en el mismo statement rompe con "ON CONFLICT DO UPDATE
-  // command cannot affect row a second time" (mismo criterio que
-  // lib/apify/reconcile.ts).
+  // Un Map por external_id: un upsert con filas repetidas en el mismo statement
+  // rompe con "ON CONFLICT DO UPDATE command cannot affect row a second time"
+  // (mismo criterio que lib/apify/reconcile.ts).
   const posts = new Map<string, NormalizedPost>();
-  for (const raw of mediaRows) {
-    const post = mapMedia(raw);
-    if (post) posts.set(post.externalId, post);
-  }
+  for (const post of params.posts) posts.set(post.externalId, post);
   if (posts.size === 0) return 0;
 
   const { data: savedPosts, error } = await admin
@@ -364,7 +296,7 @@ async function syncMedia(params: {
 
   const metricsInserts = [...posts.values()].flatMap((post) => {
     const postId = postIdByExternalId.get(post.externalId);
-    if (!postId) return [];
+    if (!postId || !hasAnyMetric(post)) return [];
     return [
       {
         owner_id: ownerId,
@@ -392,26 +324,8 @@ async function syncMedia(params: {
   return savedPosts.length;
 }
 
-async function syncComments(params: {
-  admin: Admin;
-  ownerId: string;
-  apiKey: string;
-  connector: string;
-  commentFields: string[];
-  mapComment: (row: unknown) => NormalizedComment | null;
-  today: string;
-}): Promise<number> {
-  const { admin, ownerId, apiKey, connector, commentFields, mapComment, today } = params;
-
-  const rows = await queryWindsorConnector({
-    apiKey,
-    connector,
-    fields: commentFields,
-    dateFrom: HISTORY_START,
-    dateTo: today,
-  });
-
-  const comments = rows.map(mapComment).filter((c): c is NormalizedComment => c !== null);
+async function syncComments(params: { admin: Admin; ownerId: string; comments: NormalizedComment[] }): Promise<number> {
+  const { admin, ownerId, comments } = params;
   if (comments.length === 0) return 0;
 
   const postExternalIds = [...new Set(comments.map((c) => c.postExternalId))];
@@ -423,9 +337,8 @@ async function syncComments(params: {
 
   const postIdByExternalId = new Map((posts ?? []).map((p) => [p.external_id, p.id]));
 
-  // Un Map por (post_id, external_id): Windsor puede repetir el mismo
-  // comment_id en el rango — probado contra la cuenta real — y un upsert con
-  // filas repetidas en el mismo statement rompe (ver comentario en syncMedia).
+  // Un Map por (post_id, external_id): un upsert con filas repetidas en el mismo
+  // statement rompe (ver comentario en syncMedia).
   const dedup = new Map<string, (typeof comments)[number] & { postId: string }>();
   for (const comment of comments) {
     const postId = postIdByExternalId.get(comment.postExternalId);
@@ -457,39 +370,19 @@ async function syncAudience(params: {
   admin: Admin;
   ownerId: string;
   accountId: string;
-  apiKey: string;
-  connector: string;
-  audienceFields: Partial<Record<BrandAudienceDimension, [string, string]>>;
-  mapAudience: (dimension: BrandAudienceDimension, row: unknown) => NormalizedAudienceRow | null;
+  rows: NormalizedAudienceRow[];
   today: string;
 }): Promise<void> {
-  const { admin, ownerId, accountId, apiKey, connector, audienceFields, mapAudience, today } = params;
+  const { admin, ownerId, accountId, rows, today } = params;
 
-  // Las 4 dimensiones son consultas independientes entre sí — en paralelo en
-  // vez de en serie, para no sumar 4 round-trips más a Windsor al tiempo
-  // total de la corrida (importa en el límite de duración de la función).
-  const dimensions = Object.keys(audienceFields) as BrandAudienceDimension[];
-  const rowsByDimension = await Promise.all(
-    dimensions.map((dimension) => {
-      const fields = audienceFields[dimension];
-      if (!fields) return Promise.resolve([]);
-      return queryWindsorConnector({ apiKey, connector, fields, dateFrom: HISTORY_START, dateTo: today });
-    }),
-  );
-
-  const inserts = dimensions.flatMap((dimension, i) =>
-    rowsByDimension[i]
-      .map((raw) => mapAudience(dimension, raw))
-      .filter((row): row is NormalizedAudienceRow => row !== null)
-      .map((row) => ({
-        owner_id: ownerId,
-        account_id: accountId,
-        captured_on: today,
-        dimension: row.dimension,
-        value: row.value,
-        size: row.size,
-      })),
-  );
+  const inserts = rows.map((row) => ({
+    owner_id: ownerId,
+    account_id: accountId,
+    captured_on: today,
+    dimension: row.dimension,
+    value: row.value,
+    size: row.size,
+  }));
 
   if (inserts.length > 0) {
     await admin.from("brand_audience").upsert(inserts, { onConflict: "account_id,captured_on,dimension,value" });

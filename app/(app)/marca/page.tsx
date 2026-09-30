@@ -39,7 +39,7 @@ import { requireUser } from "@/lib/supabase/server";
 
 export const metadata = { title: "Marca Personal · Awareness AI" };
 // El botón "Sincronizar ahora" corre lib/brand/sync.ts entero (varias
-// llamadas a Windsor) — mismo límite que la ruta de cron (app/api/jobs/sync-marca).
+// llamadas a la API de Instagram) — mismo límite que la ruta de cron (app/api/jobs/sync-marca).
 export const maxDuration = 60;
 
 const PLATFORM = "INSTAGRAM" as const;
@@ -108,7 +108,7 @@ export default async function MarcaPage() {
           <EmptyState
             icon={<KeyRound className="size-5" />}
             title="Todavía no hay una cuenta conectada"
-            description="Cargá tu API key de Windsor.ai en Configuración y sincronizá para ver tus métricas de Instagram acá."
+            description="Cargá las credenciales de Instagram en el entorno (ver Configuración) y sincronizá para ver tus métricas de Instagram acá."
             action={
               <ButtonLink href="/configuracion" variant="primary">
                 Ir a Configuración
