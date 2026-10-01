@@ -17,11 +17,13 @@ import { generateNextReply } from "@/lib/leads/ai/reply";
 import { rewriteMessage } from "@/lib/leads/ai/rewrite";
 import { REWRITE_TONES, type RewriteTone } from "@/lib/leads/ai/rewrite-tones";
 import { editDistance } from "@/lib/leads/ai/style/diff";
+import { listStyleExamples } from "@/lib/leads/ai/style/examples";
 import type { AnalyzeOutput } from "@/lib/leads/ai/schemas";
 import {
   getLead,
   getLeadAngleCounts30d,
   getLeadIntel,
+  listLeadActivities,
   listLeadMessages,
   listLeadNotes,
   listLeadSignals,
@@ -262,16 +264,19 @@ export async function generateLeadOpening(leadId: string): Promise<OpeningAction
   const lead = await getLead(leadId);
   if (!lead) return { ok: false, message: "Lead no encontrado." };
 
-  const [salesProfile, intel, signals, notes, angleCounts] = await Promise.all([
+  const [salesProfile, intel, signals, notes, angleCounts, styleExamples] = await Promise.all([
     getSalesProfile(),
     getLeadIntel(leadId),
     listLeadSignals(leadId),
     listLeadNotes(leadId),
     getLeadAngleCounts30d(),
+    listStyleExamples({ leadId, kind: "APERTURA" }),
   ]);
 
   try {
     const opening = await generateOpening({
+      leadId,
+      styleExamples,
       apiKey: keyResult.apiKey,
       salesProfile,
       lead: toLeadContext(lead),
@@ -720,7 +725,7 @@ export type FollowUpActionState =
   | { ok: true; message: string | null; cannotGenerateReason: string | null }
   | { ok: false; message: string };
 
-/** Botón "Generar seguimiento" de la ficha, para un `AHORA_NO` cuya fecha de retomar llegó (SPA §17). No persiste nada. */
+/** Botón "Generar seguimiento" de la ficha, para cualquier lead contactado y sin cerrar (SPA §17). Lee el hilo, las notas, la memoria y el enriquecimiento. No persiste nada. */
 export async function generateLeadFollowup(leadId: string): Promise<FollowUpActionState> {
   await requireUser();
   if (!idSchema.safeParse(leadId).success) return { ok: false, message: "Lead inválido." };
@@ -731,22 +736,41 @@ export async function generateLeadFollowup(leadId: string): Promise<FollowUpActi
   const lead = await getLead(leadId);
   if (!lead) return { ok: false, message: "Lead no encontrado." };
 
-  const [salesProfile, intel, signals, notes] = await Promise.all([
+  const [salesProfile, intel, signals, notes, conversation, activities, styleExamples] = await Promise.all([
     getSalesProfile(),
     getLeadIntel(leadId),
     listLeadSignals(leadId),
     listLeadNotes(leadId),
+    listLeadMessages(leadId),
+    listLeadActivities(leadId),
+    listStyleExamples({ leadId, kind: "SEGUIMIENTO" }),
   ]);
+
+  // Contactos registrados a mano ("Registré un WhatsApp"): viven en `lead_activities`, no en `lead_messages`.
+  const contacts = activities.filter((a) => ["WHATSAPP", "EMAIL", "LLAMADA", "REUNION"].includes(a.type));
+  const lastMessage = conversation.filter((m) => m.sender === "LEAD" || m.confirmed).at(-1);
+  const lastTouchAt = [lastMessage?.occurred_at, contacts[0]?.occurred_at, lead.last_contacted_at]
+    .filter((d): d is string => Boolean(d))
+    .sort()
+    .at(-1);
+  const daysSinceLastMessage = lastTouchAt
+    ? Math.max(0, Math.floor((Date.now() - new Date(lastTouchAt).getTime()) / (24 * 60 * 60 * 1000)))
+    : null;
 
   try {
     const followUp = await generateFollowup({
       apiKey: keyResult.apiKey,
+      leadId,
       salesProfile,
       lead: toLeadContext(lead),
       enrichment: (intel?.enrichment as EnrichmentResult | null) ?? null,
       memory: (intel?.memory as LeadMemory | null) ?? null,
       signals,
       notes,
+      conversation,
+      contacts,
+      daysSinceLastMessage,
+      styleExamples,
     });
     return { ok: true, message: followUp.message, cannotGenerateReason: followUp.cannot_generate_reason };
   } catch (error) {

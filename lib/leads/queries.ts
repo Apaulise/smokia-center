@@ -460,21 +460,23 @@ export async function listStaleLeads(days = 7, limit = 5) {
 export type FollowUpQueueLead = LeadWithRelations & { overdue: boolean };
 
 /**
- * Cola completa de seguimiento de `/leads/seguimiento` (Plan §1.20): misma
- * condición que `listStaleLeads` (el widget del dashboard usa esa, acotada a
- * 5), pero sin el tope, con el join completo de `SELECT_LEAD_ROW` y separable
- * en "vencido" / "sin contactar" con el flag `overdue`.
+ * Cola de seguimiento de `/leads/seguimiento` (Plan §1.20): prospecciones
+ * abiertas, es decir leads a los que ya se les escribió (`last_contacted_at`
+ * no nulo) y que no están en un estado terminal. Los leads sin contactar no
+ * entran: son contactos cargados para escribirles más adelante, no un
+ * seguimiento pendiente. Ordenada por último contacto más viejo primero — el
+ * que lleva más tiempo sin novedades es el más prioritario. `overdue` marca
+ * además los que tienen una fecha de retomar ya cumplida.
  */
-export async function listFollowUpQueue(days = 7, limit = 200) {
+export async function listFollowUpQueue(limit = 200) {
   const supabase = await createClient();
-  const threshold = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
   const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("leads")
     .select(SELECT_LEAD_ROW)
     .not("status", "in", "(CERRADO_GANADO,CERRADO_PERDIDO,DESCARTADO)")
-    .or(`last_contacted_at.lt.${threshold},and(last_contacted_at.is.null,created_at.lt.${threshold}),next_action_at.lte.${now}`)
-    .order("last_contacted_at", { ascending: true, nullsFirst: true })
+    .not("last_contacted_at", "is", null)
+    .order("last_contacted_at", { ascending: true })
     .limit(limit);
   if (error) throw error;
   const rows = (data ?? []) as LeadWithRelations[];

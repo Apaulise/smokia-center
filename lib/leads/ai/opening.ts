@@ -6,6 +6,7 @@ import { buildAngleBlock, buildLeadStateBlock, type LeadContext, type LeadMemory
 import type { LeadNoteRow, LeadSignalRow } from "@/lib/leads/queries";
 import { OPENING_GROQ_SCHEMA, OpeningSchema, type OpeningOutput } from "@/lib/leads/ai/schemas";
 import { getSalesOS } from "@/lib/leads/ai/sales-os";
+import { buildStyleBlock, type StyleExample } from "@/lib/leads/ai/style/examples";
 
 /**
  * Generador de apertura (Plan §1.11). `chooseSalesAngle` decide el ángulo en
@@ -46,11 +47,25 @@ export function chooseSalesAngle(params: {
  * dentro de un mismo ángulo, no sólo entre ángulos.
  */
 const OPENING_VARIANT_COUNT = 3;
-const VARIANT_HINT: Record<number, string> = {
-  1: "Encuadre: arrancá con un lead-in cálido tipo 'Estuve viendo que en [nombre del negocio]...' (no textual, adaptalo) y seguí con algo que se ve u observaste del negocio (una foto, cómo atienden, el volumen aparente) antes de la pregunta — mejor que ir directo a la observación en seco. Si no hay ningún detalle verificado que observar, no lo inventes: usá el encuadre de la variante 2 en su lugar.",
-  2: "Encuadre: arrancá desde una duda genuina sobre cómo manejan hoy ese proceso, sin mencionar lo que viste.",
-  3: "Encuadre: arrancá con un lead-in cálido tipo 'Estuve viendo que en [nombre del negocio]...' (no textual, adaptalo) seguido de una observación breve y concreta sobre el rubro o el momento del negocio, después la pregunta. 'Concreta' es sobre ESTE negocio puntual, no un dato genérico como su ciudad — si no hay nada concreto, usá el encuadre de la variante 2 en su lugar.",
+
+/** Etiquetas estables de cada tipo de apertura, para mostrarlas en el análisis de §1.19. */
+export const VARIANT_LABEL: Record<number, string> = {
+  1: "Reconocimiento + escenario",
+  2: "Escenario directo",
+  3: "Observación específica + duda",
 };
+
+const VARIANT_HINT: Record<number, string> = {
+  1: "Tipo 1 — RECONOCIMIENTO + ESCENARIO: arrancá con 'Estuve viendo [nombre corto]', reconocé algo que ya hacen bien y está verificado (HECHO) — por ejemplo que tengan reservas online con un sistema — y recién después hacé la pregunta de escenario. Si no hay nada verificado que reconocer, usá el tipo 2.",
+  2: "Tipo 2 — ESCENARIO DIRECTO: sin observación previa. Una línea de saludo y la pregunta de escenario, que es el mensaje entero.",
+  3: "Tipo 3 — OBSERVACIÓN ESPECÍFICA + DUDA: una observación breve sobre algo puntual de ESTE negocio (HECHO, no su ciudad ni un widget estándar) y una duda genuina sobre cómo lo manejan. Si no hay nada específico verificado, usá el tipo 2.",
+};
+
+/**
+ * Mensaje de referencia escrito por el vendedor: el nivel de concreción que
+ * se busca. Va como ESTILO, no como plantilla — el contenido es de otro negocio.
+ */
+const REFERENCE_OPENING = `Hola! Estuve viendo Vintage y vi que tienen bastante aceitado el tema de reservas con AgendaPro y además manejan varios servicios distintos. Te quería hacer una consulta puntual: cuando alguien pregunta por WhatsApp o Instagram pero después no termina reservando, ¿suelen hacer algún seguimiento?`;
 
 /** Variante balanceada por cuántas aperturas ya salieron con ese ángulo — sin otra consulta a la base. */
 function chooseVariant(angle: SalesAngle, counts: Partial<Record<SalesAngle, number>>): number {
@@ -82,6 +97,8 @@ export async function generateOpening(params: {
   signals: LeadSignalRow[];
   notes: LeadNoteRow[];
   angleCounts: Partial<Record<SalesAngle, number>>;
+  styleExamples: StyleExample[];
+  leadId: string;
 }): Promise<GeneratedOpening> {
   const { angle, reason } = chooseSalesAngle({
     recommended: params.enrichment?.recommendedSalesAngle ?? null,
@@ -99,7 +116,33 @@ export async function generateOpening(params: {
   });
   const angleBlock = buildAngleBlock({ angle, reason }, params.angleCounts);
 
-  const basePrompt = `Escribí el primer mensaje para este negocio (SPA §8): entre dos y cinco líneas, contexto verificable + una sola pregunta simple que se pueda contestar sin comprometerse a nada. Nunca te presentes ni menciones una agencia de IA en este mensaje — el objetivo es que te contesten, no vender.\n\nRegla estricta sobre el contexto (SPA §4): sólo podés escribir "vi que...", "tenés...", "en tu web..." o cualquier otra afirmación en primera persona sobre algo puntual del negocio si viene marcado (HECHO, verificado en la búsqueda) en el bloque de enriquecimiento de abajo, o si es una cita textual del lead en la memoria. Si el enriquecimiento dice "SIN VERIFICAR" o no tiene servicios/señales verificados, NO inventes qué tiene la web, qué sistema usa o cómo gestiona turnos.\n\nEl criterio para que algo cuente como "observación" (SPA §8) no es si es cierto, es si es ESPECÍFICO de este negocio y no de cualquier otro del mismo rubro. Dos trampas comunes que son ciertas pero NO sirven:\n- La ciudad: "vi que tu centro está en Ciudad Autónoma de Buenos Aires" le sirve igual a cualquier negocio de esa ciudad. Salvo que sea un barrio o zona chica que de verdad distinga al negocio, no la uses como observación.\n- La infraestructura estándar de cualquier sitio del rubro: que tenga un botón flotante de WhatsApp, un formulario de contacto, o que esté hecho en determinada plataforma (WordPress, Wix). Son "señales de tecnología" verificadas, pero son iguales en casi cualquier sitio de ese rubro hoy — decir "vi que tenés un botón de WhatsApp" suena a que mirás la página como una checklist, no como si conocieras el negocio. Si vas a usar esa señal, hablá del COMPORTAMIENTO detrás (derivan las consultas a WhatsApp, no tienen reservas online) y no del widget en sí.\n\nEntre las señales verificadas, preferí siempre la más específica y menos común: un tratamiento o equipo particular, una ubicación puntual (piso, zona), un especialista, un horario atípico, la ausencia de algo que se esperaría (sin reservas online, por ejemplo) — eso sí es algo que sólo se sabe mirando a ESE negocio. Si no hay ningún detalle verificado que sea realmente específico, no fuerces una "observación": arrancá directo con el rubro y una pregunta genuina sobre cómo trabajan hoy — un mensaje sin observación pero honesto es mejor que uno que rellena con un dato genérico.\n\nLa frase del "ángulo elegido" de abajo (p. ej. "cómo se agenda, confirma y reprograma hoy") te dice DE QUÉ TEMA preguntar, no CÓMO redactar la pregunta — es la misma frase para todos los negocios con ese ángulo, así que copiarla casi textual es lo que hace que dos negocios distintos reciban la misma pregunta (SPA §8: "si tu primera línea le sirve igual a cualquier otro del mismo rubro, no es personalización"). Si hay una señal de operación o tecnología marcada (HECHO, verificado en la búsqueda) para ESTE negocio puntual, construí la pregunta apoyada en esa señal concreta (p. ej. si sólo usan WhatsApp, preguntale por eso puntual, no por "la gestión de turnos" en general). Si no hay ninguna señal verificada, igual variá la redacción — no reutilices la frase del ángulo.\n\n${stateBlock}\n\n${angleBlock}\n\n## Encuadre de esta variante (Plan §1.11 — no es una plantilla, es un punto de partida)\n${VARIANT_HINT[variant]}`;
+  const styleBlock = buildStyleBlock(params.styleExamples, params.leadId);
+
+  const basePrompt = `Escribí el primer mensaje para este negocio (SPA §8): entre dos y cinco líneas, contexto verificable + UNA sola pregunta. Nunca te presentes ni menciones una agencia de IA — el objetivo es que te contesten, no vender.
+
+## Cómo es un buen primer mensaje (el nivel de concreción que se busca)
+Ejemplo escrito por el vendedor para otro negocio — imitá la ESTRUCTURA y el tono, no el contenido:
+
+"${REFERENCE_OPENING}"
+
+Qué tiene de bueno, y es lo que tenés que replicar:
+1. Nombre corto y natural del negocio ("Vintage", no "Vintage Nails & Beauty"), como lo diría una persona.
+2. Reconoce algo que ya hacen bien (HECHO verificado). Eso muestra que miraste y baja la guardia; no arranca marcando un problema.
+3. La pregunta describe una SITUACIÓN concreta del día a día ("cuando alguien pregunta por WhatsApp o Instagram pero después no termina reservando, ¿hacen seguimiento?"), que se contesta en una línea. No pregunta por un TEMA abstracto ("¿cómo organizan la información de los clientes?"): esa es la pregunta floja.
+4. Suena a una persona curiosa, no a un diagnóstico.
+
+## Reglas de contenido
+- Sólo afirmaciones en primera persona ("vi que...", "tienen...") sobre lo que figura como HECHO en el enriquecimiento o una cita textual del lead (SPA §4). Con "SIN VERIFICAR" o sin señales, no inventes qué tiene la web, qué sistema usan ni cómo trabajan.
+- Tampoco inventes detalles dentro de la pregunta (que reciben comprobantes de pago, que atienden por tal canal, etc.): la situación que plantees tiene que ser plausible para el rubro y salir del ángulo, no de datos supuestos del negocio.
+- Lo que cuenta como observación es lo ESPECÍFICO de este negocio: una herramienta que usan (un sistema de reservas), un tratamiento o equipo particular, un horario atípico, la ausencia de algo esperable. NO cuentan la ciudad ni la infraestructura estándar (botón flotante de WhatsApp, formulario, WordPress/Wix); si usás esa señal, hablá del comportamiento detrás y no del widget.
+- La frase del ángulo de abajo es el TEMA de la pregunta, no la redacción: no la copies. Convertila en una situación concreta apoyada en una señal verificada de este negocio; si no hay ninguna, igual redactala con tus palabras.
+
+${stateBlock}
+
+${angleBlock}${styleBlock}
+
+## Tipo de apertura de este mensaje (se mide por tipo y por rubro: respetalo)
+${VARIANT_HINT[variant]}`;
 
   const parsed = await resolveStructuredJson(OpeningSchema, (repairNote) =>
     generateGroqJson({

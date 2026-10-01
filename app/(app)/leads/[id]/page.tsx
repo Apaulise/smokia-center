@@ -41,8 +41,9 @@ export async function generateMetadata({ params }: PageProps<"/leads/[id]">) {
  * antes eran tres paneles separados (Apertura/Analizar/Seguimiento) en un
  * solo bloque que cambia según la etapa, como pide el mockup.
  */
-export default async function LeadFichaPage({ params }: PageProps<"/leads/[id]">) {
+export default async function LeadFichaPage({ params, searchParams }: PageProps<"/leads/[id]">) {
   const { id } = await params;
+  const { modo } = await searchParams;
   const lead = await getLead(id);
   if (!lead) notFound();
 
@@ -178,6 +179,7 @@ export default async function LeadFichaPage({ params }: PageProps<"/leads/[id]">
             hasInstagram={Boolean(lead.instagram_url)}
             messages={messages}
             nextBestActionReason={intel?.next_best_action_reason ?? null}
+            preferFollowUp={modo === "seguimiento"}
           />
           <MessageThread messages={messages} activities={activities} />
         </div>

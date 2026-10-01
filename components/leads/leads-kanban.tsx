@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useRef, useState, useTransition, type DragEvent } from "react";
 
+import { Toast } from "@/components/leads/ui/feedback";
 import { Chip } from "@/components/leads/ui/status-badge";
 import { updateLeadStatus } from "@/lib/leads/actions";
 import type { LeadWithRelations } from "@/lib/leads/queries";
@@ -25,6 +26,8 @@ export function LeadsKanban({ leads }: { leads: LeadWithRelations[] }) {
   const [items, setItems] = useState(leads);
   const [dragOverGroup, setDragOverGroup] = useState<StageGroup | null>(null);
   const [, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const errorTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Ajuste de estado derivado durante el render, no en un efecto (ver leads-table.tsx).
@@ -45,15 +48,27 @@ export function LeadsKanban({ leads }: { leads: LeadWithRelations[] }) {
     if (!leadId) return;
 
     const status = STAGE_GROUP[group][0];
+    const previous = items.find((lead) => lead.id === leadId)?.status;
     setItems((current) => current.map((lead) => (lead.id === leadId ? { ...lead, status } : lead)));
     startTransition(async () => {
-      await updateLeadStatus(leadId, status);
+      const result = await updateLeadStatus(leadId, status);
+      if (result && !result.ok) {
+        if (previous) setItems((current) => current.map((lead) => (lead.id === leadId ? { ...lead, status: previous } : lead)));
+        setError(result.message);
+        if (errorTimeout.current) clearTimeout(errorTimeout.current);
+        errorTimeout.current = setTimeout(() => setError(null), 5000);
+      }
       router.refresh();
     });
   }
 
   return (
     <div className="relative">
+      {error ? (
+        <div className="absolute -top-2 left-1/2 z-20 w-max -translate-x-1/2 -translate-y-full">
+          <Toast tone="error">{error}</Toast>
+        </div>
+      ) : null}
       <button
         type="button"
         aria-label="Desplazar a la izquierda"

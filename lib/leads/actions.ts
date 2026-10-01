@@ -561,19 +561,57 @@ export async function deleteLeadList(_prevState: ActionState, formData: FormData
 // ── Lista de leads y seguimiento (Plan §1.3) ────────────────────────────────
 
 /**
+ * REUNION_AGENDADA y REUNION_REALIZADA sólo los pone la agenda
+ * (stage-engine.ts, Plan §1.5): un cambio manual a uno de estos dos sin un
+ * turno real cargado en `appointments` dejaría el pipeline (y el dashboard)
+ * contando reuniones que no existen.
+ */
+const MEETING_STATUS_GATE: Partial<Record<LeadStatus, AppointmentStatus[]>> = {
+  REUNION_AGENDADA: ["AGENDADA", "CONFIRMADA", "REALIZADA"],
+  REUNION_REALIZADA: ["REALIZADA"],
+};
+
+function meetingGateMessage(status: LeadStatus): string {
+  return status === "REUNION_REALIZADA"
+    ? "No se puede marcar como reunión realizada: este lead no tiene ningún turno marcado como Realizada en la agenda."
+    : "No se puede pasar a reunión agendada: este lead no tiene ningún turno cargado en la agenda. Agendalo primero desde la ficha del lead.";
+}
+
+/** IDs de `leadIds` con al menos un turno en `appointments` cuyo estado está en `statuses`. */
+async function leadIdsWithAppointment(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  leadIds: string[],
+  statuses: AppointmentStatus[],
+): Promise<Set<string>> {
+  if (leadIds.length === 0) return new Set();
+  const { data } = await supabase.from("appointments").select("lead_id").in("lead_id", leadIds).in("status", statuses);
+  return new Set((data ?? []).map((row) => row.lead_id).filter((id): id is string => id !== null));
+}
+
+/**
  * Cambio de estado inline (tabla y kanban). Cada cambio queda registrado en
  * `lead_activities` solo, sin que quien lo hace se acuerde de anotarlo
- * (CLAUDE.md §1.3 / Plan §1.1).
+ * (CLAUDE.md §1.3 / Plan §1.1). Bloquea el paso a reunión agendada/realizada
+ * sin un turno real (ver `MEETING_STATUS_GATE`).
  */
-export async function updateLeadStatus(leadId: string, status: LeadStatus) {
+export async function updateLeadStatus(leadId: string, status: LeadStatus): Promise<ActionState> {
   const user = await requireUser();
   const supabase = await createClient();
 
   const { data: current } = await supabase.from("leads").select("status").eq("id", leadId).maybeSingle();
-  if (!current || current.status === status) return;
+  if (!current) return { ok: false, message: "No se encontró el lead." };
+  if (current.status === status) return { ok: true, message: "" };
+
+  const requiredStatuses = MEETING_STATUS_GATE[status];
+  if (requiredStatuses) {
+    const withAppointment = await leadIdsWithAppointment(supabase, [leadId], requiredStatuses);
+    if (!withAppointment.has(leadId)) {
+      return { ok: false, message: meetingGateMessage(status) };
+    }
+  }
 
   const { error } = await supabase.from("leads").update({ status }).eq("id", leadId);
-  if (error) return;
+  if (error) return { ok: false, message: "No se pudo cambiar el estado." };
 
   await supabase.from("lead_activities").insert({
     owner_id: user.id,
@@ -585,6 +623,7 @@ export async function updateLeadStatus(leadId: string, status: LeadStatus) {
 
   revalidatePath("/leads/lista");
   revalidatePath(`/leads/${leadId}`);
+  return { ok: true, message: "Estado actualizado." };
 }
 
 export async function bulkAssignIndustry(leadIds: string[], industryId: string | null) {
@@ -595,34 +634,62 @@ export async function bulkAssignIndustry(leadIds: string[], industryId: string |
   revalidatePath("/leads/lista");
 }
 
-export async function bulkUpdateStatus(leadIds: string[], status: LeadStatus) {
-  if (leadIds.length === 0) return;
+export type BulkStatusState = { ok: boolean; message: string; skippedIds: string[] } | null;
+
+/** Igual que `updateLeadStatus` pero en lote: aplica a los leads que pasan el gate y reporta los que no. */
+export async function bulkUpdateStatus(leadIds: string[], status: LeadStatus): Promise<BulkStatusState> {
+  if (leadIds.length === 0) return null;
   const user = await requireUser();
   const supabase = await createClient();
 
   const { data: current } = await supabase.from("leads").select("id, status").in("id", leadIds);
   const changed = (current ?? []).filter((row) => row.status !== status);
-  if (changed.length === 0) return;
+  if (changed.length === 0) return null;
 
-  await supabase
-    .from("leads")
-    .update({ status })
-    .in(
-      "id",
+  const requiredStatuses = MEETING_STATUS_GATE[status];
+  let allowed = changed;
+  let skippedIds: string[] = [];
+
+  if (requiredStatuses) {
+    const withAppointment = await leadIdsWithAppointment(
+      supabase,
       changed.map((row) => row.id),
+      requiredStatuses,
+    );
+    allowed = changed.filter((row) => withAppointment.has(row.id));
+    skippedIds = changed.filter((row) => !withAppointment.has(row.id)).map((row) => row.id);
+  }
+
+  if (allowed.length > 0) {
+    await supabase
+      .from("leads")
+      .update({ status })
+      .in(
+        "id",
+        allowed.map((row) => row.id),
+      );
+
+    await supabase.from("lead_activities").insert(
+      allowed.map((row) => ({
+        owner_id: user.id,
+        lead_id: row.id,
+        type: "CAMBIO_ESTADO" as const,
+        from_status: row.status,
+        to_status: status,
+      })),
     );
 
-  await supabase.from("lead_activities").insert(
-    changed.map((row) => ({
-      owner_id: user.id,
-      lead_id: row.id,
-      type: "CAMBIO_ESTADO" as const,
-      from_status: row.status,
-      to_status: status,
-    })),
-  );
+    revalidatePath("/leads/lista");
+  }
 
-  revalidatePath("/leads/lista");
+  if (skippedIds.length === 0) return { ok: true, message: "Estado actualizado.", skippedIds };
+
+  const message =
+    allowed.length > 0
+      ? `Se aplicó a ${allowed.length} de ${changed.length} leads. ${skippedIds.length} no tienen turno cargado en la agenda y quedaron sin cambios.`
+      : meetingGateMessage(status);
+
+  return { ok: false, message, skippedIds };
 }
 
 export async function bulkDeleteLeads(leadIds: string[]) {

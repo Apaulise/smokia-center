@@ -91,6 +91,7 @@ export function LeadComposer({
   hasInstagram,
   messages,
   nextBestActionReason,
+  preferFollowUp = false,
 }: {
   leadId: string;
   status: LeadStatus;
@@ -100,16 +101,37 @@ export function LeadComposer({
   /** Últimos mensajes, para recuperar una respuesta sugerida sin confirmar todavía (ver `AnalizarComposer`). */
   messages: LeadMessageRow[];
   nextBestActionReason: string | null;
+  /** Abre directo en "Seguimiento" (link "Hacer seguimiento" de `/leads/seguimiento`). */
+  preferFollowUp?: boolean;
 }) {
-  const mode = composerModeFor(status, nextActionAt);
+  const defaultMode = composerModeFor(status, nextActionAt);
+  const [override, setOverride] = useState<"analizar" | "seguimiento" | null>(null);
 
-  if (mode === "apertura") {
+  if (defaultMode === "apertura") {
     return <AperturaComposer leadId={leadId} phone={phone} hasInstagram={hasInstagram} />;
   }
-  if (mode === "seguimiento") {
-    return <SeguimientoComposer leadId={leadId} phone={phone} />;
-  }
-  return <AnalizarComposer leadId={leadId} phone={phone} messages={messages} nextBestActionReason={nextBestActionReason} />;
+
+  // Un lead ya contactado puede necesitar las dos cosas: analizar una respuesta
+  // nueva o retomar una conversación que se frenó — el vendedor elige.
+  const mode = override ?? (preferFollowUp ? "seguimiento" : defaultMode);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="inline-flex gap-0.5 self-start rounded-lm-sm border border-lm-line bg-lm-surface p-0.5">
+        <SegmentedButton active={mode === "analizar"} onClick={() => setOverride("analizar")} className="h-6 px-2 text-xs">
+          Analizar respuesta
+        </SegmentedButton>
+        <SegmentedButton active={mode === "seguimiento"} onClick={() => setOverride("seguimiento")} className="h-6 px-2 text-xs">
+          Seguimiento
+        </SegmentedButton>
+      </div>
+      {mode === "seguimiento" ? (
+        <SeguimientoComposer leadId={leadId} phone={phone} />
+      ) : (
+        <AnalizarComposer leadId={leadId} phone={phone} messages={messages} nextBestActionReason={nextBestActionReason} />
+      )}
+    </div>
+  );
 }
 
 /**
@@ -490,7 +512,7 @@ function SeguimientoComposer({ leadId, phone }: { leadId: string; phone: string 
         <span className="font-lm-sans text-[11px] font-semibold tracking-[0.1em] text-lm-ink-3 uppercase">Seguimiento</span>
       </ComposerHead>
       <ComposerBody className="flex flex-col gap-3">
-        <p className="text-lm-ink-2">Le llegó la fecha de retomar a un &quot;ahora no&quot; — el mensaje va a citar la conversación anterior.</p>
+        <p className="text-lm-ink-2">Arma el mensaje desde la conversación, tus notas y lo que se sabe del negocio, partiendo del último mensaje enviado o recibido.</p>
         {error ? <p className="text-lm-danger">{error}</p> : null}
 
         {generated ? (

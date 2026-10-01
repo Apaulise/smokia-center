@@ -3,11 +3,11 @@
 import { ArrowDown, ArrowUp, Loader2, Sparkles, Star } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 
 import { Button } from "@/components/leads/ui/button";
 import { Select } from "@/components/leads/ui/field";
-import { EmptyState } from "@/components/leads/ui/feedback";
+import { EmptyState, Toast } from "@/components/leads/ui/feedback";
 import { Chip } from "@/components/leads/ui/status-badge";
 import { Table, Td, Th, Tr } from "@/components/leads/ui/table";
 import {
@@ -79,6 +79,14 @@ export function LeadsTable({
   const [bulkIndustry, setBulkIndustry] = useState("");
   const [bulkStatus, setBulkStatus] = useState<LeadStatus | "">("");
   const [enrichMessage, setEnrichMessage] = useState<string | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const statusErrorTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function flashStatusError(message: string) {
+    setStatusError(message);
+    if (statusErrorTimeout.current) clearTimeout(statusErrorTimeout.current);
+    statusErrorTimeout.current = setTimeout(() => setStatusError(null), 6000);
+  }
 
   const [syncedLeads, setSyncedLeads] = useState(initialLeads);
   if (initialLeads !== syncedLeads) {
@@ -143,10 +151,21 @@ export function LeadsTable({
     if (!bulkStatus) return;
     const ids = selectedIds;
     const status = bulkStatus;
+    const previousStatuses = new Map(leads.filter((lead) => ids.includes(lead.id)).map((lead) => [lead.id, lead.status]));
     updateLocalStatus(ids, status);
     setBulkStatus("");
     startTransition(async () => {
-      await bulkUpdateStatus(ids, status);
+      const result = await bulkUpdateStatus(ids, status);
+      if (result && !result.ok) {
+        setLeads((current) =>
+          current.map((lead) =>
+            result.skippedIds.includes(lead.id) && previousStatuses.has(lead.id)
+              ? { ...lead, status: previousStatuses.get(lead.id)! }
+              : lead,
+          ),
+        );
+        flashStatusError(result.message);
+      }
       router.refresh();
     });
   }
@@ -169,9 +188,14 @@ export function LeadsTable({
   }
 
   function handleRowStatusChange(id: string, status: LeadStatus) {
+    const previous = leads.find((lead) => lead.id === id)?.status;
     updateLocalStatus([id], status);
     startTransition(async () => {
-      await updateLeadStatus(id, status);
+      const result = await updateLeadStatus(id, status);
+      if (result && !result.ok) {
+        if (previous) updateLocalStatus([id], previous);
+        flashStatusError(result.message);
+      }
       router.refresh();
     });
   }
@@ -182,6 +206,11 @@ export function LeadsTable({
 
   return (
     <div className="flex flex-col gap-3">
+      {statusError ? (
+        <div className="w-max">
+          <Toast tone="error">{statusError}</Toast>
+        </div>
+      ) : null}
       {selected.size > 0 ? (
         <div className="flex flex-wrap items-center gap-3 rounded-lm-md border border-lm-line-strong bg-lm-raised px-4 py-3">
           <span className="font-mono text-[13px] tabular-nums text-lm-ink">{selected.size} seleccionados</span>

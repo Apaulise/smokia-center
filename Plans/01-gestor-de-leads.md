@@ -554,6 +554,8 @@ Primero hay que validar que el copiloto tome buenas decisiones. Automatizar un c
 
 **Decisión de implementación que el plan no fijaba: sin paginación real.** `listFollowUpQueue` trae hasta 200 filas con un solo `.limit()`, no `.range()` con controles de página como `/leads/lista`. Con el volumen actual (una sola cuenta, generación manual de listas) 200 alcanza de sobra; si el volumen crece, agregar paginación ahí es un cambio local a una función.
 
+> **Rediseño (2026-10-01), pedido tras usar la pantalla:** "Sin contactar" no tenía sentido — esos leads son contactos cargados para escribirles después. `listFollowUpQueue()` ahora devuelve sólo **prospecciones abiertas**: `last_contacted_at` no nulo y estado no terminal, en una sola lista ordenada por último contacto más viejo primero (con el motivo "Sin novedades" a partir de 7 días, o "Retomar vencido" si hay `next_action_at` cumplido). Cada fila lleva a `/leads/[id]?modo=seguimiento`. En la ficha, `LeadComposer` suma un selector "Analizar respuesta / Seguimiento" para cualquier lead contactado (antes el seguimiento sólo existía para un `AHORA_NO` vencido), y `generateFollowup()` ahora recibe el hilo de mensajes además de notas, memoria y enriquecimiento, y arranca del último mensaje enviado o recibido. **Checklist manual pendiente** (los ítems 4, 5 y 7 de abajo describen el diseño anterior).
+
 **Verificación manual** (`CLAUDE.md` §13):
 
 1. Ir a `/leads` (dashboard): en el bloque "ATENCIÓN" aparece un link "Ver todos" al lado del título "Sin tocar hace más de 7 días".
