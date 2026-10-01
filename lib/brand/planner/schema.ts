@@ -65,7 +65,7 @@ export const WEEKLY_REELS_MAX = 4;
  * subida de archivos, y `publishPlannerItem` rechaza del lado del servidor
  * (esconder un botón no es una barrera). Volver a `true` lo reactiva todo.
  */
-export const PUBLISH_FROM_APP_ENABLED = false;
+export const PUBLISH_FROM_APP_ENABLED = true;
 
 /** El bucket público de los archivos a publicar (ver la migración de §3.7 y por qué es público). */
 export const BRAND_MEDIA_BUCKET = "brand-media";

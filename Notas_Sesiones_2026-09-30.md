@@ -49,13 +49,19 @@ Reglas vigentes (ver CLAUDE.md §13 y memoria): los checklists manuales se hacen
 
 ---
 
+### 8. Sesiones de preparación de pendientes y avance de Marca (tarde)
+- Se prepararon (solo lectura) los checklists de los cinco pendientes; siguen sin correrse los de §1.22, "Pedir la reunión", Etapa 1 y §1.7–§1.19.
+- **§3.13 ítem 10: ok.** **Ítem 8: pendiente** (pide publicar un reel real a mano).
+- **§3.15:** `#ai` con 10 resultados no trajo tarjetas (esperado: el piso es 150.000 views y el actor trae el feed reciente). Descartar/restaurar: ok. "Usar": sin probar. Se agregó un mensaje de resultado en `/marca/competencia` ("N reels revisados, M virales"), sin verificar visualmente.
+- **Publicación por API (ítem 7 de la migración):** `PUBLISH_FROM_APP_ENABLED` quedó en `true` en `lib/brand/planner/schema.ts:68` para probar con una historia. **Volver a `false` al terminar la prueba.** Verificación en Instagram todavía sin hacer.
+
 ## Pendientes para retomar (en este orden sugerido)
 
 1. **Checklist manual §1.22** (objetivo → contactos por día): retomar desde el ítem 1 de 10, de a uno.
 2. **Verificar el fix de "Pedir la reunión"** en el lead afectado (ver sesión 6).
 3. **Checklist manual de la Etapa 1 fuera de Anthropic** (7 pasos) + cargar saldo de Gemini + confirmar modelo de Groq.
 4. **Checklists manuales de §1.7–§1.19** (copiloto comercial): ninguno probado en la app real todavía.
-5. **Marca:** publicar de verdad por API de Meta (ítem 7 de la migración) y luego ítems 8 y 10 de §3.13; checklist de §3.15 (descubrir virales); §3.7 sin verificar.
+5. **Marca:** publicar de verdad por API de Meta con una historia de prueba (ítem 7 de la migración; flag en `true`, volver a `false` después); ítem 8 de §3.13 (el 10 ya está ok); §3.15 pendiente el "Usar" y confirmar el mensaje nuevo; §3.7 sin verificar.
 
 ## Recordatorios al cambiar de PC
 - `.env.local` **no está en git**: copiarlo a mano (incluye `APP_ENCRYPTION_KEY`, que no se puede regenerar sin perder datos cifrados, y las credenciales de Instagram).

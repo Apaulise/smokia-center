@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 
 import { computeTrendOutliers } from "./insights";
-import type { InsightPost, Outlier } from "@/lib/brand/competitors/insights";
+import { TREND_MAX_AGE_DAYS, TREND_MIN_VIEWS, type InsightPost, type Outlier } from "@/lib/brand/competitors/insights";
 import type { Database } from "@/lib/supabase/database.types";
 
 type JobStatus = Database["public"]["Enums"]["job_status"];
@@ -53,6 +53,10 @@ export interface LastTrendSearch {
   query: string;
   status: JobStatus;
   lastError: string | null;
+  /** Reels que trajo la corrida. Sólo con la búsqueda COMPLETADO. */
+  imported: number;
+  /** De esos, los que hoy califican como virales (piso de views y ventana de recencia). */
+  viral: number;
 }
 
 /**
@@ -65,11 +69,27 @@ export async function getLastTrendSearch(): Promise<LastTrendSearch | null> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("brand_trend_searches")
-    .select("query, status, last_error")
+    .select("id, query, status, last_error")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return data ? { query: data.query, status: data.status, lastError: data.last_error } : null;
+  if (!data) return null;
+
+  let imported = 0;
+  let viral = 0;
+  if (data.status === "COMPLETADO") {
+    const { data: posts } = await supabase
+      .from("brand_trend_posts")
+      .select("views, published_at")
+      .eq("search_id", data.id)
+      .limit(POSTS_MAX_ROWS);
+    const cutoff = Date.now() - TREND_MAX_AGE_DAYS * 86_400_000;
+    imported = posts?.length ?? 0;
+    viral = (posts ?? []).filter(
+      (post) => (post.views ?? 0) >= TREND_MIN_VIEWS && post.published_at !== null && new Date(post.published_at).getTime() >= cutoff,
+    ).length;
+  }
+  return { query: data.query, status: data.status, lastError: data.last_error, imported, viral };
 }
 
 /** Las búsquedas todavía en curso, para que TrendPoller sepa qué reconciliar. */

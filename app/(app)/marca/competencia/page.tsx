@@ -207,6 +207,15 @@ export default async function CompetenciaPage() {
           </p>
         ) : null}
 
+        {apifyKey && lastTrendSearch?.status === "COMPLETADO" ? (
+          <p className="-mt-3 text-xs text-lm-ink-2">
+            Última búsqueda (&ldquo;{lastTrendSearch.query}&rdquo;): {lastTrendSearch.imported} reels revisados,{" "}
+            {lastTrendSearch.viral === 0
+              ? "ninguno llegó al piso de virales (más de 150.000 views en los últimos 30 días). Probá con otros hashtags."
+              : `${lastTrendSearch.viral} ${lastTrendSearch.viral === 1 ? "viral encontrado" : "virales encontrados"}.`}
+          </p>
+        ) : null}
+
         <CompetitorPoller pendingIds={pendingIds} />
         <TrendPoller pendingIds={pendingTrendSearchIds} />
 
