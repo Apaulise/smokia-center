@@ -2,7 +2,7 @@ import { getApifyAccountLimits, type ApifyAccountLimits } from "@/lib/apify/clie
 import { decrypt, maskSecret } from "@/lib/crypto";
 import { getMetaCredentials } from "@/lib/meta/client";
 import type { LeadSource } from "@/lib/providers/types";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
 import {
   ANTHROPIC_KEY_SETTING,
@@ -58,9 +58,15 @@ export async function getApifyCredit(): Promise<ApifyAccountLimits | null> {
   }
 }
 
-/** Si hay credenciales de Instagram en el entorno. No dice si el token sigue vigente: eso lo prueba el botón de Configuración. */
-export function getInstagramConnectionStatus() {
-  return { configured: getMetaCredentials() !== null };
+/** Si el usuario conectó su Instagram. No dice si el token sigue vigente: eso lo prueba el botón de Configuración. */
+export async function getInstagramConnectionStatus() {
+  const user = await getCurrentUser();
+  if (!user) return { configured: false as const, masked: null };
+
+  const supabase = await createClient();
+  const credentials = await getMetaCredentials(supabase, user.id);
+  if (!credentials) return { configured: false as const, masked: null };
+  return { configured: true as const, masked: `Cuenta ${credentials.userId} · ${maskSecret(credentials.accessToken)}` };
 }
 
 export async function getAnthropicKeyStatus() {

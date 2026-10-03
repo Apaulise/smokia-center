@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { EmailSignInForm } from "@/app/(auth)/login/email-form";
 import { GoogleSignInButton } from "@/app/(auth)/login/google-button";
@@ -10,7 +10,7 @@ type Mode = "sign-in" | "sign-up";
 const COPY: Record<Mode, { title: string; description: string; quote: string }> = {
   "sign-in": {
     title: "Ingresá a tu cuenta",
-    description: "Usá tu email para continuar.",
+    description: "Usá tu cuenta de Google o tu email para continuar.",
     quote: "Cada conversación, un paso más cerca del cierre.",
   },
   "sign-up": {
@@ -20,16 +20,50 @@ const COPY: Record<Mode, { title: string; description: string; quote: string }> 
   },
 };
 
+const ERRORS = {
+  failed: "No pudimos completar el ingreso. Probá de nuevo.",
+  not_allowed: "Esta cuenta no tiene acceso a Awareness AI.",
+} as const;
+
 /**
  * Pantalla de login (Design System §08): split 2 columnas — formulario a la
  * izquierda, panel de marca con cita a la derecha. `mode` vive acá (no
  * adentro de `EmailSignInForm`) para que la cita cambie con sign-in/sign-up,
  * como pide el mockup.
  */
-export function LoginScreen({ next, failed, googleEnabled }: { next: string; failed: boolean; googleEnabled: boolean }) {
+export function LoginScreen({ next, error }: { next: string; error: keyof typeof ERRORS | null }) {
   const [mode, setMode] = useState<Mode>("sign-in");
   const copy = COPY[mode];
 
+  return (
+    <AuthShell title={copy.title} description={copy.description} quote={copy.quote}>
+      <div className="flex flex-col gap-4">
+        <GoogleSignInButton next={next} />
+        <div className="flex items-center gap-3 text-xs text-lm-ink-3">
+          <span className="h-px flex-1 bg-lm-line" />
+          o continuá con
+          <span className="h-px flex-1 bg-lm-line" />
+        </div>
+        <EmailSignInForm next={next} mode={mode} onModeChange={setMode} />
+      </div>
+
+      {error ? <p className="mt-4 text-[13px] text-lm-danger">{ERRORS[error]}</p> : null}
+    </AuthShell>
+  );
+}
+
+/** El layout compartido por login y recuperar contraseña: formulario + panel de marca. */
+export function AuthShell({
+  title,
+  description,
+  quote,
+  children,
+}: {
+  title: string;
+  description: string;
+  quote: string;
+  children: ReactNode;
+}) {
   return (
     <div className="grid min-h-dvh bg-lm-bg font-lm-sans text-lm-ink lg:grid-cols-2">
       <div className="flex flex-col justify-between px-6 py-8 sm:px-12 sm:py-10">
@@ -38,26 +72,10 @@ export function LoginScreen({ next, failed, googleEnabled }: { next: string; fai
         </span>
 
         <div className="mx-auto w-full max-w-[350px] py-12">
-          <h1 className="font-lm-sans text-[26px] leading-8 font-semibold tracking-[-0.01em] text-lm-ink">{copy.title}</h1>
-          <p className="mt-2 text-[13.5px] text-lm-ink-2">{copy.description}</p>
+          <h1 className="font-lm-sans text-[26px] leading-8 font-semibold tracking-[-0.01em] text-lm-ink">{title}</h1>
+          <p className="mt-2 text-[13.5px] text-lm-ink-2">{description}</p>
 
-          <div className="mt-8">
-            {googleEnabled ? (
-              <div className="flex flex-col gap-4">
-                <GoogleSignInButton next={next} />
-                <div className="flex items-center gap-3 text-xs text-lm-ink-3">
-                  <span className="h-px flex-1 bg-lm-line" />
-                  o continuá con
-                  <span className="h-px flex-1 bg-lm-line" />
-                </div>
-                <EmailSignInForm next={next} mode={mode} onModeChange={setMode} />
-              </div>
-            ) : (
-              <EmailSignInForm next={next} mode={mode} onModeChange={setMode} />
-            )}
-          </div>
-
-          {failed ? <p className="mt-4 text-[13px] text-lm-danger">No pudimos completar el ingreso. Probá de nuevo.</p> : null}
+          <div className="mt-8">{children}</div>
         </div>
 
         <p className="font-mono text-[11px] text-lm-ink-3">© 2026 Awareness AI</p>
@@ -77,7 +95,7 @@ export function LoginScreen({ next, failed, googleEnabled }: { next: string; fai
             Awareness <span className="text-lm-ink-2">AI</span>
           </span>
           <p className="max-w-xs text-[22px] leading-8 text-lm-ink-2">
-            “{copy.quote}”
+            “{quote}”
             <span className="ml-0.5 inline-block h-[22px] w-[2px] translate-y-1 bg-lm-signal motion-safe:animate-pulse" aria-hidden />
           </p>
         </div>

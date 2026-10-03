@@ -424,7 +424,7 @@ export type PublishResult = PlannerResult<{ linked: boolean; message: string | n
  *    antes de reintentar. Sólo un rechazo explícito libera el candado.
  */
 export async function publishPlannerItem(id: string): Promise<PublishResult> {
-  await requireUser();
+  const user = await requireUser();
   if (!PUBLISH_FROM_APP_ENABLED) {
     return { ok: false, message: "Publicar desde la app está desactivado: publicá a mano en Instagram y registrala con “Ya la publiqué”." };
   }
@@ -435,7 +435,7 @@ export async function publishPlannerItem(id: string): Promise<PublishResult> {
   if (item.status === "PUBLICADO") return { ok: false, message: "La pieza ya está publicada." };
 
   const provider = getBrandSource(item.platform);
-  if (!provider?.publish || !provider.capabilities.publish.includes(item.kind)) {
+  if (!provider || !provider.capabilities.publish.includes(item.kind)) {
     return { ok: false, message: "Este tipo de pieza no se publica desde la app." };
   }
 
@@ -448,8 +448,10 @@ export async function publishPlannerItem(id: string): Promise<PublishResult> {
     return { ok: false, message: `El caption con los hashtags suma ${caption.length} caracteres y el máximo es ${CAPTION_MAX_CHARS}.` };
   }
 
-  if (!provider.isConfigured()) {
-    return { ok: false, message: "Faltan INSTAGRAM_ACCESS_TOKEN e INSTAGRAM_USER_ID en las variables de entorno." };
+  // Las credenciales del usuario logueado: cada uno publica en SU cuenta.
+  const connection = await provider.connect(supabase, user.id);
+  if (!connection?.publish) {
+    return { ok: false, message: `Conectá tu cuenta de ${provider.label} en Configuración para poder publicar.` };
   }
 
   // El candado: sólo lo toma quien encuentre la pieza sin publicar y sin otro intento reciente.
@@ -476,7 +478,7 @@ export async function publishPlannerItem(id: string): Promise<PublishResult> {
   let externalId: string | null;
   let message: string | null;
   try {
-    const result = await provider.publish({
+    const result = await connection.publish({
       kind: item.kind,
       caption,
       media: urls,

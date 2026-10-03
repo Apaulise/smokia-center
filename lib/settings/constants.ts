@@ -59,3 +59,10 @@ export const DEFAULT_INDUSTRIES: Array<{ name: string; color: string }> = [
   { name: "Automotriz", color: "#18D6E8" },
   { name: "Turismo y hotelería", color: "#7C3AED" },
 ];
+
+/**
+ * Credenciales de Instagram (Graph API de Meta) de cada usuario: JSON
+ * `{accessToken, userId}` cifrado. Antes vivían en variables de entorno, pero
+ * cada socio conecta su propia cuenta (Plans/acceso-multiusuario.md).
+ */
+export const INSTAGRAM_CREDENTIALS_SETTING = "instagram_credentials";

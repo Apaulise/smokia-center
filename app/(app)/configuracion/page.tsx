@@ -24,7 +24,7 @@ import {
 export const metadata = { title: "Configuración · Awareness AI" };
 
 export default async function ConfiguracionPage() {
-  const [apifyStatus, anthropicStatus, geminiStatus, groqStatus, salesProfile, industries, actorOverrides] =
+  const [apifyStatus, anthropicStatus, geminiStatus, groqStatus, salesProfile, industries, actorOverrides, instagramStatus] =
     await Promise.all([
       getApifyKeyStatus(),
       getAnthropicKeyStatus(),
@@ -33,9 +33,8 @@ export default async function ConfiguracionPage() {
       getSalesProfile(),
       listIndustries(),
       getActorOverrides(),
+      getInstagramConnectionStatus(),
     ]);
-
-  const instagramStatus = getInstagramConnectionStatus();
 
   return (
     // bg-lm-bg propio: esta pantalla no cuelga de app/(app)/leads/layout.tsx (que ya
@@ -125,10 +124,10 @@ export default async function ConfiguracionPage() {
                 Instagram (Meta)
               </span>
             }
-            description="Métricas y publicación, por la API oficial de Meta."
+            description="Métricas y publicación de TU cuenta, por la API oficial de Meta. Cada usuario conecta la suya."
           >
             <Panel className="p-4">
-              <InstagramConnection configured={instagramStatus.configured} />
+              <InstagramConnection configured={instagramStatus.configured} masked={instagramStatus.masked} />
             </Panel>
           </Section>
         </div>

@@ -35,6 +35,9 @@ SUPABASE_SERVICE_ROLE_KEY=<service_role secret>
 APP_ENCRYPTION_KEY=<generar, ver abajo>
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 CRON_SECRET=<generar, ver abajo>
+
+# Quién puede entrar (separados por coma). Sin esto no entra nadie.
+ALLOWED_EMAILS=vos@ejemplo.com,socio@ejemplo.com
 ```
 
 Generar los dos secretos propios:
@@ -57,7 +60,12 @@ npm run db:types    # regenera lib/supabase/database.types.ts
 
 `db:types` se corre **después de cada migración**. Ese archivo no se edita a mano.
 
-## 5. Login con Google
+## 5. Login con Google — ✅ hecho (2026-10-03)
+
+**En Google Cloud Console** → APIs & Services → OAuth consent screen:
+
+- Tipo *External*, en modo **Testing**
+- **Test users:** agregar los dos mails de `ALLOWED_EMAILS`. En modo Testing sólo ellos pueden pasar por el consent screen
 
 **En Google Cloud Console** → APIs & Services → Credentials → OAuth 2.0 Client ID (tipo *Web application*):
 
@@ -70,7 +78,26 @@ npm run db:types    # regenera lib/supabase/database.types.ts
 - **Site URL:** `http://localhost:3000` (cambiar a la URL de Vercel al desplegar)
 - **Redirect URLs:** agregar `http://localhost:3000/**` y, más adelante, `https://<tu-app>.vercel.app/**`
 
-## 6. Arrancar
+Si alguien entra con Google usando el mismo mail con el que ya tiene cuenta por contraseña, Supabase vincula las dos identidades al mismo usuario: los datos no se duplican.
+
+## 6. Mails de Auth (reset de contraseña con código)
+
+El SMTP por defecto de Supabase sólo le manda a miembros de la organización y con un límite de pocos mails por hora. Se usa **Resend** (free tier):
+
+1. **En Resend:** verificar un dominio propio (DNS) y crear una API key. Sin dominio verificado, Resend sólo le manda al mail dueño de la cuenta de Resend — el socio no recibiría nada
+2. **En Supabase** → Authentication → Emails → SMTP Settings → *Enable custom SMTP*:
+   - Host `smtp.resend.com`, puerto `465`, usuario `resend`, password = la API key de Resend
+   - Sender: `no-reply@<tu-dominio>`, nombre `Awareness AI`
+3. **En Supabase** → Authentication → Emails → Templates → **Reset Password**: el cuerpo tiene que mostrar el código, no el link. Por ejemplo:
+   ```html
+   <h2>Recuperá tu contraseña</h2>
+   <p>Tu código para Awareness AI es:</p>
+   <p style="font-size:28px;font-family:monospace;letter-spacing:6px"><strong>{{ .Token }}</strong></p>
+   <p>Vence en una hora. Si no lo pediste, ignorá este mail.</p>
+   ```
+4. **En Supabase** → Authentication → Providers → Email: **Email OTP Length = 6** (la pantalla `/recuperar` espera 6 dígitos) y vencimiento 3600 s
+
+## 7. Arrancar
 
 ```bash
 npm run dev
@@ -82,7 +109,7 @@ npm run dev
 
 1. Cargar las mismas variables de `.env.local` en **Settings → Environment Variables**
 2. `NEXT_PUBLIC_APP_URL` pasa a ser la URL real de Vercel — **Apify la usa para el webhook**, así que con `localhost` los resultados nunca vuelven solos
-3. Agregar la URL de Vercel a las **Redirect URLs** de Supabase Auth (paso 5)
+3. Agregar la URL de Vercel a las **Redirect URLs** de Supabase Auth (paso 5), y cambiar la **Site URL** a esa URL (los links de confirmación de cuenta apuntan ahí)
 4. Verificar que la service role key no quedó en el bundle del cliente:
    ```bash
    npm run build && grep -r "service_role" .next/static || echo "limpio"
@@ -94,4 +121,5 @@ npm run dev
 
 - **No usamos Supabase local.** Requiere Docker y la decisión fue trabajar directo contra la nube. Por eso los comandos van con `--linked` y no con `--local`
 - **Apify no puede alcanzar `localhost`.** En desarrollo los webhooks nunca llegan y la importación entra por la reconciliación al abrir la pantalla de jobs. Es esperado
+- **Instagram es por usuario.** Cada uno conecta su cuenta en `/configuracion` (token de larga duración + id de la cuenta profesional). Si la app de Meta está en modo desarrollo, el socio tiene que estar agregado como tester/rol de la app para poder generar su token
 - **Apify cobra por resultado.** Al probar, usar `maxResults` chico (5): cada corrida cuesta plata real

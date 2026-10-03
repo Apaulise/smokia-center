@@ -43,14 +43,6 @@ const AUDIENCE_BREAKDOWNS: Record<BrandAudienceDimension, string> = {
   PAIS: "country",
 };
 
-function credentialsOrThrow(): MetaCredentials {
-  const credentials = getMetaCredentials();
-  if (!credentials) {
-    throw new MetaApiError("Faltan INSTAGRAM_ACCESS_TOKEN e INSTAGRAM_USER_ID en las variables de entorno.", true);
-  }
-  return credentials;
-}
-
 /**
  * Sólo cubre lo que devuelve `/media` (feed): REEL, POST, CARRUSEL, VIDEO. Las
  * historias viven en `/stories` y duran 24 h: no entran a la biblioteca.
@@ -92,8 +84,7 @@ function readInsights(body: unknown): Record<string, number> {
 
 const isoDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
-async function fetchAccounts(): Promise<NormalizedAccountSnapshot[]> {
-  const credentials = credentialsOrThrow();
+async function fetchAccounts(credentials: MetaCredentials): Promise<NormalizedAccountSnapshot[]> {
   const row = asRecord(
     await graphGet(credentials, credentials.userId, {
       fields: "id,username,name,biography,website,followers_count,follows_count,media_count",
@@ -122,8 +113,7 @@ async function fetchAccounts(): Promise<NormalizedAccountSnapshot[]> {
  * (UTC). Cada pedido es independiente: uno que falle (ej. un día sin datos)
  * no tira abajo los demás.
  */
-async function fetchDailyMetrics(): Promise<NormalizedDailyMetrics[]> {
-  const credentials = credentialsOrThrow();
+async function fetchDailyMetrics(credentials: MetaCredentials): Promise<NormalizedDailyMetrics[]> {
   const externalId = credentials.userId;
   const now = Date.now();
   const startOfToday = Math.floor(now / DAY_MS) * DAY_MS;
@@ -212,8 +202,7 @@ async function fetchMediaInsights(credentials: MetaCredentials, mediaId: string,
   return {};
 }
 
-async function fetchMedia(): Promise<NormalizedPost[]> {
-  const credentials = credentialsOrThrow();
+async function fetchMedia(credentials: MetaCredentials): Promise<NormalizedPost[]> {
   const rows = await graphGetAll(
     credentials,
     `${credentials.userId}/media`,
@@ -288,8 +277,7 @@ async function fetchMedia(): Promise<NormalizedPost[]> {
   });
 }
 
-async function fetchComments(posts: NormalizedPost[]): Promise<NormalizedComment[]> {
-  const credentials = credentialsOrThrow();
+async function fetchComments(credentials: MetaCredentials, posts: NormalizedPost[]): Promise<NormalizedComment[]> {
   const withComments = posts.filter((post) => (post.comments ?? 0) > 0);
 
   const perPost = await mapWithConcurrency(withComments, CONCURRENCY, async (post) => {
@@ -337,8 +325,7 @@ async function fetchComments(posts: NormalizedPost[]): Promise<NormalizedComment
  * un pedido por dimensión (mezclar dos en el mismo produciría un cruce
  * ambiguo). Una dimensión que falla queda vacía sin tirar las otras.
  */
-async function fetchAudience(): Promise<NormalizedAudienceRow[]> {
-  const credentials = credentialsOrThrow();
+async function fetchAudience(credentials: MetaCredentials): Promise<NormalizedAudienceRow[]> {
   const dimensions = Object.keys(AUDIENCE_BREAKDOWNS) as BrandAudienceDimension[];
 
   const perDimension = await Promise.all(
@@ -436,8 +423,7 @@ function mediaParams(file: PublishMedia, extra: Record<string, string | boolean 
   return file.type === "VIDEO" ? { video_url: file.url, ...extra } : { image_url: file.url, ...extra };
 }
 
-async function publish({ kind, caption, media }: PublishParams): Promise<PublishResult> {
-  const credentials = credentialsOrThrow();
+async function publish(credentials: MetaCredentials, { kind, caption, media }: PublishParams): Promise<PublishResult> {
   const deadline = Date.now() + PUBLISH_BUDGET_MS;
 
   const first = media[0];
@@ -495,11 +481,16 @@ export const instagramProvider: BrandSourceProvider = {
     publish: ["REEL", "VIDEO", "POST", "CARRUSEL", "HISTORIA"],
   },
 
-  isConfigured: () => getMetaCredentials() !== null,
-  fetchAccounts,
-  fetchDailyMetrics,
-  fetchMedia,
-  fetchAudience,
-  fetchComments,
-  publish,
+  async connect(supabase, ownerId) {
+    const credentials = await getMetaCredentials(supabase, ownerId);
+    if (!credentials) return null;
+    return {
+      fetchAccounts: () => fetchAccounts(credentials),
+      fetchDailyMetrics: () => fetchDailyMetrics(credentials),
+      fetchMedia: () => fetchMedia(credentials),
+      fetchAudience: () => fetchAudience(credentials),
+      fetchComments: (posts) => fetchComments(credentials, posts),
+      publish: (params) => publish(credentials, params),
+    };
+  },
 };

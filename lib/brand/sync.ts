@@ -10,9 +10,9 @@
 // necesita el mismo bypass de RLS que lib/apify/reconcile.ts — con el owner_id
 // resuelto por quien llama y escrito explícito en cada fila (CLAUDE.md §4).
 //
-// Las credenciales son las del proveedor (variables de entorno, ver
-// lib/meta/client.ts): la app es de un solo dueño y el token es de SU cuenta.
-// Por eso el owner_id sólo decide dónde se escribe, no con qué cuenta se lee.
+// Las credenciales son las de ESE owner (cifradas en `settings`, ver
+// lib/meta/client.ts): cada usuario conecta su propia cuenta, así que el
+// owner_id decide a la vez con qué cuenta se lee y dónde se escribe.
 //
 // Cuánto historial trae cada consulta lo decide el proveedor (ver
 // INSIGHTS_WINDOW en lib/brand/sources/instagram.ts).
@@ -69,11 +69,12 @@ export async function runBrandSync(
     return { status: "FALLIDO", itemsImported: 0, error: `Plataforma desconocida: ${platform}` };
   }
 
-  if (!provider.isConfigured()) {
+  const connection = await provider.connect(admin, ownerId);
+  if (!connection) {
     return {
       status: "FALLIDO",
       itemsImported: 0,
-      error: "Faltan las credenciales de Instagram (INSTAGRAM_ACCESS_TOKEN e INSTAGRAM_USER_ID).",
+      error: `Conectá tu cuenta de ${provider.label} en Configuración para poder sincronizar.`,
     };
   }
 
@@ -125,7 +126,7 @@ export async function runBrandSync(
     let itemsImported = 0;
 
     // 1a. Identidad + totales "a hoy" — una fila esperada por cuenta.
-    const accounts = await provider.fetchAccounts();
+    const accounts = await connection.fetchAccounts();
 
     const accountIds = new Map<string, string>();
     let latestFollowers: number | null = null;
@@ -191,8 +192,8 @@ export async function runBrandSync(
     }
 
     // 1b. Métricas diarias — upsert por la fecha real de cada fila, no por "hoy".
-    if (provider.fetchDailyMetrics && accountIds.size > 0) {
-      for (const day of await provider.fetchDailyMetrics()) {
+    if (connection.fetchDailyMetrics && accountIds.size > 0) {
+      for (const day of await connection.fetchDailyMetrics()) {
         const dayAccountId = accountIds.get(day.externalId);
         if (!dayAccountId) continue;
 
@@ -218,16 +219,16 @@ export async function runBrandSync(
     let posts: NormalizedPost[] = [];
 
     if (accountId) {
-      posts = await provider.fetchMedia();
+      posts = await connection.fetchMedia();
       itemsImported += await syncMedia({ admin, ownerId, accountId, posts, today });
 
-      if (provider.capabilities.audience && provider.fetchAudience) {
-        await syncAudience({ admin, ownerId, accountId, rows: await provider.fetchAudience(), today });
+      if (provider.capabilities.audience && connection.fetchAudience) {
+        await syncAudience({ admin, ownerId, accountId, rows: await connection.fetchAudience(), today });
       }
     }
 
-    if (provider.fetchComments && posts.length > 0) {
-      itemsImported += await syncComments({ admin, ownerId, comments: await provider.fetchComments(posts) });
+    if (connection.fetchComments && posts.length > 0) {
+      itemsImported += await syncComments({ admin, ownerId, comments: await connection.fetchComments(posts) });
     }
 
     // Empalma lo publicado desde el planificador con su fila recién importada

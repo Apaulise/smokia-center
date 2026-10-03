@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { isAllowedEmail } from "@/lib/auth/allowlist";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -21,10 +22,16 @@ export async function GET(request: Request) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
     return NextResponse.redirect(`${origin}/login?error=exchange_failed`);
+  }
+
+  // Google deja entrar a cualquier cuenta: la allowlist decide quién se queda.
+  if (!isAllowedEmail(data.user?.email)) {
+    await supabase.auth.signOut();
+    return NextResponse.redirect(`${origin}/login?error=not_allowed`);
   }
 
   return NextResponse.redirect(`${origin}${destination}`);

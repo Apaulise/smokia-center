@@ -1,13 +1,15 @@
 // Sincronización diaria de marca (Plans/03 §3.2). La API de Instagram es pull,
 // así que — a diferencia de /api/jobs/reconcile — esto no reconcilia jobs
-// existentes: dispara una corrida nueva por cada owner que ya tiene una cuenta
-// sincronizada. La primera sincronización de un owner la dispara él mismo al
-// abrir /marca. Protegido por CRON_SECRET, mismo esquema que el reconcile de Leads.
+// existentes: dispara una corrida nueva por cada owner que conectó su cuenta en
+// Configuración. Cada corrida lee con las credenciales de SU owner
+// (Plans/acceso-multiusuario.md). Protegido por CRON_SECRET, mismo esquema que
+// el reconcile de Leads.
 
 import { NextResponse, type NextRequest } from "next/server";
 
 import { BRAND_SOURCES } from "@/lib/brand/sources/registry";
 import { runBrandSync } from "@/lib/brand/sync";
+import { INSTAGRAM_CREDENTIALS_SETTING } from "@/lib/settings/constants";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Varias llamadas a la Graph API (cuenta, diarias, contenido con insights por
@@ -23,8 +25,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 
+  // Sólo los owners con credenciales cargadas: sin ellas runBrandSync no tiene con qué leer.
   const admin = createAdminClient();
-  const { data: rows } = await admin.from("brand_accounts").select("owner_id");
+  const { data: rows } = await admin.from("settings").select("owner_id").eq("key", INSTAGRAM_CREDENTIALS_SETTING);
 
   const ownerIds = [...new Set((rows ?? []).map((row) => row.owner_id))];
 

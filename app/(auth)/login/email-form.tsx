@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { signUpWithEmail } from "@/app/(auth)/login/actions";
 import { Button } from "@/components/leads/ui/button";
 import { Field, Input } from "@/components/leads/ui/field";
 import { createClient } from "@/lib/supabase/client";
@@ -10,10 +12,9 @@ import { createClient } from "@/lib/supabase/client";
 type Mode = "sign-in" | "sign-up";
 
 /**
- * Login temporal por email/contraseña — reemplaza a Google mientras el
- * consent screen de OAuth no está configurado (ver GoogleSignInButton en
- * login/page.tsx). Sirve además para crear un segundo usuario de prueba y
- * validar RLS (Plan 01, paso de verificación 3).
+ * Login por email/contraseña, al lado de Google. El registro pasa por
+ * `signUpWithEmail` (servidor) para chequear la allowlist antes de crear la
+ * cuenta; el sign-in va directo desde el cliente.
  *
  * El proyecto de Supabase pide confirmar el mail al registrarse
  * (mailer_autoconfirm = false), así que "Crear cuenta" no deja sesión
@@ -45,19 +46,18 @@ export function EmailSignInForm({
     const email = String(formData.get("email") ?? "");
     const password = String(formData.get("password") ?? "");
 
-    const supabase = createClient();
-
     if (mode === "sign-up") {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const result = await signUpWithEmail(email, password);
       setPending(false);
-      if (error) {
-        setError(error.message);
+      if (!result.ok) {
+        setError(result.message);
         return;
       }
       setSignedUp(true);
       return;
     }
 
+    const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       setError(error.message);
@@ -74,7 +74,24 @@ export function EmailSignInForm({
         <Field label="Email" htmlFor="email">
           <Input id="email" name="email" type="email" autoComplete="email" required className="h-10 sm:h-12" />
         </Field>
-        <Field label="Contraseña" htmlFor="password">
+        <Field
+          label={
+            mode === "sign-in" ? (
+              <span className="flex items-center justify-between">
+                Contraseña
+                <Link
+                  href="/recuperar"
+                  className="text-[12px] font-normal text-lm-ink-3 underline-offset-4 hover:text-lm-ink hover:underline"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </span>
+            ) : (
+              "Contraseña"
+            )
+          }
+          htmlFor="password"
+        >
           <Input
             id="password"
             name="password"

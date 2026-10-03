@@ -1,3 +1,7 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import type { Database } from "@/lib/supabase/database.types";
+
 /** Espeja el enum Postgres `brand_platform` que trae la migración de §3.2. */
 export type BrandPlatform = "INSTAGRAM" | "YOUTUBE";
 
@@ -108,6 +112,10 @@ export interface PublishResult {
  * pantalla editada (ver CLAUDE.md §9 y Plans/03 §3.1). Cada plataforma resuelve
  * sus credenciales y su paginación adentro; el motor de sync sólo ve filas ya
  * normalizadas.
+ *
+ * Las credenciales son de cada usuario (Plans/acceso-multiusuario.md), así que
+ * el provider no habla con la plataforma directamente: `connect` devuelve una
+ * conexión atada a las credenciales de ESE owner.
  */
 export interface BrandSourceProvider {
   id: BrandPlatform;
@@ -117,8 +125,16 @@ export interface BrandSourceProvider {
     stories: boolean;
     publish: BrandPostKind[];
   };
-  /** Hay credenciales cargadas para esta plataforma (no dice si son válidas). */
-  isConfigured(): boolean;
+  /**
+   * Conexión con las credenciales de `ownerId`, o null si ese usuario no
+   * conectó la plataforma (no dice si el token sigue vigente). Con el cliente
+   * admin, filtra por owner_id explícitamente.
+   */
+  connect(supabase: SupabaseClient<Database>, ownerId: string): Promise<BrandSourceConnection | null>;
+}
+
+/** Lo que se le puede pedir a una plataforma ya conectada con las credenciales de un usuario. */
+export interface BrandSourceConnection {
   /** Identidad + totales "a hoy" de cada cuenta. */
   fetchAccounts(): Promise<NormalizedAccountSnapshot[]>;
   /** Métricas por día de una ventana reciente, una fila por cuenta y día. */

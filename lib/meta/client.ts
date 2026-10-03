@@ -2,12 +2,19 @@
  * Cliente HTTP crudo contra la Graph API oficial de Meta (Instagram), sin SDK —
  * espejo de lib/apify/client.ts. Reemplaza a lib/windsor/client.ts.
  *
- * Las credenciales viven en variables de entorno (INSTAGRAM_ACCESS_TOKEN e
- * INSTAGRAM_USER_ID), no en la tabla `settings`: la app es de un solo dueño y
- * el token es de su cuenta. Graph API lleva el token en el query string, así
- * que NINGÚN error de acá debe incluir la URL armada — sólo el mensaje de Meta
- * y el código (ver CLAUDE.md §5, "nunca loguear secretos").
+ * Las credenciales son de cada usuario: viven cifradas en `settings`
+ * (INSTAGRAM_CREDENTIALS_SETTING) y se cargan desde Configuración. Graph API
+ * lleva el token en el query string, así que NINGÚN error de acá debe incluir
+ * la URL armada — sólo el mensaje de Meta y el código (ver CLAUDE.md §5,
+ * "nunca loguear secretos").
  */
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
+
+import { decrypt } from "@/lib/crypto";
+import { INSTAGRAM_CREDENTIALS_SETTING } from "@/lib/settings/constants";
+import type { Database } from "@/lib/supabase/database.types";
 
 /** Versión de la Graph API a la que se apunta. Meta mantiene cada versión ~2 años. */
 export const GRAPH_VERSION = "v23.0";
@@ -20,11 +27,35 @@ export interface MetaCredentials {
   userId: string;
 }
 
-export function getMetaCredentials(): MetaCredentials | null {
-  const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN?.trim();
-  const userId = process.env.INSTAGRAM_USER_ID?.trim();
-  if (!accessToken || !userId) return null;
-  return { accessToken, userId };
+const credentialsSchema = z.object({
+  accessToken: z.string().min(1),
+  userId: z.string().min(1),
+});
+
+/**
+ * Las credenciales de Instagram de `ownerId`, o null si no conectó su cuenta
+ * (o si están cifradas con otra APP_ENCRYPTION_KEY). Filtra por owner_id
+ * explícitamente: sirve tanto con el cliente del usuario (RLS) como con el
+ * admin de la sincronización y el cron, que saltea RLS.
+ */
+export async function getMetaCredentials(
+  supabase: SupabaseClient<Database>,
+  ownerId: string,
+): Promise<MetaCredentials | null> {
+  const { data } = await supabase
+    .from("settings")
+    .select("value_encrypted")
+    .eq("owner_id", ownerId)
+    .eq("key", INSTAGRAM_CREDENTIALS_SETTING)
+    .maybeSingle();
+  if (!data) return null;
+
+  try {
+    const parsed = credentialsSchema.safeParse(JSON.parse(decrypt(data.value_encrypted)));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -66,7 +97,7 @@ function describeError(body: GraphErrorBody | null, status: number): { message: 
   // largos duran 60 días), así que se dice qué hacer en vez de repetir el texto de Meta.
   if (code === 190) {
     return {
-      message: "El token de Instagram venció o fue revocado. Generá uno nuevo y actualizá INSTAGRAM_ACCESS_TOKEN.",
+      message: "El token de Instagram venció o fue revocado. Generá uno nuevo y actualizalo en Configuración.",
       code,
       subcode,
     };

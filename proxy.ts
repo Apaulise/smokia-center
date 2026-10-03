@@ -1,8 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { isAllowedEmail } from "@/lib/auth/allowlist";
+
 /** Rutas accesibles sin sesión. Todo lo demás exige login. */
-const PUBLIC_PATHS = ["/login", "/auth/callback"];
+const PUBLIC_PATHS = ["/login", "/auth/callback", "/recuperar"];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -33,6 +35,22 @@ export async function proxy(request: NextRequest) {
   const isLoggedIn = Boolean(data?.claims);
 
   const { pathname } = request.nextUrl;
+
+  // Sesión válida pero de un mail fuera de la allowlist (p. ej. una cuenta de
+  // Google ajena que Supabase llegó a crear): se cierra y vuelve al login.
+  if (isLoggedIn && !isAllowedEmail(data?.claims.email as string | undefined)) {
+    await supabase.auth.signOut();
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = "?error=not_allowed";
+    const redirect = NextResponse.redirect(url);
+    // signOut escribió en `response` las cookies vencidas; pasan al redirect.
+    for (const cookie of response.cookies.getAll()) {
+      redirect.cookies.set(cookie);
+    }
+    return redirect;
+  }
+
   const isPublic = PUBLIC_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`),
   );

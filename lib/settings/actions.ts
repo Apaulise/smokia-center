@@ -7,7 +7,7 @@ import { z } from "zod";
 import { decrypt, encrypt } from "@/lib/crypto";
 import { generateGeminiJson } from "@/lib/gemini/client";
 import { generateGroqJson } from "@/lib/groq/client";
-import { getMetaCredentials, graphGet } from "@/lib/meta/client";
+import { getMetaCredentials, graphGet, type MetaCredentials } from "@/lib/meta/client";
 import type { LeadSource } from "@/lib/providers/types";
 import { createClient, requireUser } from "@/lib/supabase/server";
 import { slugify } from "@/lib/utils";
@@ -18,6 +18,7 @@ import {
   DEFAULT_INDUSTRIES,
   GEMINI_KEY_SETTING,
   GROQ_KEY_SETTING,
+  INSTAGRAM_CREDENTIALS_SETTING,
   SALES_PROFILE_SETTING,
   actorOverrideKey,
 } from "./constants";
@@ -115,24 +116,77 @@ export async function testApifyConnection(
 // ── Instagram (Graph API de Meta) ────────────────────────────────────────
 
 /**
- * Las credenciales de Instagram viven en variables de entorno, no en `settings`
- * (ver lib/meta/client.ts): no hay nada que guardar ni borrar desde la app, sólo
- * verificar que el token siga andando. Los tokens largos vencen a los 60 días.
+ * Cada usuario conecta su propia cuenta de Instagram: token + id de la cuenta
+ * profesional, cifrados juntos en `settings` (ver lib/meta/client.ts). Los
+ * tokens largos vencen a los 60 días.
  */
+const instagramCredentialsSchema = z.object({
+  accessToken: z.string().trim().min(20, "El token parece incompleto."),
+  userId: z.string().trim().regex(/^\d+$/, "El id de la cuenta es numérico."),
+});
+
+async function fetchInstagramUsername(credentials: MetaCredentials): Promise<string | undefined> {
+  const row = (await graphGet(credentials, credentials.userId, { fields: "username" })) as { username?: string };
+  return row.username;
+}
+
+export async function saveInstagramCredentials(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const user = await requireUser();
+  const parsed = instagramCredentialsSchema.safeParse({
+    accessToken: formData.get("accessToken"),
+    userId: formData.get("userId"),
+  });
+  if (!parsed.success) {
+    return { ok: false, message: firstIssue(parsed.error, "Credenciales inválidas.") };
+  }
+
+  // Se prueban antes de guardar: un token que Meta rechaza no sirve de nada guardado.
+  let username: string | undefined;
+  try {
+    username = await fetchInstagramUsername(parsed.data);
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "No se pudo contactar a Instagram." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("settings").upsert(
+    {
+      owner_id: user.id,
+      key: INSTAGRAM_CREDENTIALS_SETTING,
+      value_encrypted: encrypt(JSON.stringify(parsed.data)),
+    },
+    { onConflict: "owner_id,key" },
+  );
+  if (error) return { ok: false, message: "No se pudo guardar la conexión." };
+
+  revalidatePath("/configuracion");
+  return { ok: true, message: username ? `Conectado como @${username}.` : "Conexión guardada." };
+}
+
+export async function deleteInstagramCredentials() {
+  const supabase = await createClient();
+  await supabase.from("settings").delete().eq("key", INSTAGRAM_CREDENTIALS_SETTING);
+  revalidatePath("/configuracion");
+}
+
 export async function testInstagramConnection(
   _prevState: ActionState,
   _formData: FormData,
 ): Promise<ActionState> {
-  await requireUser();
+  const user = await requireUser();
+  const supabase = await createClient();
 
-  const credentials = getMetaCredentials();
+  const credentials = await getMetaCredentials(supabase, user.id);
   if (!credentials) {
-    return { ok: false, message: "Faltan INSTAGRAM_ACCESS_TOKEN e INSTAGRAM_USER_ID en las variables de entorno." };
+    return { ok: false, message: "Todavía no conectaste tu cuenta de Instagram." };
   }
 
   try {
-    const row = (await graphGet(credentials, credentials.userId, { fields: "username" })) as { username?: string };
-    return { ok: true, message: row.username ? `Conectado como @${row.username}.` : "Conexión exitosa." };
+    const username = await fetchInstagramUsername(credentials);
+    return { ok: true, message: username ? `Conectado como @${username}.` : "Conexión exitosa." };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "No se pudo contactar a Instagram." };
   }

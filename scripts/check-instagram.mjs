@@ -2,6 +2,10 @@
 //   node --env-file=.env.local scripts/check-instagram.mjs
 // Prueba cada consulta que hace la sincronización y publicación y dice cuál anda
 // y cuál no. Nunca imprime el token: sólo nombres de campos, cantidades y errores de Meta.
+//
+// Ojo: la app ya NO lee INSTAGRAM_ACCESS_TOKEN / INSTAGRAM_USER_ID — cada usuario
+// conecta su cuenta en Configuración (Plans/acceso-multiusuario.md). Este script
+// los sigue leyendo del entorno sólo para diagnosticar un token a mano.
 
 const VERSION = "v23.0";
 const token = process.env.INSTAGRAM_ACCESS_TOKEN?.trim();
