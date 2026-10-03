@@ -60,20 +60,20 @@ npm run db:types    # regenera lib/supabase/database.types.ts
 
 `db:types` se corre **después de cada migración**. Ese archivo no se edita a mano.
 
-## 5. Login con Google — ✅ hecho (2026-10-03)
+## 5. Login con Google — Google Cloud ✅ hecho (2026-10-03) · Supabase ⏳ pendiente
 
-**En Google Cloud Console** → APIs & Services → OAuth consent screen:
+**En Google Cloud Console** → APIs & Services → OAuth consent screen (✅ hecho):
 
 - Tipo *External*, en modo **Testing**
 - **Test users:** agregar los dos mails de `ALLOWED_EMAILS`. En modo Testing sólo ellos pueden pasar por el consent screen
 
-**En Google Cloud Console** → APIs & Services → Credentials → OAuth 2.0 Client ID (tipo *Web application*):
+**En Google Cloud Console** → APIs & Services → Credentials → OAuth 2.0 Client ID (tipo *Web application*) (✅ hecho):
 
 - **Authorized redirect URI:** `https://<ref>.supabase.co/auth/v1/callback`
 
-**En Supabase** → Authentication → Providers → Google: pegar el Client ID y el Client Secret.
+**En Supabase** (⏳ pendiente) → Authentication → Providers → Google: pegar el Client ID y el Client Secret.
 
-**En Supabase** → Authentication → URL Configuration:
+**En Supabase** (⏳ pendiente) → Authentication → URL Configuration:
 
 - **Site URL:** `http://localhost:3000` (cambiar a la URL de Vercel al desplegar)
 - **Redirect URLs:** agregar `http://localhost:3000/**` y, más adelante, `https://<tu-app>.vercel.app/**`
