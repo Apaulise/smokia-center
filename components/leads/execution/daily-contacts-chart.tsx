@@ -30,7 +30,7 @@ function formatDay(day: string, opts: Intl.DateTimeFormatOptions = { day: "2-dig
   return new Date(Date.UTC(year, month - 1, date)).toLocaleDateString("es-AR", { ...opts, timeZone: "UTC" });
 }
 
-/** Contactos nuevos por día del mes contra la línea de objetivo diario (Plan §1.22). Barras con tooltip por barra. */
+/** Contactos (nuevos + seguimientos) por día del mes contra la línea de objetivo diario (Plan §1.22). Barras con tooltip por barra. */
 export function DailyContactsChart({ days, target }: { days: DailyContacts[]; target: number }) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
@@ -129,6 +129,12 @@ export function DailyContactsChart({ days, target }: { days: DailyContacts[]; ta
                 {hovered.contacts} / {target}
               </span>
             </p>
+            {hovered.followups > 0 ? (
+              <p className="flex items-center justify-between gap-4 text-lm-ink-3">
+                Incluye seguimientos
+                <span className="font-mono tabular-nums">{hovered.followups}</span>
+              </p>
+            ) : null}
             <p className="mt-0.5 text-lm-ink-3">{hovered.contacts >= target ? "Llegaste al objetivo" : `Faltaron ${target - hovered.contacts}`}</p>
           </div>
         ) : null}

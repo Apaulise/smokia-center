@@ -7,7 +7,7 @@ import { ChatMessage } from "./chat-message";
 import { SaveIdeaDialog } from "./save-idea-dialog";
 import { ChatThreadList } from "./thread-list";
 import { Button } from "@/components/leads/ui/button";
-import { sendBrandChatMessage } from "@/lib/brand/actions";
+import { deleteBrandChatThread, sendBrandChatMessage } from "@/lib/brand/actions";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
 import { createClient } from "@/lib/supabase/client";
 import type { Database, Json } from "@/lib/supabase/database.types";
@@ -183,6 +183,16 @@ export function BrandChatPanel({
     syncUrl(id);
   }
 
+  async function handleDeleteThread(id: string) {
+    const result = await deleteBrandChatThread(id);
+    if (!result.ok) {
+      setError("No se pudo eliminar la conversación.");
+      return;
+    }
+    setThreads((prev) => prev.filter((t) => t.id !== id));
+    if (id === threadIdRef.current) handleNewThread();
+  }
+
   function handleSend() {
     const text = input.trim();
     if (!text || busy) return;
@@ -256,6 +266,7 @@ export function BrandChatPanel({
           loading={loadingThread}
           onSelect={handleSelectThread}
           onNew={handleNewThread}
+          onDelete={handleDeleteThread}
           newDisabled={messages.length === 0}
         />
       </aside>

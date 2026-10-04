@@ -179,3 +179,114 @@ export async function generateGeminiGrounded(params: GeminiGroundedParams): Prom
 
   return { text, grounded: searched || readUrl };
 }
+
+/** Modelo del chat de Marca: más capaz que el lite, con contexto grande y TPM de sobra en el free tier (Groq gratis tope 8.000 TPM, no alcanza para el prompt del sistema). */
+export const GEMINI_CHAT_MODEL = "gemini-3.5-flash";
+
+export type GeminiPart =
+  | { text: string }
+  | { functionCall: { name: string; args: Record<string, unknown> }; thoughtSignature?: string }
+  | { functionResponse: { name: string; response: Record<string, unknown> } };
+
+export interface GeminiContent {
+  role: "user" | "model";
+  parts: GeminiPart[];
+}
+
+export interface GeminiChatResult {
+  text: string;
+  toolCalls: { name: string; args: Record<string, unknown>; signature?: string }[];
+  finishReason: string | null;
+}
+
+/**
+ * Un turno de chat con function calling, en streaming SSE. Llama a `onText`
+ * con cada fragmento visible (los "thought" se descartan) y devuelve el texto
+ * y las llamadas a herramientas armadas. Quien llama las ejecuta y vuelve a
+ * llamar (lib/brand/ai/chat.ts). `parametersJsonSchema` acepta JSON Schema
+ * completo, a diferencia de `parameters` (subconjunto de OpenAPI).
+ */
+export async function streamGeminiChat(params: {
+  apiKey: string;
+  system: string;
+  contents: GeminiContent[];
+  tools: { name: string; description: string; parametersJsonSchema: Record<string, unknown> }[];
+  onText: (delta: string) => void;
+  model?: string;
+  maxOutputTokens?: number;
+}): Promise<GeminiChatResult> {
+  const model = params.model ?? GEMINI_CHAT_MODEL;
+  const response = await fetch(`${GEMINI_BASE}/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-goog-api-key": params.apiKey },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: params.system }] },
+      contents: params.contents,
+      tools: [{ functionDeclarations: params.tools }],
+      generationConfig: { maxOutputTokens: params.maxOutputTokens ?? 8192, temperature: 0.7 },
+    }),
+  });
+  if (!response.ok || !response.body) {
+    throw new Error(`Gemini rechazó la consulta (${await geminiErrorMessage(response)})`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let text = "";
+  let finishReason: string | null = null;
+  let blockReason: string | null = null;
+  const toolCalls: GeminiChatResult["toolCalls"] = [];
+
+  const handleLine = (line: string) => {
+    if (!line.startsWith("data:")) return;
+    const data = line.slice(5).trim();
+    if (!data) return;
+    let chunk: {
+      candidates?: {
+        content?: {
+          parts?: {
+            text?: string;
+            thought?: boolean;
+            thoughtSignature?: string;
+            functionCall?: { name?: string; args?: Record<string, unknown> };
+          }[];
+        };
+        finishReason?: string;
+      }[];
+      promptFeedback?: { blockReason?: string };
+      error?: { message?: string };
+    };
+    try {
+      chunk = JSON.parse(data);
+    } catch {
+      return;
+    }
+    if (chunk.error?.message) throw new Error(`Gemini cortó la respuesta (${chunk.error.message})`);
+    if (chunk.promptFeedback?.blockReason) blockReason = chunk.promptFeedback.blockReason;
+    const candidate = chunk.candidates?.[0];
+    if (!candidate) return;
+    for (const part of candidate.content?.parts ?? []) {
+      if (part.functionCall?.name) {
+        toolCalls.push({ name: part.functionCall.name, args: part.functionCall.args ?? {}, signature: part.thoughtSignature });
+      } else if (part.text && !part.thought) {
+        text += part.text;
+        params.onText(part.text);
+      }
+    }
+    if (candidate.finishReason) finishReason = candidate.finishReason;
+  };
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) handleLine(line.trimEnd());
+  }
+  if (buffer) handleLine(buffer.trimEnd());
+
+  if (blockReason && !text && toolCalls.length === 0) throw new Error(`Gemini bloqueó el pedido (${blockReason}).`);
+  return { text, toolCalls, finishReason };
+}

@@ -360,6 +360,20 @@ Sí esto:
 
 > **Si no podés citar algo concreto de la conversación anterior, no escribas el mensaje.** Decí que falta contexto. Un follow-up genérico gasta el único intento que quedaba.
 
+**Excepción: el prospecto que no contestó.** Si nunca hubo respuesta, no hay nada que citar: el mensaje no retoma una conversación, la reabre. Es un mensaje corto y cálido (2 a 4 frases) con una sola pregunta, que retoma el tema de tu último mensaje desde otro ángulo: una re-pregunta, una versión más chica o un ejemplo cotidiano. Nunca una pregunta seca de cierre tipo "¿seguís interesados?".
+
+El tercer seguimiento sin respuesta es distinto: es el cierre. Le das permiso de decir que no ("si no te interesa o no es el momento, avisame y no te molesto más"), sin culpa ni drama.
+
+Nunca esto:
+
+> Hola! Hace 8 días te escribí por WhatsApp con la pregunta: "…". ¿Utilizan algún registro o herramienta…?
+
+Sí esto:
+
+> Hola! Te quedo con una duda más concreta: cuando alguien consulta por un tratamiento y no reserva, ¿en la práctica se le vuelve a escribir o muchas veces se pierde entre los otros mensajes?
+
+No cuentes cuántos días pasaron, no repitas la pregunta anterior, no reproches el silencio y no abras un segundo pitch.
+
 ---
 
 ## 18. CÓMO ESCRIBÍS

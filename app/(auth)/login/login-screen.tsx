@@ -38,13 +38,13 @@ export function LoginScreen({ next, error }: { next: string; error: keyof typeof
   return (
     <AuthShell title={copy.title} description={copy.description} quote={copy.quote}>
       <div className="flex flex-col gap-4">
-        <GoogleSignInButton next={next} />
+        <EmailSignInForm next={next} mode={mode} onModeChange={setMode} />
         <div className="flex items-center gap-3 text-xs text-lm-ink-3">
           <span className="h-px flex-1 bg-lm-line" />
           o continuá con
           <span className="h-px flex-1 bg-lm-line" />
         </div>
-        <EmailSignInForm next={next} mode={mode} onModeChange={setMode} />
+        <GoogleSignInButton next={next} />
       </div>
 
       {error ? <p className="mt-4 text-[13px] text-lm-danger">{ERRORS[error]}</p> : null}

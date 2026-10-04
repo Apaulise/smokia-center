@@ -247,7 +247,7 @@ export default async function ObjetivoPage({ searchParams }: { searchParams: Pro
           </p>
         </Section>
 
-        <Section eyebrow="ESTE MES" title="Contactos por día" description="Leads contactados por primera vez cada día, contra tu objetivo diario ajustado.">
+        <Section eyebrow="ESTE MES" title="Contactos por día" description="Primeros contactos y seguimientos enviados cada día, contra tu objetivo diario ajustado.">
           <DailyContactsChart days={month.days} target={dailyTarget} />
         </Section>
       </div>

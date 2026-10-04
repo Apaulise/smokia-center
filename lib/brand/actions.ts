@@ -5,7 +5,7 @@ import { after } from "next/server";
 
 import { runBrandChatTurn } from "@/lib/brand/ai/chat";
 import type { BrandChatWireTurn } from "@/lib/brand/ai/chat-types";
-import { getAnthropicApiKey, getGroqApiKey } from "@/lib/brand/ai/key";
+import { getGeminiApiKey, getGroqApiKey } from "@/lib/brand/ai/key";
 import { generateBrandRecommendations } from "@/lib/brand/ai/recommendations";
 import { computeBrandInsights, MIN_POSTS_FOR_ANALYSIS } from "@/lib/brand/insights";
 import { getPublishedHypotheses } from "@/lib/brand/planner/queries";
@@ -165,7 +165,7 @@ export async function sendBrandChatMessage(params: {
   const text = params.text.trim();
   if (!text) return { ok: false, message: "Escribí un mensaje." };
 
-  const keyResult = await getAnthropicApiKey();
+  const keyResult = await getGeminiApiKey();
   if (!keyResult.ok) return { ok: false, message: keyResult.message };
 
   let threadId = params.threadId;
@@ -206,6 +206,17 @@ export async function sendBrandChatMessage(params: {
   after(() => runBrandChatTurn(runParams));
 
   return { ok: true, threadId, assistantMessageId: assistantRow.id };
+}
+
+/**
+ * Borra una conversación y todos sus mensajes (on delete cascade). Las ideas ya
+ * guardadas desde ese hilo se conservan: su source_thread_id pasa a null.
+ */
+export async function deleteBrandChatThread(threadId: string): Promise<{ ok: boolean }> {
+  await requireUser();
+  const supabase = await createClient();
+  const { error } = await supabase.from("brand_chat_threads").delete().eq("id", threadId);
+  return { ok: !error };
 }
 
 export type SaveContentIdeaResult = { ok: true; id: string } | { ok: false; message: string };

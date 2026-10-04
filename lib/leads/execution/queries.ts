@@ -1,3 +1,4 @@
+import { isoDateOf, isoDateToUtcInstant, addDaysIso } from "@/lib/leads/calendar";
 import type { ChainInputs } from "@/lib/leads/execution/chain";
 import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
@@ -59,13 +60,42 @@ export async function getExecutionMetrics(fromIso: string, toIso: string, bookin
 
 export interface DailyContacts {
   day: string;
+  /** Total del día para el objetivo: primeros contactos + seguimientos enviados. */
   contacts: number;
+  /** De ese total, cuántos fueron seguimientos a leads que no respondieron (o que se retomaron). */
+  followups: number;
 }
 
-/** Primeros contactos por día calendario de Argentina, de `fromDate` a `toDate` inclusive ("YYYY-MM-DD"). */
+/**
+ * Contactos por día calendario de Argentina, de `fromDate` a `toDate` inclusive ("YYYY-MM-DD").
+ * Cuentan los primeros contactos y también los seguimientos confirmados: retomar
+ * una conversación frenada es trabajo comercial del día igual que abrir una nueva.
+ * Las tasas de la cadena (`getExecutionMetrics`) siguen midiendo sólo primeros contactos.
+ */
 export async function getDailyContacts(fromDate: string, toDate: string): Promise<DailyContacts[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("leads_daily_contacts", { p_from: fromDate, p_to: toDate });
-  if (error) throw error;
-  return data ?? [];
+  const [first, followUps] = await Promise.all([
+    supabase.rpc("leads_daily_contacts", { p_from: fromDate, p_to: toDate }),
+    supabase
+      .from("lead_messages")
+      .select("occurred_at")
+      .eq("sender", "VENDEDOR")
+      .eq("kind", "SEGUIMIENTO")
+      .eq("confirmed", true)
+      .gte("occurred_at", isoDateToUtcInstant(fromDate))
+      .lt("occurred_at", isoDateToUtcInstant(addDaysIso(toDate, 1))),
+  ]);
+  if (first.error) throw first.error;
+  if (followUps.error) throw followUps.error;
+
+  const followupsByDay = new Map<string, number>();
+  for (const row of followUps.data ?? []) {
+    const day = isoDateOf(row.occurred_at);
+    followupsByDay.set(day, (followupsByDay.get(day) ?? 0) + 1);
+  }
+
+  return (first.data ?? []).map((d) => {
+    const followups = followupsByDay.get(d.day) ?? 0;
+    return { day: d.day, contacts: d.contacts + followups, followups };
+  });
 }

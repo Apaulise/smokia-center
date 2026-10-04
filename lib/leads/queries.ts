@@ -457,7 +457,11 @@ export async function listStaleLeads(days = 7, limit = 5) {
   return data ?? [];
 }
 
-export type FollowUpQueueLead = LeadWithRelations & { overdue: boolean };
+export type FollowUpQueueLead = LeadWithRelations & {
+  overdue: boolean;
+  /** Tiene una fecha de próxima acción a futuro: ya se hizo lo que tocaba y se espera. */
+  waiting: boolean;
+};
 
 /**
  * Cola de seguimiento de `/leads/seguimiento` (Plan §1.20): prospecciones
@@ -483,6 +487,7 @@ export async function listFollowUpQueue(limit = 200) {
   return rows.map((lead) => ({
     ...lead,
     overdue: Boolean(lead.next_action_at && new Date(lead.next_action_at) <= new Date(now)),
+    waiting: Boolean(lead.next_action_at && new Date(lead.next_action_at) > new Date(now)),
   })) satisfies FollowUpQueueLead[];
 }
 

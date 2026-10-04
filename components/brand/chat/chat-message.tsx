@@ -16,6 +16,7 @@ const TOOL_LABEL: Record<string, string> = {
   guardar_conocimiento: "Guardando en la base de conocimiento…",
   actualizar_conocimiento: "Actualizando la base de conocimiento…",
   web_search: "Buscando en la web…",
+  buscar_en_la_web: "Buscando en la web…",
 };
 
 /**

@@ -612,6 +612,8 @@ export async function analyzeLeadResponseAction(input: {
 
   const leadUpdate: Database["public"]["Tables"]["leads"]["Update"] = {
     interest_level: analysis.analysis.interest_level,
+    // Contestó: la fecha de seguimiento programada ya no aplica (si dijo "ahora no" con fecha, se pisa abajo).
+    next_action_at: null,
   };
   if (newStatus !== lead.status) leadUpdate.status = newStatus;
   if (analysis.analysis.not_now && analysis.analysis.follow_up_date) {
@@ -660,6 +662,29 @@ export async function rewriteLeadMessage(message: string, tone: RewriteTone): Pr
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "No se pudo reescribir el mensaje." };
   }
+}
+
+/** Días de espera hasta el próximo seguimiento, según cuántos se mandaron sin respuesta (tras el 1.º y tras el 2.º). */
+const FOLLOW_UP_WAIT_DAYS = [4, 7];
+
+/**
+ * Fecha del próximo seguimiento tras confirmar uno. Cuenta los seguimientos
+ * enviados desde la última respuesta del prospecto, incluido el que se acaba
+ * de registrar. Después del 3.º no queda nada programado: es el cierre.
+ */
+async function nextFollowUpDate(supabase: Awaited<ReturnType<typeof createClient>>, leadId: string, nowIso: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("lead_messages")
+    .select("sender, kind, occurred_at")
+    .eq("lead_id", leadId)
+    .eq("confirmed", true)
+    .order("occurred_at", { ascending: true });
+  const thread = data ?? [];
+  const lastLead = thread.map((m) => m.sender).lastIndexOf("LEAD");
+  const sent = thread.slice(lastLead + 1).filter((m) => m.sender === "VENDEDOR" && m.kind === "SEGUIMIENTO").length;
+  const wait = FOLLOW_UP_WAIT_DAYS[sent - 1];
+  if (!wait) return null;
+  return new Date(new Date(nowIso).getTime() + wait * 86_400_000).toISOString();
 }
 
 const confirmMessageSchema = z.object({
@@ -713,9 +738,15 @@ export async function confirmMessageSent(input: {
   });
   if (error) return { ok: false, message: "No se pudo registrar el mensaje." };
 
-  await supabase.from("leads").update({ last_contacted_at: now }).eq("id", parsed.data.leadId);
+  const leadUpdate: Database["public"]["Tables"]["leads"]["Update"] = { last_contacted_at: now };
+  if (parsed.data.kind === "SEGUIMIENTO") {
+    // Se pisa también una fecha vencida de antes: ese "retomar" ya se cumplió con este mensaje.
+    leadUpdate.next_action_at = await nextFollowUpDate(supabase, parsed.data.leadId, now);
+  }
+  await supabase.from("leads").update(leadUpdate).eq("id", parsed.data.leadId);
 
   revalidatePath(`/leads/${parsed.data.leadId}`);
+  revalidatePath("/leads/seguimiento");
   return { ok: true, message: "Mensaje confirmado." };
 }
 

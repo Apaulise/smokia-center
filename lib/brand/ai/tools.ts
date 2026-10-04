@@ -1,5 +1,7 @@
-import type Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
+
+import type { ChatToolDef } from "./chat-types";
+import { generateGeminiGrounded } from "@/lib/gemini/client";
 
 import { insertKnowledge, updateKnowledge } from "@/lib/brand/knowledge/mutations";
 import { searchKnowledge, type KnowledgeRow } from "@/lib/brand/knowledge/queries";
@@ -49,6 +51,8 @@ const BuscarConocimientoInput = z.object({
   limite: z.number().int().min(1).max(KNOWLEDGE_SEARCH_MAX).optional(),
 });
 
+const BuscarEnLaWebInput = z.object({ consulta: z.string().trim().min(2).max(500) });
+
 const ActualizarConocimientoInput = KnowledgePatchInput.extend({ id: z.string().uuid() });
 
 const COLLECTION_GUIDE = KNOWLEDGE_COLLECTIONS.map((c) => `${c}: ${COLLECTION_HINT[c]}`).join(" ");
@@ -62,7 +66,7 @@ const COLLECTION_GUIDE = KNOWLEDGE_COLLECTIONS.map((c) => `${c}: ${COLLECTION_HI
  * negativos"). El server tool de búsqueda web se agrega aparte, en
  * lib/brand/ai/chat.ts, junto al resto de `tools`.
  */
-export const BRAND_CHAT_TOOLS: Anthropic.Tool[] = [
+export const BRAND_CHAT_TOOLS: ChatToolDef[] = [
   {
     name: "buscar_mis_posts",
     description:
@@ -162,6 +166,18 @@ export const BRAND_CHAT_TOOLS: Anthropic.Tool[] = [
       required: ["id"],
     },
   },
+  {
+    name: "buscar_en_la_web",
+    description:
+      "Busca en la web (Google) y lee páginas para traer información actual: tendencias, formatos que están funcionando, qué hizo otro creador, datos de una herramienta o un tema. Usala cuando la respuesta dependa de algo reciente o externo a la cuenta. Devuelve un resumen en prosa con lo encontrado; no inventes fuentes que no aparezcan ahí.",
+    input_schema: {
+      type: "object",
+      properties: {
+        consulta: { type: "string", description: "Qué buscar, en una o dos oraciones claras." },
+      },
+      required: ["consulta"],
+    },
+  },
 ];
 
 function summarizeKnowledge(row: KnowledgeRow) {
@@ -208,12 +224,28 @@ export interface BrandChatToolContext {
   platform: BrandPlatform;
   /** Dueño de lo que la tool escriba. Viene de la sesión que disparó el turno, nunca del modelo. */
   ownerId: string;
+  /** Key de Gemini, para la búsqueda web (buscar_en_la_web). */
+  geminiApiKey: string;
 }
 
 /** Ejecuta una tool propia por nombre. Nunca lanza: un error vuelve como tool_result con is_error. */
 export async function runBrandChatTool(name: string, rawInput: unknown, ctx: BrandChatToolContext): Promise<BrandChatToolResult> {
   const { platform, ownerId } = ctx;
   try {
+    if (name === "buscar_en_la_web") {
+      const input = BuscarEnLaWebInput.parse(rawInput);
+      const result = await generateGeminiGrounded({
+        apiKey: ctx.geminiApiKey,
+        system:
+          "Sos un asistente de investigación. Buscá en la web y respondé en español con un resumen conciso y factual de lo que encontraste, citando de dónde sale cada dato (sitio o creador). Si no encontrás nada confiable, decilo.",
+        prompt: input.consulta,
+      });
+      const warning = result.grounded
+        ? ""
+        : "\n\n(Atención: la búsqueda no devolvió fuentes verificables; tratá esto como conocimiento general, no como dato confirmado.)";
+      return { content: result.text + warning, isError: false };
+    }
+
     if (name === "buscar_mis_posts") {
       const input = BuscarMisPostsInput.parse(rawInput ?? {});
       const rows = await getBrandContentLibrary(platform, {

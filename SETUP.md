@@ -60,7 +60,7 @@ npm run db:types    # regenera lib/supabase/database.types.ts
 
 `db:types` se corre **después de cada migración**. Ese archivo no se edita a mano.
 
-## 5. Login con Google — Google Cloud ✅ hecho (2026-10-03) · Supabase ⏳ pendiente
+## 5. Login con Google ✅ hecho y verificado (2026-10-03)
 
 **En Google Cloud Console** → APIs & Services → OAuth consent screen (✅ hecho):
 
@@ -71,16 +71,16 @@ npm run db:types    # regenera lib/supabase/database.types.ts
 
 - **Authorized redirect URI:** `https://<ref>.supabase.co/auth/v1/callback`
 
-**En Supabase** (⏳ pendiente) → Authentication → Providers → Google: pegar el Client ID y el Client Secret.
+**En Supabase** (✅ hecho) → Authentication → Providers → Google: pegar el Client ID y el Client Secret.
 
-**En Supabase** (⏳ pendiente) → Authentication → URL Configuration:
+**En Supabase** (✅ hecho) → Authentication → URL Configuration:
 
 - **Site URL:** `http://localhost:3000` (cambiar a la URL de Vercel al desplegar)
 - **Redirect URLs:** agregar `http://localhost:3000/**` y, más adelante, `https://<tu-app>.vercel.app/**`
 
 Si alguien entra con Google usando el mismo mail con el que ya tiene cuenta por contraseña, Supabase vincula las dos identidades al mismo usuario: los datos no se duplican.
 
-## 6. Mails de Auth (reset de contraseña con código)
+## 6. Mails de Auth (reset de contraseña con código) ⏸ diferido: falta dominio propio para Resend
 
 El SMTP por defecto de Supabase sólo le manda a miembros de la organización y con un límite de pocos mails por hora. Se usa **Resend** (free tier):
 

@@ -1,7 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
-
-import type { BrandChatWireTurn } from "./chat-types";
-import { createAnthropicClient } from "./client";
+import type { BrandChatWireTurn, WireBlock } from "./chat-types";
 import { getContentOS } from "./content-os";
 import { buildContentOSStateBlock, type GoalSnapshot } from "./prompts";
 import { BRAND_CHAT_TOOLS, runBrandChatTool } from "./tools";
@@ -9,6 +6,7 @@ import { attributeFollowers } from "@/lib/brand/goals/attribution";
 import { computeGoalProgress } from "@/lib/brand/goals/progress";
 import { getCurrentGoal, getFollowerSnapshots } from "@/lib/brand/goals/queries";
 import { computeBrandInsights } from "@/lib/brand/insights";
+import { streamGeminiChat, type GeminiContent, type GeminiPart } from "@/lib/gemini/client";
 import { todayIso } from "@/lib/leads/calendar";
 import { getKnowledgeCounts, getOpenExperiments } from "@/lib/brand/knowledge/queries";
 import { getPublishedHypotheses } from "@/lib/brand/planner/queries";
@@ -23,6 +21,59 @@ const MAX_TOOL_ROUNDS = 8;
 const FLUSH_INTERVAL_MS = 400;
 
 type JobStatus = Database["public"]["Enums"]["job_status"];
+
+/** Marca que Gemini 3 acepta para un functionCall que no viene de una vuelta suya (hilos de la época de Anthropic). */
+const SKIP_SIGNATURE = "skip_thought_signature_validator";
+
+/** Traduce el historial guardado (bloques text/tool_use/tool_result) a contents de Gemini. Los bloques de la época de Anthropic (thinking, server_tool_use…) se descartan. */
+function toGeminiContents(turns: BrandChatWireTurn[]): GeminiContent[] {
+  const callIds = new Set<string>();
+  const resultIds = new Set<string>();
+  const nameById = new Map<string, string>();
+  for (const turn of turns) {
+    if (typeof turn.content === "string") continue;
+    for (const b of turn.content as WireBlock[]) {
+      if (b.type === "tool_use" && typeof b.id === "string" && typeof b.name === "string") {
+        callIds.add(b.id);
+        nameById.set(b.id, b.name);
+      }
+      if (b.type === "tool_result" && typeof b.tool_use_id === "string") resultIds.add(b.tool_use_id);
+    }
+  }
+  // Una llamada sin su resultado (o al revés) hace que Gemini rechace el pedido: sólo pasan las parejas completas.
+  const paired = (id: string) => callIds.has(id) && resultIds.has(id);
+
+  const out: GeminiContent[] = [];
+  for (const turn of turns) {
+    if (typeof turn.content === "string") {
+      if (turn.content) out.push({ role: turn.role === "assistant" ? "model" : "user", parts: [{ text: turn.content }] });
+      continue;
+    }
+    const blocks = turn.content as WireBlock[];
+    const parts: GeminiPart[] = [];
+    if (turn.role === "assistant") {
+      for (const b of blocks) {
+        if (b.type === "text" && typeof b.text === "string" && b.text) parts.push({ text: b.text });
+        if (b.type === "tool_use" && typeof b.id === "string" && typeof b.name === "string" && paired(b.id)) {
+          parts.push({
+            functionCall: { name: b.name, args: (b.input && typeof b.input === "object" ? b.input : {}) as Record<string, unknown> },
+            thoughtSignature: typeof b.signature === "string" ? b.signature : SKIP_SIGNATURE,
+          });
+        }
+      }
+      if (parts.length > 0) out.push({ role: "model", parts });
+    } else {
+      for (const b of blocks) {
+        if (b.type === "tool_result" && typeof b.tool_use_id === "string" && paired(b.tool_use_id)) {
+          const key = b.is_error ? "error" : "result";
+          parts.push({ functionResponse: { name: nameById.get(b.tool_use_id) ?? "herramienta", response: { [key]: String(b.content) } } });
+        }
+      }
+      if (parts.length > 0) out.push({ role: "user", parts });
+    }
+  }
+  return out;
+}
 
 function toJson(turns: BrandChatWireTurn[]): Json {
   return turns as unknown as Json;
@@ -66,7 +117,7 @@ export async function runBrandChatTurn(params: {
   // la Server Action antes de programar este after()), así que ya viene
   // incluido acá — no hace falta agregarlo de nuevo.
   const priorTurns = (historyRows ?? []).flatMap((row) => row.content as unknown as BrandChatWireTurn[]);
-  const messages: Anthropic.MessageParam[] = priorTurns.map((turn) => ({ role: turn.role, content: turn.content }));
+  const contents = toGeminiContents(priorTurns);
 
   const [posts, knowledgeCounts, openExperiments, hypotheses, currentGoal, snapshots, latestSyncJob] = await Promise.all([
     getBrandPostsForAnalysis(params.platform),
@@ -123,8 +174,14 @@ export async function runBrandChatTurn(params: {
     lastSyncedAt,
   );
 
-  const client = createAnthropicClient(params.apiKey);
-  const tools = [...BRAND_CHAT_TOOLS, { type: "web_search_20260209", name: "web_search", max_uses: 5 } as const];
+  const systemWithState = `${system}
+
+${stateBlock}`;
+  const tools = BRAND_CHAT_TOOLS.map((tool) => ({
+    name: tool.name,
+    description: tool.description,
+    parametersJsonSchema: tool.input_schema,
+  }));
 
   const wireTurns: BrandChatWireTurn[] = [];
 
@@ -138,61 +195,66 @@ export async function runBrandChatTurn(params: {
 
   try {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      const stream = client.messages.stream({
-        model: "claude-opus-5",
-        max_tokens: 16000,
-        thinking: { type: "adaptive" },
-        output_config: { effort: "high" },
-        system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
-        tools,
-        messages: [...messages, { role: "system", content: stateBlock }],
-      });
-
       let liveText = "";
       let lastFlush = 0;
       let flushing = false;
 
-      stream.on("text", (delta) => {
-        liveText += delta;
-        const now = Date.now();
-        if (flushing || now - lastFlush < FLUSH_INTERVAL_MS) return;
-        lastFlush = now;
-        flushing = true;
-        void persist("EN_CURSO", null, liveText).finally(() => {
-          flushing = false;
-        });
+      const result = await streamGeminiChat({
+        apiKey: params.apiKey,
+        system: systemWithState,
+        contents,
+        tools,
+        onText: (delta) => {
+          liveText += delta;
+          const now = Date.now();
+          if (flushing || now - lastFlush < FLUSH_INTERVAL_MS) return;
+          lastFlush = now;
+          flushing = true;
+          void persist("EN_CURSO", null, liveText).finally(() => {
+            flushing = false;
+          });
+        },
       });
 
-      const message = await stream.finalMessage();
-      // El SOC son ~5.500 tokens cacheados (§3.10): si cache_read da 0 a
-      // partir del segundo mensaje del hilo, algo variable se coló en el
-      // prefijo y cada mensaje está costando diez veces más.
-      console.log(
-        `[brand-chat] cache_read=${message.usage.cache_read_input_tokens ?? 0} cache_write=${message.usage.cache_creation_input_tokens ?? 0} input=${message.usage.input_tokens}`,
-      );
-      wireTurns.push({ role: "assistant", content: message.content });
-      messages.push({ role: "assistant", content: message.content });
+      const calls = result.toolCalls.map((call) => ({ ...call, id: `call_${crypto.randomUUID()}` }));
+      const blocks: WireBlock[] = [];
+      if (result.text) blocks.push({ type: "text", text: result.text });
+      for (const call of calls) blocks.push({ type: "tool_use", id: call.id, name: call.name, input: call.args, signature: call.signature });
+      if (blocks.length > 0) wireTurns.push({ role: "assistant", content: blocks });
 
-      if (message.stop_reason === "tool_use") {
-        const toolUses = message.content.filter((block): block is Anthropic.ToolUseBlock => block.type === "tool_use");
-        const results: Anthropic.ToolResultBlockParam[] = [];
-        for (const toolUse of toolUses) {
-          const result = await runBrandChatTool(toolUse.name, toolUse.input, { platform: params.platform, ownerId: params.ownerId });
-          results.push({ type: "tool_result", tool_use_id: toolUse.id, content: result.content, is_error: result.isError });
+      const modelParts: GeminiPart[] = [];
+      if (result.text) modelParts.push({ text: result.text });
+      for (const call of calls) {
+        modelParts.push({ functionCall: { name: call.name, args: call.args }, thoughtSignature: call.signature ?? SKIP_SIGNATURE });
+      }
+      if (modelParts.length > 0) contents.push({ role: "model", parts: modelParts });
+
+      if (calls.length > 0) {
+        const results: WireBlock[] = [];
+        const responseParts: GeminiPart[] = [];
+        for (const call of calls) {
+          const outcome = await runBrandChatTool(call.name, call.args, {
+            platform: params.platform,
+            ownerId: params.ownerId,
+            geminiApiKey: params.apiKey,
+          });
+          results.push({ type: "tool_result", tool_use_id: call.id, content: outcome.content, is_error: outcome.isError });
+          responseParts.push({
+            functionResponse: { name: call.name, response: { [outcome.isError ? "error" : "result"]: outcome.content } },
+          });
         }
         wireTurns.push({ role: "user", content: results });
-        messages.push({ role: "user", content: results });
+        contents.push({ role: "user", parts: responseParts });
         await persist("EN_CURSO", null);
         continue;
       }
 
-      if (message.stop_reason === "pause_turn") {
-        await persist("EN_CURSO", null);
-        continue;
+      if (!result.text) {
+        await persist("FALLIDO", "El modelo devolvió una respuesta vacía. Probá de nuevo.");
+        return;
       }
-
-      if (message.stop_reason === "refusal") {
-        await persist("FALLIDO", "Claude no pudo responder por una política de seguridad.");
+      if (result.finishReason === "MAX_TOKENS") {
+        await persist("COMPLETADO", "La respuesta se cortó por largo — pedile que continúe o que sea más breve.");
         return;
       }
 
@@ -202,14 +264,7 @@ export async function runBrandChatTurn(params: {
 
     await persist("COMPLETADO", "Se llegó al máximo de vueltas de herramientas — la respuesta puede estar incompleta.");
   } catch (error) {
-    const message =
-      error instanceof Anthropic.AuthenticationError
-        ? "Anthropic rechazó la key configurada."
-        : error instanceof Anthropic.APIError
-          ? `Anthropic respondió ${error.status}: ${error.message}`
-          : error instanceof Error
-            ? error.message
-            : "Error inesperado generando la respuesta.";
+    const message = error instanceof Error ? error.message : "Error inesperado generando la respuesta.";
     await persist("FALLIDO", message).catch(() => {});
   }
 }
