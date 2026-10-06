@@ -635,3 +635,38 @@ La lectura de métricas y la publicación de Instagram dejaron de pasar por Wind
 - Verificación contra la cuenta real: `node --env-file=.env.local scripts/check-instagram.mjs`.
 
 **Estado al 2026-09-30:** verificados en la app real la conexión, la sincronización, la cuenta, las piezas, la audiencia (con países y géneros legibles) y los comentarios (con respuestas). **Pendiente: publicar de verdad en Instagram** (POST de prueba, y después un carrusel). Idea futura, sin empezar: un creador de carruseles que planifique y publique algunos por semana, apoyado en esta publicación por API.
+
+### 3.16 Importar publicados al planificador
+
+> **Estado (2026-10-05): código escrito, migración sin aplicar, checklist manual PENDIENTE.** El push de `20261005120000_brand_content_import.sql` quedó para correr a mano (`npm run db:push` y después `npm run db:types`); hasta entonces `tsc` falla sólo en las columnas nuevas.
+
+**Problema:** se suben muchos reels a Instagram de golpe y cargarlos a mano en el planificador es trabajo repetido. La sincronización ya trae todo a `brand_posts`; lo que faltaba era que cada reel sin pieza apareciera en el calendario, en su día, con lo que dice.
+
+**Qué hace** (`lib/brand/planner/import.ts`, al final de cada sincronización de Instagram):
+
+- Cada fila de `brand_posts` que ninguna pieza reclama pasa a ser una `brand_content_items` en `PUBLICADO`, con `scheduled_for = published_at`, su caption, `post_id`, `external_id` y `imported_from_post = true`. Título provisorio: la primera línea del caption.
+- Si hay **una sola** pieza sin publicar con el mismo caption (se había cargado a mano y después se subió sin "Ya la publiqué"), se la empalma y se la marca publicada en vez de duplicarla. Un empate no se empalma (mismo criterio que `link.ts`). El índice único sobre `post_id` es la última barrera contra duplicados.
+- Importar es gratis y no depende de ninguna key. Posts y carruseles se importan pero no se analizan (`analysis_status = null`).
+
+**Análisis con Gemini** (`lib/brand/planner/import-analysis.ts`, `generateGeminiVideoJson` en `lib/gemini/client.ts`): para cada reel, descarga el video (con una `media_url` fresca pedida a Graph, porque la guardada vence) y Gemini lo mira con audio. Devuelve transcripción (va a `script`), título, `hook`, `idea`, `angle` y `objective`, validados con Zod. Sólo se completa lo que sigue vacío: una edición a mano entre la importación y el análisis gana. Hasta ~12 MB el video viaja inline; más, por la Files API (se borra al terminar).
+
+- **Automático:** cada sincronización analiza 2 reels con `after()`, sin demorar la respuesta. Sin key de Gemini las piezas quedan `PENDIENTE`.
+- **Botón "Analizar ahora"** en el planificador (3 por clic) para vaciar una cola grande, y "Reintentar fallidos".
+- Un reel que falla 3 veces queda `FALLIDO` con el motivo en `analysis_error`. El intento se anota *antes* de empezar, así que una función que muere a la mitad también cuenta.
+
+**Decisiones:**
+
+- **No se usa `/watch` desde la app.** Es una skill local (yt-dlp + ffmpeg) y la app corre en Vercel. Gemini cubre lo mismo para esto. `/watch` queda disponible para una pasada puntual sobre el histórico.
+- **Sin hipótesis.** Las importadas no tienen una escrita antes de grabar, así que `getPublishedHypotheses` (filtra `hypothesis not null`) no las trata como experimentos.
+- **Modelo:** `gemini-3.5-flash` (el del chat), no el lite: una transcripción en español pide el modelo más capaz del free tier.
+- **Límite a vigilar:** el free tier de Gemini tiene cuota por minuto y por día; con una cola grande el botón puede devolver un 429, y el reel queda `PENDIENTE` para el siguiente clic (sí gasta un intento).
+
+**Checklist manual** (uno por uno, ver `CLAUDE.md` §13):
+
+1. Aplicar la migración y regenerar tipos; `npm run typecheck` en verde.
+2. "Sincronizar ahora" en Marca → los reels sin cargar aparecen en el calendario, cada uno en su día de publicación, como publicados.
+3. Un reel que ya habías cargado a mano y subido → se empalma, no se duplica.
+4. Aparece el aviso "N reels importados esperan…" con el botón.
+5. "Analizar ahora" → un reel se abre con transcripción en el guion, hook, idea, ángulo y un título razonable.
+6. Re-sincronizar → no se duplica nada.
+7. Un reel con el título editado a mano antes del análisis → el análisis no lo pisa.

@@ -4,7 +4,7 @@ import { Crumbs } from "@/components/brand/ui/card";
 import { HeaderBar } from "@/components/leads/ui/page-header";
 import { PeriodNav, ViewToggle, type CalendarView } from "@/components/shell/calendar-nav";
 import { getLinkablePosts } from "@/lib/brand/goals/queries";
-import { getPlannerItemsInRange, getItemChoices, getUnscheduledItems } from "@/lib/brand/planner/queries";
+import { getImportAnalysisCounts, getPlannerItemsInRange, getItemChoices, getUnscheduledItems } from "@/lib/brand/planner/queries";
 import { summarizeWeek } from "@/lib/brand/planner/week";
 import { getBrandPostClassifications } from "@/lib/brand/queries";
 import {
@@ -48,13 +48,14 @@ export default async function PlanificadorPage({ searchParams }: { searchParams:
   const user = await requireUser();
   const supabase = await createClient();
 
-  const [items, unscheduled, choices, classifications, account, linkablePosts] = await Promise.all([
+  const [items, unscheduled, choices, classifications, account, linkablePosts, importCounts] = await Promise.all([
     getPlannerItemsInRange(PLATFORM, isoDateToUtcInstant(days[0]), isoDateToUtcInstant(addDaysIso(days[days.length - 1], 1))),
     getUnscheduledItems(PLATFORM),
     getItemChoices(PLATFORM),
     getBrandPostClassifications(PLATFORM),
     supabase.from("brand_accounts").select("username").eq("platform", PLATFORM).limit(1).maybeSingle(),
     getLinkablePosts(PLATFORM),
+    getImportAnalysisCounts(PLATFORM),
   ]);
 
   // La semana que se resume: la que se está mirando, o en la vista de mes la de hoy (si está en la grilla)
@@ -82,6 +83,7 @@ export default async function PlanificadorPage({ searchParams }: { searchParams:
         unscheduled={unscheduled}
         choices={choices}
         linkablePosts={linkablePosts}
+        importCounts={importCounts}
         title={isWeek ? weekLabel(days) : monthLabel(monthStart)}
         eyebrow={eyebrow}
         nav={

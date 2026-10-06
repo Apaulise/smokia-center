@@ -94,6 +94,23 @@ export async function getPublishedHypotheses(platform: BrandPlatform, limit = 15
   return data ?? [];
 }
 
+/** Cuántos reels importados esperan análisis y cuántos se dieron por fallidos (§3.16), para el aviso del planificador. */
+export async function getImportAnalysisCounts(platform: BrandPlatform) {
+  const supabase = await createClient();
+  const count = async (status: "PENDIENTE" | "FALLIDO") => {
+    const { count: total, error } = await supabase
+      .from("brand_content_items")
+      .select("id", { count: "exact", head: true })
+      .eq("platform", platform)
+      .eq("analysis_status", status);
+    // Es un aviso, no el contenido de la página: si falla (p. ej. la migración de §3.16 sin aplicar) se muestra en cero.
+    if (error) return 0;
+    return total ?? 0;
+  };
+  const [pending, failed] = await Promise.all([count("PENDIENTE"), count("FALLIDO")]);
+  return { pending, failed };
+}
+
 /** Piezas del planificador que todavía no salieron, para el badge de "Planificador" del sidebar — sin traer filas. */
 export async function countOpenContentItems(): Promise<number> {
   const supabase = await createClient();

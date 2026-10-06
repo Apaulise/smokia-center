@@ -512,13 +512,19 @@ export async function listAppointmentsInRange(startIso: string, endIso: string) 
   return (data ?? []) as AppointmentWithLead[];
 }
 
-/** Próximos turnos sin recorte por rango — vista lista de /leads/agenda. */
+/**
+ * Turnos sin recorte por rango — vista lista de /leads/agenda. Además de los
+ * próximos entran los que ya pasaron pero siguen sin resolver (Agendada /
+ * Confirmada): sin esto un turno desaparece de la lista apenas pasa su hora y
+ * no hay forma de marcarlo como Realizada (que es lo que habilita pasar el
+ * lead a "Reunión realizada").
+ */
 export async function listUpcomingAppointmentsList(limit = 100) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("appointments")
     .select(SELECT_APPOINTMENT_ROW)
-    .gte("starts_at", new Date().toISOString())
+    .or(`starts_at.gte.${new Date().toISOString()},status.in.(AGENDADA,CONFIRMADA)`)
     .order("starts_at", { ascending: true })
     .limit(limit);
   if (error) throw error;

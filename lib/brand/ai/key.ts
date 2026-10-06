@@ -1,5 +1,8 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { decrypt } from "@/lib/crypto";
 import { ANTHROPIC_KEY_SETTING, GEMINI_KEY_SETTING, GROQ_KEY_SETTING } from "@/lib/settings/constants";
+import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 
 export type AnthropicKeyResult = { ok: true; apiKey: string } | { ok: false; message: string };
@@ -40,6 +43,27 @@ export async function getAnthropicApiKey(): Promise<AnthropicKeyResult> {
  */
 export async function getGeminiApiKey(): Promise<AnthropicKeyResult> {
   return getDecryptedKey(GEMINI_KEY_SETTING, "Google AI Studio (Gemini)");
+}
+
+/**
+ * La key de Gemini de un owner puntual, para código que corre sin sesión (la
+ * sincronización y el cron, con el cliente admin). Filtra por owner_id a mano
+ * porque ahí RLS no lo hace por nosotros (CLAUDE.md §4). null si no la cargó o
+ * si quedó cifrada con otra APP_ENCRYPTION_KEY.
+ */
+export async function getGeminiApiKeyForOwner(db: SupabaseClient<Database>, ownerId: string): Promise<string | null> {
+  const { data } = await db
+    .from("settings")
+    .select("value_encrypted")
+    .eq("owner_id", ownerId)
+    .eq("key", GEMINI_KEY_SETTING)
+    .maybeSingle();
+  if (!data) return null;
+  try {
+    return decrypt(data.value_encrypted);
+  } catch {
+    return null;
+  }
 }
 
 /**

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState, useTransition, type DragEvent, type ReactNode } from "react";
 
 import type { LinkablePost } from "@/lib/brand/goals/queries";
+import { ImportAnalysisBanner } from "@/components/brand/planner/import-analysis-banner";
 import { PlannerItemDialog } from "@/components/brand/planner/item-dialog";
 import { Eyebrow, Tag } from "@/components/brand/ui/card";
 import { CalendarGrid, type CalendarMove } from "@/components/leads/agenda/calendar-grid";
@@ -72,6 +73,7 @@ export function PlannerView({
   unscheduled,
   choices,
   linkablePosts,
+  importCounts,
   title,
   eyebrow,
   nav,
@@ -89,6 +91,8 @@ export function PlannerView({
   unscheduled: PlannerItem[];
   choices: { items: PlannerItemChoice[]; notes: PlannerNoteChoice[] };
   linkablePosts: LinkablePost[];
+  /** Reels importados sin analizar / fallidos (§3.16). */
+  importCounts: { pending: number; failed: number };
   title: string;
   eyebrow: string;
   /** Flechas anterior/siguiente + "Hoy". */
@@ -143,6 +147,8 @@ export function PlannerView({
       </div>
 
       {strip}
+
+      <ImportAnalysisBanner pending={importCounts.pending} failed={importCounts.failed} />
 
       {moveError ? <p className="text-sm text-lm-danger">{moveError}</p> : null}
 

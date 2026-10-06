@@ -9,8 +9,9 @@ import { getBrandSource } from "@/lib/brand/sources/registry";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
 import { createClient, requireUser } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/database.types";
-import { MetaApiError } from "@/lib/meta/client";
+import { getMetaCredentials, MetaApiError } from "@/lib/meta/client";
 
+import { analyzePendingImports } from "./import-analysis";
 import { isPublishableKind, validateFileForKind, validateMediaForPublish, type MediaFile } from "./rules";
 import {
   BRAND_MEDIA_BUCKET,
@@ -33,6 +34,41 @@ const PLANNER_PATH = "/marca/planificador";
 const PUBLISH_LOCK_MINUTES = 10;
 
 export type PlannerResult<T extends object = object> = ({ ok: true } & T) | { ok: false; message: string };
+
+/** Reels por clic de "Analizar ahora": cada uno descarga un video y espera a Gemini, y todo entra en los 60 s de la página. */
+const ANALYSES_PER_CLICK = 3;
+
+/**
+ * "Analizar ahora" (§3.16): analiza un lote de reels importados que siguen
+ * pendientes. Corre con la sesión del usuario (RLS filtra), sin service role.
+ * Con `retryFailed`, los que se habían dado por fallidos vuelven a la fila.
+ */
+export async function analyzeImportedReels(
+  options: { retryFailed?: boolean } = {},
+): Promise<PlannerResult<{ analyzed: number; failed: number; remaining: number }>> {
+  const user = await requireUser();
+  const supabase = await createClient();
+
+  const keyResult = await getGeminiApiKey();
+  if (!keyResult.ok) return { ok: false, message: keyResult.message };
+
+  if (options.retryFailed) {
+    await supabase
+      .from("brand_content_items")
+      .update({ analysis_status: "PENDIENTE", analysis_attempts: 0, analysis_error: null })
+      .eq("owner_id", user.id)
+      .eq("analysis_status", "FALLIDO");
+  }
+
+  const result = await analyzePendingImports(supabase, user.id, {
+    apiKey: keyResult.apiKey,
+    credentials: await getMetaCredentials(supabase, user.id),
+    limit: ANALYSES_PER_CLICK,
+  });
+
+  revalidatePath(PLANNER_PATH);
+  return { ok: true, ...result };
+}
 
 /** Fecha y hora locales (Argentina, UTC-3 sin horario de verano) → instante UTC. */
 function toInstant(date: string, time: string | null): string {

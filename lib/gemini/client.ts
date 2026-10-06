@@ -106,6 +106,117 @@ export async function generateGeminiJson(params: GeminiJsonParams): Promise<stri
   return text;
 }
 
+/** Hasta acá el video viaja inline en el pedido (el tope de Google es 20 MB por pedido, base64 incluido). */
+const INLINE_VIDEO_MAX_BYTES = 12 * 1024 * 1024;
+const FILE_POLL_INTERVAL_MS = 2_000;
+const FILE_POLL_MAX_ATTEMPTS = 20;
+
+interface GeminiFile {
+  name: string;
+  uri: string;
+  mimeType?: string;
+  state?: string;
+}
+
+/**
+ * Sube un video a la Files API (protocolo resumable, un solo tramo) y espera a
+ * que Google termine de procesarlo. Para lo que no entra inline.
+ */
+async function uploadGeminiFile(apiKey: string, bytes: Uint8Array, mimeType: string): Promise<GeminiFile> {
+  const start = await fetch(`https://generativelanguage.googleapis.com/upload/v1beta/files`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-goog-api-key": apiKey,
+      "x-goog-upload-protocol": "resumable",
+      "x-goog-upload-command": "start",
+      "x-goog-upload-header-content-length": String(bytes.byteLength),
+      "x-goog-upload-header-content-type": mimeType,
+    },
+    body: JSON.stringify({ file: { display_name: "reel" } }),
+  });
+  const uploadUrl = start.headers.get("x-goog-upload-url");
+  if (!start.ok || !uploadUrl) {
+    throw new Error(`Gemini rechazó la subida del video (${await geminiErrorMessage(start)})`);
+  }
+
+  const upload = await fetch(uploadUrl, {
+    method: "POST",
+    headers: {
+      "content-length": String(bytes.byteLength),
+      "x-goog-upload-offset": "0",
+      "x-goog-upload-command": "upload, finalize",
+    },
+    body: bytes as unknown as BodyInit,
+  });
+  if (!upload.ok) throw new Error(`Gemini rechazó la subida del video (${await geminiErrorMessage(upload)})`);
+
+  let file = ((await upload.json()) as { file?: GeminiFile }).file;
+  if (!file?.name || !file.uri) throw new Error("Gemini rechazó la subida del video (respuesta sin archivo).");
+
+  // Un video no se puede usar hasta que pasa de PROCESSING a ACTIVE.
+  for (let attempt = 0; file.state === "PROCESSING" && attempt < FILE_POLL_MAX_ATTEMPTS; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, FILE_POLL_INTERVAL_MS));
+    const poll = await fetch(`${GEMINI_BASE}/${file.name}`, { headers: { "x-goog-api-key": apiKey } });
+    if (!poll.ok) throw new Error(`Gemini rechazó la consulta (${await geminiErrorMessage(poll)})`);
+    file = (await poll.json()) as GeminiFile;
+  }
+  if (file.state !== "ACTIVE") throw new Error("Gemini rechazó el video: no terminó de procesarlo a tiempo.");
+  return file;
+}
+
+export interface GeminiVideoJsonParams extends GeminiJsonParams {
+  video: { bytes: Uint8Array; mimeType: string };
+}
+
+/**
+ * Lo mismo que `generateGeminiJson`, pero el modelo mira el video (imagen y
+ * audio). Entra inline si es chico y por la Files API si no; el archivo subido
+ * se borra al terminar (si no, Google lo conserva 48 h).
+ */
+export async function generateGeminiVideoJson(params: GeminiVideoJsonParams): Promise<string> {
+  const model = params.model ?? GEMINI_CHAT_MODEL;
+  const { bytes, mimeType } = params.video;
+
+  let file: GeminiFile | null = null;
+  let videoPart: Record<string, unknown>;
+  if (bytes.byteLength <= INLINE_VIDEO_MAX_BYTES) {
+    videoPart = { inlineData: { mimeType, data: Buffer.from(bytes).toString("base64") } };
+  } else {
+    file = await uploadGeminiFile(params.apiKey, bytes, mimeType);
+    videoPart = { fileData: { mimeType, fileUri: file.uri } };
+  }
+
+  try {
+    const response = await fetch(`${GEMINI_BASE}/models/${encodeURIComponent(model)}:generateContent`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-goog-api-key": params.apiKey },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: params.system }] },
+        contents: [{ role: "user", parts: [videoPart, { text: params.prompt }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: params.schema,
+          maxOutputTokens: params.maxOutputTokens ?? 8192,
+          temperature: 0,
+        },
+      }),
+    });
+    if (!response.ok) throw new Error(`Gemini rechazó la consulta (${await geminiErrorMessage(response)})`);
+
+    const body = (await response.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+    const text = body.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
+    if (!text.trim()) throw new Error("Gemini devolvió una respuesta vacía.");
+    return text;
+  } finally {
+    if (file) {
+      await fetch(`${GEMINI_BASE}/${file.name}`, { method: "DELETE", headers: { "x-goog-api-key": params.apiKey } }).catch(
+        () => undefined,
+      );
+    }
+  }
+}
+
 export interface GeminiGroundedParams {
   apiKey: string;
   system: string;

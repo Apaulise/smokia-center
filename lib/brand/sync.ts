@@ -16,7 +16,13 @@
 //
 // Cuánto historial trae cada consulta lo decide el proveedor (ver
 // INSIGHTS_WINDOW en lib/brand/sources/instagram.ts).
+import { after } from "next/server";
+
+import { getGeminiApiKeyForOwner } from "@/lib/brand/ai/key";
+import { importUnlinkedPosts } from "@/lib/brand/planner/import";
+import { analyzePendingImports } from "@/lib/brand/planner/import-analysis";
 import { linkPublishedItems } from "@/lib/brand/planner/link";
+import { getMetaCredentials } from "@/lib/meta/client";
 import { getBrandSource } from "@/lib/brand/sources/registry";
 import {
   hasAnyMetric,
@@ -240,6 +246,17 @@ export async function runBrandSync(
       // se reintenta en la siguiente sincronización
     }
 
+    // Lo publicado sin pasar por el planificador entra al calendario (§3.16) y,
+    // si es un reel, se programa su análisis para después de contestar.
+    if (platform === "INSTAGRAM") {
+      try {
+        await importUnlinkedPosts(admin, ownerId, platform);
+      } catch {
+        // se reintenta en la siguiente sincronización
+      }
+      scheduleImportAnalysis(admin, ownerId);
+    }
+
     await admin
       .from("brand_sync_jobs")
       .update({ status: "COMPLETADO", items_imported: itemsImported, finished_at: new Date().toISOString() })
@@ -253,6 +270,34 @@ export async function runBrandSync(
       .update({ status: "FALLIDO", error: message, finished_at: new Date().toISOString() })
       .eq("id", job.id);
     return { status: "FALLIDO", itemsImported: 0, error: message };
+  }
+}
+
+/** Cuántos reels se analizan por sincronización: cada uno descarga un video y espera a Gemini, y todo comparte el maxDuration de 60 s. */
+const ANALYSES_PER_SYNC = 2;
+
+/**
+ * Analiza reels importados con `after()`: la sincronización contesta enseguida y
+ * esto sigue por detrás. Sin key de Gemini no hace nada (las piezas quedan
+ * PENDIENTE hasta que se cargue). Es un extra: nunca tira abajo la sincronización.
+ */
+function scheduleImportAnalysis(admin: Admin, ownerId: string) {
+  try {
+    after(async () => {
+      try {
+        const apiKey = await getGeminiApiKeyForOwner(admin, ownerId);
+        if (!apiKey) return;
+        await analyzePendingImports(admin, ownerId, {
+          apiKey,
+          credentials: await getMetaCredentials(admin, ownerId),
+          limit: ANALYSES_PER_SYNC,
+        });
+      } catch {
+        // las piezas siguen PENDIENTE: la próxima corrida o el botón lo reintentan
+      }
+    });
+  } catch {
+    // fuera de un request no hay after(): el botón del planificador cubre ese caso
   }
 }
 

@@ -573,7 +573,7 @@ const MEETING_STATUS_GATE: Partial<Record<LeadStatus, AppointmentStatus[]>> = {
 
 function meetingGateMessage(status: LeadStatus): string {
   return status === "REUNION_REALIZADA"
-    ? "No se puede marcar como reunión realizada: este lead no tiene ningún turno marcado como Realizada en la agenda."
+    ? "No se puede marcar como reunión realizada: este lead no tiene ningún turno marcado como Realizada en la agenda. Andá a Agenda → Lista, marcá el turno como Realizada y el lead avanza solo."
     : "No se puede pasar a reunión agendada: este lead no tiene ningún turno cargado en la agenda. Agendalo primero desde la ficha del lead.";
 }
 
