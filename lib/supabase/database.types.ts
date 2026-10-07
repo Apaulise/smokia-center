@@ -465,6 +465,9 @@ export type Database = {
       }
       brand_content_items: {
         Row: {
+          analysis_attempts: number
+          analysis_error: string | null
+          analysis_status: string | null
           angle: string | null
           caption: string | null
           created_at: string
@@ -474,6 +477,7 @@ export type Database = {
           hypothesis: string | null
           id: string
           idea: string | null
+          imported_from_post: boolean
           kind: Database["public"]["Enums"]["brand_post_kind"]
           knowledge_id: string | null
           media: Json
@@ -498,6 +502,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          analysis_attempts?: number
+          analysis_error?: string | null
+          analysis_status?: string | null
           angle?: string | null
           caption?: string | null
           created_at?: string
@@ -507,6 +514,7 @@ export type Database = {
           hypothesis?: string | null
           id?: string
           idea?: string | null
+          imported_from_post?: boolean
           kind: Database["public"]["Enums"]["brand_post_kind"]
           knowledge_id?: string | null
           media?: Json
@@ -531,6 +539,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          analysis_attempts?: number
+          analysis_error?: string | null
+          analysis_status?: string | null
           angle?: string | null
           caption?: string | null
           created_at?: string
@@ -540,6 +551,7 @@ export type Database = {
           hypothesis?: string | null
           id?: string
           idea?: string | null
+          imported_from_post?: boolean
           kind?: Database["public"]["Enums"]["brand_post_kind"]
           knowledge_id?: string | null
           media?: Json
