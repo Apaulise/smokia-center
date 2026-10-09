@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { Sidebar } from "@/components/shell/sidebar";
@@ -15,6 +16,11 @@ import { getCurrentUser } from "@/lib/supabase/server";
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+
+  // Embebido como preview en la pantalla global (ver proxy.ts): sólo el contenido.
+  if ((await headers()).get("x-preview") === "1") {
+    return <main className="min-w-0">{children}</main>;
+  }
 
   // Badges de conteo del sidebar (Design System, ítems "Listas"/"Agenda" de Leads y
   // "Biblioteca"/"Planificador"/"Base de conocimiento" de Marca) — counts livianos

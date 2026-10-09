@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowLeft,
   ChevronLeft,
   ChevronRight,
   LayoutGrid,
@@ -15,7 +16,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { CommandPalette } from "@/components/shell/command-palette";
 import { MODULES, type NavModule } from "@/components/shell/nav";
@@ -37,6 +38,25 @@ const ICONS = {
 } as const;
 
 const COLLAPSE_STORAGE_KEY = "awareness-ai:sidebar-collapsed";
+/** `storage` sólo avisa a las otras pestañas; este evento avisa a la propia. */
+const COLLAPSE_EVENT = "awareness-ai:sidebar-collapsed-change";
+
+function readCollapsed() {
+  try {
+    return localStorage.getItem(COLLAPSE_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function subscribeCollapsed(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  window.addEventListener(COLLAPSE_EVENT, onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener(COLLAPSE_EVENT, onChange);
+  };
+}
 
 function isModuleActive(pathname: string, module: NavModule) {
   return pathname === module.href || pathname.startsWith(`${module.href}/`);
@@ -47,17 +67,20 @@ export function Sidebar({ email, badges }: { email?: string; badges?: Record<str
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
-  // Arranca sin colapsar en el primer render (server y cliente deben coincidir
-  // para no romper hydration) y se ajusta a lo persistido recién en el efecto.
-  const [collapsed, setCollapsed] = useState(false);
+  // El snapshot de servidor (false) es el que se usa al hidratar, así server y
+  // cliente coinciden; después React relee localStorage y re-renderiza.
+  // Cada gestor es un espacio separado: el sidebar sólo muestra el módulo en el que se está.
+  const activeModule = MODULES.find((module) => module.available && isModuleActive(pathname, module));
+  const ActiveIcon = activeModule ? ICONS[activeModule.icon] : LayoutGrid;
+  const collapsed = useSyncExternalStore(subscribeCollapsed, readCollapsed, () => false);
 
-  useEffect(() => setOpen(false), [pathname]);
-
-  useEffect(() => {
-    if (localStorage.getItem(COLLAPSE_STORAGE_KEY) === "true") {
-      setCollapsed(true);
-    }
-  }, []);
+  // Cerrar el menú mobile al navegar: se ajusta durante el render, no en un
+  // efecto, para no pagar un render extra con el menú todavía abierto.
+  const [lastPathname, setLastPathname] = useState(pathname);
+  if (pathname !== lastPathname) {
+    setLastPathname(pathname);
+    setOpen(false);
+  }
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -71,11 +94,12 @@ export function Sidebar({ email, badges }: { email?: string; badges?: Record<str
   }, []);
 
   function toggleCollapsed() {
-    setCollapsed((value) => {
-      const next = !value;
-      localStorage.setItem(COLLAPSE_STORAGE_KEY, String(next));
-      return next;
-    });
+    try {
+      localStorage.setItem(COLLAPSE_STORAGE_KEY, String(!collapsed));
+    } catch {
+      // Sin storage (modo privado estricto) el colapso simplemente no se recuerda.
+    }
+    window.dispatchEvent(new Event(COLLAPSE_EVENT));
   }
 
   async function signOut() {
@@ -119,7 +143,7 @@ export function Sidebar({ email, badges }: { email?: string; badges?: Record<str
           )}
         >
           {collapsed ? null : (
-            <Link href="/leads" className="flex items-center gap-2 text-[15px] font-semibold text-lm-ink">
+            <Link href="/" className="flex items-center gap-2 text-[15px] font-semibold text-lm-ink">
               {/* 230×400 real: declarar el ratio real evita el warning de Next por width/height que no matchean el CSS. */}
               <Image src="/logo-mark.png" alt="" width={15} height={26} className="h-[26px] w-auto shrink-0" priority />
               Awareness AI
@@ -150,72 +174,59 @@ export function Sidebar({ email, badges }: { email?: string; badges?: Record<str
         </div>
 
         <nav className={cn("flex-1 space-y-0.5 overflow-y-auto px-2 py-1", collapsed && "lg:px-2")}>
-          {MODULES.map((module) => {
-            const Icon = ICONS[module.icon];
-            const active = isModuleActive(pathname, module);
+          <Link
+            href="/"
+            title={collapsed ? "Todos los gestores" : undefined}
+            className={cn(
+              "flex h-8 items-center gap-2.5 rounded-lm-sm px-2 text-sm text-lm-ink-2 transition-colors hover:bg-lm-raised hover:text-lm-ink",
+              collapsed && "lg:justify-center lg:px-0",
+            )}
+          >
+            <ArrowLeft className="size-4 shrink-0" strokeWidth={1.5} />
+            <span className={cn("truncate", collapsed && "lg:hidden")}>Todos los gestores</span>
+          </Link>
 
-            if (!module.available) {
-              return (
-                <div
-                  key={module.href}
-                  className={cn(
-                    "flex h-8 cursor-not-allowed items-center gap-2 rounded-lm-sm px-2 text-lm-ink-3",
-                    collapsed && "lg:justify-center lg:px-0",
-                  )}
-                  title={collapsed ? `${module.label} — pronto` : "Todavía no construido"}
-                >
-                  <Icon className="size-3.5 shrink-0" strokeWidth={1.5} />
-                  <span className={cn("truncate text-sm", collapsed && "lg:hidden")}>{module.label}</span>
-                  <span className={cn("ml-auto shrink-0 text-xs", collapsed && "lg:hidden")}>pronto</span>
-                </div>
-              );
-            }
-
-            return (
-              <div key={module.href}>
-                <Link
-                  href={module.href}
-                  title={collapsed ? module.label : undefined}
-                  className={cn(
-                    "relative flex h-8 items-center gap-2.5 rounded-lm-sm px-2 text-sm text-lm-ink-2 transition-colors",
-                    collapsed && "lg:justify-center lg:px-0",
-                    active ? "text-lm-ink" : "hover:bg-lm-raised hover:text-lm-ink",
-                    active &&
-                      "before:absolute before:top-1.5 before:bottom-1.5 before:left-[-8px] before:w-0.5 before:rounded-lm-xs before:bg-lm-signal",
-                  )}
-                >
-                  <Icon className={cn("size-4 shrink-0", active && "text-lm-signal-text")} strokeWidth={1.5} />
-                  <span className={cn("truncate", collapsed && "lg:hidden")}>{module.label}</span>
-                </Link>
-
-                {active && module.children ? (
-                  <div className={cn("mt-0.5 ml-[13px] space-y-0.5 border-l border-lm-line pl-[21px]", collapsed && "lg:hidden")}>
-                    {module.children.map((child) => {
-                      const childActive = child.exact
-                        ? pathname === child.href
-                        : pathname === child.href || pathname.startsWith(`${child.href}/`);
-
-                      const badge = badges?.[child.href];
-
-                      return (
-                        <Link
-                          key={child.href}
-                          href={child.href}
-                          className={cn(
-                            "flex h-7 items-center justify-between gap-2 rounded-lm-sm px-2 py-1.5 text-[13px] transition-colors",
-                            childActive ? "text-lm-ink" : "text-lm-ink-2 hover:text-lm-ink",
-                          )}
-                        >
-                          <span className="truncate">{child.label}</span>
-                          {badge ? <span className="shrink-0 font-mono text-xs text-lm-ink-3">{badge}</span> : null}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                ) : null}
+          {activeModule ? (
+            <div className="pt-2">
+              <div
+                title={collapsed ? activeModule.label : undefined}
+                className={cn(
+                  "relative flex h-8 items-center gap-2.5 rounded-lm-sm px-2 text-sm text-lm-ink",
+                  collapsed && "lg:justify-center lg:px-0",
+                  "before:absolute before:top-1.5 before:bottom-1.5 before:left-[-8px] before:w-0.5 before:rounded-lm-xs before:bg-lm-signal",
+                )}
+              >
+                <ActiveIcon className="size-4 shrink-0 text-lm-signal-text" strokeWidth={1.5} />
+                <span className={cn("truncate", collapsed && "lg:hidden")}>{activeModule.label}</span>
               </div>
-            );
-          })}
+
+              {activeModule.children ? (
+                <div className={cn("mt-0.5 ml-[13px] space-y-0.5 border-l border-lm-line pl-[21px]", collapsed && "lg:hidden")}>
+                  {activeModule.children.map((child) => {
+                    const childActive = child.exact
+                      ? pathname === child.href
+                      : pathname === child.href || pathname.startsWith(`${child.href}/`);
+
+                    const badge = badges?.[child.href];
+
+                    return (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        className={cn(
+                          "flex h-7 items-center justify-between gap-2 rounded-lm-sm px-2 py-1.5 text-[13px] transition-colors",
+                          childActive ? "text-lm-ink" : "text-lm-ink-2 hover:text-lm-ink",
+                        )}
+                      >
+                        <span className="truncate">{child.label}</span>
+                        {badge ? <span className="shrink-0 font-mono text-xs text-lm-ink-3">{badge}</span> : null}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </nav>
 
         <div className={cn("space-y-0.5 border-t border-lm-line px-2 py-2", collapsed && "lg:px-2")}>

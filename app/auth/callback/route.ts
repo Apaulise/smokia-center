@@ -10,12 +10,12 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/leads";
+  const next = searchParams.get("next") ?? "/";
 
   // Sólo rutas internas: un `next` absoluto sería un open redirect.
   const destination = next.startsWith("/") && !next.startsWith("//")
     ? next
-    : "/leads";
+    : "/";
 
   if (!code) {
     return NextResponse.redirect(`${origin}/login?error=missing_code`);

@@ -7,6 +7,15 @@ import { isAllowedEmail } from "@/lib/auth/allowlist";
 const PUBLIC_PATHS = ["/login", "/auth/callback", "/recuperar"];
 
 export async function proxy(request: NextRequest) {
+  // `?preview=1` lo usa la pantalla global para embeber la home de cada gestor en
+  // un iframe: el layout lee este header para omitir el sidebar. Sólo cambia el
+  // marco visual; la autenticación y los datos son los mismos.
+  if (request.nextUrl.searchParams.get("preview") === "1") {
+    request.headers.set("x-preview", "1");
+  } else {
+    request.headers.delete("x-preview");
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -65,7 +74,7 @@ export async function proxy(request: NextRequest) {
 
   if (isLoggedIn && pathname === "/login") {
     const url = request.nextUrl.clone();
-    url.pathname = "/leads";
+    url.pathname = "/";
     url.search = "";
     return NextResponse.redirect(url);
   }

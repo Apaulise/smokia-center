@@ -28,8 +28,8 @@ export function ComingSoon({
           title={`${phase} — todavía no construido`}
           description="Primero tiene que quedar terminado y en uso el Gestor de Leads. Un gestor por vez."
           action={
-            <ButtonLink href="/leads" variant="primary">
-              Ir al Gestor de Leads
+            <ButtonLink href="/" variant="primary">
+              Volver al inicio
             </ButtonLink>
           }
         />

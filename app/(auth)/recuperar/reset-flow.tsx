@@ -97,7 +97,7 @@ export function ResetFlow() {
       setPending(false);
       return;
     }
-    router.push("/leads");
+    router.push("/");
     router.refresh();
   }
 
