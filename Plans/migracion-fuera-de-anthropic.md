@@ -162,7 +162,7 @@ Para cada uno: confirmar que el mensaje de error, si falla, ya no menciona a Cla
 - **Cuota de tokens por minuto de Groq, más ajustada de lo que "$0" sugiere** (cifras de terceros, no oficiales — confirmar en `console.groq.com/settings/limits`): reenviar el Sistema de Prospección/Contenido completo en cada llamada (sin caché) puede acercarse al límite por minuto en una sola corrida, especialmente en `recommendations.ts` con `max_tokens` alto — de ahí la baja recomendada.
 - **Calidad real de `gpt-oss-120b` contra Claude Opus** para el juicio fino de `analyze.ts` — no medible sin probarlo con conversaciones reales (paso 5 de verificación). Trade-off ya aceptado por el usuario.
 - **Cuota de Gemini compartida** entre el enriquecimiento de leads (ya la usa) y las 3 funciones nuevas — sin throttle centralizado hoy; si aparecen 429 en la práctica, es trabajo nuevo a evaluar después, no resuelto en este plan.
-- **Código que queda sin llamadores tras esto** (no se borra en este plan, sólo para que no se lea como descuido): `lib/leads/ai/client.ts` y `getAnthropicApiKey` de `lib/leads/ai/key.ts` — candidatos a limpieza en un commit aparte, después de verificar Etapa 1.
+- **Código que queda sin llamadores tras esto** (no se borra en este plan, sólo para que no se lea como descuido): `lib/leads/ai/client.ts` y `getAnthropicApiKey` de `lib/leads/ai/key.ts` — candidatos a limpieza en un commit aparte, después de verificar Etapa 1. **Borrados el 2026-10-08** (auditoría), junto con `@anthropic-ai/sdk`, la key de Anthropic en Configuración y `lib/leads/ai/tools.ts`: el chat de Marca ya había pasado a Gemini, así que no quedaba ningún llamador.
 
 ## Archivos críticos
 

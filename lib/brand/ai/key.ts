@@ -1,13 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { decrypt } from "@/lib/crypto";
-import { ANTHROPIC_KEY_SETTING, GEMINI_KEY_SETTING, GROQ_KEY_SETTING } from "@/lib/settings/constants";
+import { GEMINI_KEY_SETTING, GROQ_KEY_SETTING } from "@/lib/settings/constants";
 import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 
-export type AnthropicKeyResult = { ok: true; apiKey: string } | { ok: false; message: string };
+export type ApiKeyResult = { ok: true; apiKey: string } | { ok: false; message: string };
 
-async function getDecryptedKey(settingKey: string, providerLabel: string): Promise<AnthropicKeyResult> {
+async function getDecryptedKey(settingKey: string, providerLabel: string): Promise<ApiKeyResult> {
   const supabase = await createClient();
   const { data: settingsRow } = await supabase
     .from("settings")
@@ -27,21 +27,12 @@ async function getDecryptedKey(settingKey: string, providerLabel: string): Promi
 }
 
 /**
- * Descifra la key de Anthropic guardada en Configuración. Sigue haciendo
- * falta: `sendBrandChatMessage` (lib/brand/actions.ts) la usa hasta la Etapa 2
- * de la migración (chat.ts, tool-use en loop, fuera de alcance de la Etapa 1).
- */
-export async function getAnthropicApiKey(): Promise<AnthropicKeyResult> {
-  return getDecryptedKey(ANTHROPIC_KEY_SETTING, "Anthropic");
-}
-
-/**
  * La key de Google AI Studio (Gemini): clasificación de competencia (§3.14) y,
  * desde Plans/migracion-fuera-de-anthropic.md (Etapa 1), guiones (§3.7) e
  * ideas desde un outlier (§3.14/§3.15) — transformar algo que ya existe, no
  * decidir una estrategia.
  */
-export async function getGeminiApiKey(): Promise<AnthropicKeyResult> {
+export async function getGeminiApiKey(): Promise<ApiKeyResult> {
   return getDecryptedKey(GEMINI_KEY_SETTING, "Google AI Studio (Gemini)");
 }
 
@@ -71,6 +62,6 @@ export async function getGeminiApiKeyForOwner(db: SupabaseClient<Database>, owne
  * recomendaciones de contenido (§3.5) — lo que decide qué repetir, cortar o
  * probar.
  */
-export async function getGroqApiKey(): Promise<AnthropicKeyResult> {
+export async function getGroqApiKey(): Promise<ApiKeyResult> {
   return getDecryptedKey(GROQ_KEY_SETTING, "Groq");
 }

@@ -1,5 +1,5 @@
 import { decrypt } from "@/lib/crypto";
-import { ANTHROPIC_KEY_SETTING, GEMINI_KEY_SETTING, GROQ_KEY_SETTING } from "@/lib/settings/constants";
+import { GEMINI_KEY_SETTING, GROQ_KEY_SETTING } from "@/lib/settings/constants";
 import { createClient } from "@/lib/supabase/server";
 
 export type ApiKeyResult = { ok: true; apiKey: string } | { ok: false; message: string };
@@ -17,16 +17,6 @@ async function getDecryptedKey(settingKey: string, providerLabel: string): Promi
   } catch {
     return { ok: false, message: "La API key guardada no se pudo leer. Volvé a cargarla en Configuración." };
   }
-}
-
-/**
- * Descifra la key de Anthropic guardada en Configuración. Sin llamadores
- * dentro de leads desde Plans/migracion-fuera-de-anthropic.md (Etapa 1):
- * se deja para no romper el import si algo la sigue referenciando, candidata
- * a limpieza en un commit aparte una vez verificada la Etapa 1.
- */
-export async function getAnthropicApiKey(): Promise<ApiKeyResult> {
-  return getDecryptedKey(ANTHROPIC_KEY_SETTING, "Anthropic");
 }
 
 /**

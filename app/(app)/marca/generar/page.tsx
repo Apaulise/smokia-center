@@ -6,7 +6,7 @@ import { ButtonLink } from "@/components/leads/ui/button";
 import { EmptyState } from "@/components/leads/ui/feedback";
 import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
 import { getBrandChatMessages, getBrandChatThreads } from "@/lib/brand/queries";
-import { getAnthropicKeyStatus } from "@/lib/settings/queries";
+import { getGeminiKeyStatus } from "@/lib/settings/queries";
 import { requireUser } from "@/lib/supabase/server";
 
 export const metadata = { title: "Generar contenido · Awareness AI" };
@@ -18,9 +18,9 @@ const PLATFORM = "INSTAGRAM" as const;
 
 export default async function GenerarPage({ searchParams }: { searchParams: Promise<{ hilo?: string }> }) {
   const user = await requireUser();
-  const anthropicKey = await getAnthropicKeyStatus();
+  const geminiKey = await getGeminiKeyStatus();
 
-  if (!anthropicKey.configured) {
+  if (!geminiKey.configured) {
     return (
       <>
         <HeaderBar breadcrumb={<Crumbs items={[{ label: "Marca personal" }, { label: "Generar contenido" }]} />} />
@@ -28,7 +28,7 @@ export default async function GenerarPage({ searchParams }: { searchParams: Prom
           <PageHeading title="Generar contenido" description="Ideas, guiones, captions y hashtags." />
           <EmptyState
             icon={<KeyRound className="size-5" />}
-            title="Falta la API key de Anthropic"
+            title="Falta la API key de Gemini"
             description="Cargala en Configuración para poder charlar con el asistente de contenido."
             action={
               <ButtonLink href="/configuracion" variant="primary">

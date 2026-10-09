@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Build de verificación de Claude (CLAUDE.md §11) y mockups de diseño: no es código de la app.
+    ".next-verify/**",
+    "UI mockups request*/**",
   ]),
 ]);
 

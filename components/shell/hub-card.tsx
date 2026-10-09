@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Tarjeta de un gestor en la pantalla global. Habilitada es un link al gestor
- * con la pantalla real como preview, que crece al pasar el mouse; deshabilitada se ve completa pero
+ * con la pantalla real como preview; el hover agranda sólo el preview; deshabilitada se ve completa pero
  * apagada, para que la estructura del negocio se lea entera (CLAUDE.md §2).
  */
 export function HubCard({
@@ -51,7 +51,10 @@ export function HubCard({
             <p className="max-w-xs text-center text-[13px] leading-[1.5] text-lm-ink-3">{disabledNote}</p>
           </div>
         ) : (
-          children
+          // El hover vive en el preview, no en la tarjeta (estilos en .hub-preview, globals.css).
+          <div className="hub-preview">
+            {children}
+          </div>
         )}
       </div>
     </>
@@ -70,7 +73,7 @@ export function HubCard({
   return (
     <Link
       href={href}
-      className={cn(base, "group relative transition-[transform,box-shadow,border-color] duration-200 ease-out hover:z-10 hover:scale-[1.06] hover:border-lm-line-strong hover:shadow-[0_24px_64px_-16px_rgba(0,0,0,0.8)] motion-reduce:transition-none motion-reduce:hover:scale-100")}
+      className={cn(base, "group transition-colors duration-500 hover:border-lm-line-strong")}
     >
       {body}
     </Link>

@@ -5,7 +5,6 @@ import type { LeadSource } from "@/lib/providers/types";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
 import {
-  ANTHROPIC_KEY_SETTING,
   APIFY_KEY_SETTING,
   GEMINI_KEY_SETTING,
   GROQ_KEY_SETTING,
@@ -67,10 +66,6 @@ export async function getInstagramConnectionStatus() {
   const credentials = await getMetaCredentials(supabase, user.id);
   if (!credentials) return { configured: false as const, masked: null };
   return { configured: true as const, masked: `Cuenta ${credentials.userId} · ${maskSecret(credentials.accessToken)}` };
-}
-
-export async function getAnthropicKeyStatus() {
-  return getKeyStatus(ANTHROPIC_KEY_SETTING);
 }
 
 export async function getGeminiKeyStatus() {

@@ -1,7 +1,6 @@
 import { Bot, KeyRound, Sparkles, Tags, UserRound } from "lucide-react";
 
 import { ActorOverridesForm } from "@/components/settings/actor-overrides-form";
-import { AnthropicKeyForm } from "@/components/settings/anthropic-key-form";
 import { ApifyKeyForm } from "@/components/settings/apify-key-form";
 import { GeminiKeyForm } from "@/components/settings/gemini-key-form";
 import { GroqKeyForm } from "@/components/settings/groq-key-form";
@@ -12,7 +11,6 @@ import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
 import { Panel, Section } from "@/components/leads/ui/section";
 import {
   getActorOverrides,
-  getAnthropicKeyStatus,
   getApifyKeyStatus,
   getGeminiKeyStatus,
   getGroqKeyStatus,
@@ -24,10 +22,9 @@ import {
 export const metadata = { title: "Configuración · Awareness AI" };
 
 export default async function ConfiguracionPage() {
-  const [apifyStatus, anthropicStatus, geminiStatus, groqStatus, salesProfile, industries, actorOverrides, instagramStatus] =
+  const [apifyStatus, geminiStatus, groqStatus, salesProfile, industries, actorOverrides, instagramStatus] =
     await Promise.all([
       getApifyKeyStatus(),
-      getAnthropicKeyStatus(),
       getGeminiKeyStatus(),
       getGroqKeyStatus(),
       getSalesProfile(),
@@ -145,7 +142,7 @@ export default async function ConfiguracionPage() {
                 Groq
               </span>
             }
-            description="Free tier: lo que hoy decide (aperturas y análisis del copiloto de prospección, recomendaciones de contenido) — reemplaza a Anthropic en esas funciones."
+            description="Free tier: lo que hoy decide (aperturas y análisis del copiloto de prospección, recomendaciones de contenido)."
           >
             <Panel className="p-4">
               <GroqKeyForm configured={groqStatus.configured} masked={groqStatus.masked} />
@@ -159,24 +156,10 @@ export default async function ConfiguracionPage() {
                 Google AI Studio (Gemini)
               </span>
             }
-            description="Free tier: enriquecimiento de leads, clasificación de competencia y lo que hoy transforma un texto que ya existe (reescrituras de tono, guiones, ideas desde un outlier) — sin ella fallan esas funciones, no sólo el filtro de competencia."
+            description="Free tier: enriquecimiento de leads, clasificación de competencia y lo que hoy transforma un texto que ya existe (reescrituras de tono, guiones, ideas desde un outlier) y el chat de Generar contenido — sin ella fallan esas funciones, no sólo el filtro de competencia."
           >
             <Panel className="p-4">
               <GeminiKeyForm configured={geminiStatus.configured} masked={geminiStatus.masked} />
-            </Panel>
-          </Section>
-
-          <Section
-            title={
-              <span className="flex items-center gap-2">
-                <Sparkles className="size-4 text-lm-ink-2" strokeWidth={1.5} />
-                Anthropic
-              </span>
-            }
-            description="Sólo el chat de Marca con herramientas (Etapa 2 de la migración, todavía sin hacer). El resto de Leads y Marca ya corre en Groq y Gemini."
-          >
-            <Panel className="p-4">
-              <AnthropicKeyForm configured={anthropicStatus.configured} masked={anthropicStatus.masked} />
             </Panel>
           </Section>
         </div>
