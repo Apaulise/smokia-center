@@ -115,6 +115,23 @@ npm run dev
    npm run build && grep -r "service_role" .next/static || echo "limpio"
    ```
 
+## API de automatización (opcional)
+
+`/api/automation/*` deja que una automatización (n8n, un script, un agente) lea la cola de leads, pida la apertura generada por la IA y registre los contactos sin pasar por la UI. Usa la service role key y queda atada a **un solo usuario**.
+
+1. Generar el secreto: `openssl rand -hex 32` → `AUTOMATION_API_SECRET` (mínimo 32 caracteres; sin él la API responde 401 a todo)
+2. Buscar el UUID del dueño de los leads: Supabase → **Authentication → Users** → columna **UID** del mail → `AUTOMATION_OWNER_ID`. (Alternativa en el SQL Editor: `select id, email from auth.users;`)
+3. Cargar las dos en `.env.local` y en Vercel (**Settings → Environment Variables**) y redeployar
+4. Toda llamada lleva `Authorization: Bearer $AUTOMATION_API_SECRET`
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| GET | `/api/automation/leads` | Cola de leads. Filtros: `status` (coma, default `NUEVO,LISTO`), `industry` (UUID o nombre del rubro), `list`, `city`, `uncontacted=true`, `has_phone` (default `true`), `limit` (default 25, máx. 100) |
+| GET | `/api/automation/leads/:id` | Un lead + últimas 20 actividades y mensajes |
+| POST | `/api/automation/leads/:id/opening-message` | Apertura de la IA (Groq, la key de Configuración del owner). Si ya se envió una, devuelve esa salvo `?regenerate=true` |
+| POST | `/api/automation/leads/:id/contact` | Registra el mensaje enviado (`lead_messages`) + el contacto (timeline, `last_contacted_at`, estado, próxima acción) |
+| POST | `/api/automation/leads/:id/status` | Cambio de estado, con el mismo gate de reuniones que la UI |
+
 ---
 
 ## Notas

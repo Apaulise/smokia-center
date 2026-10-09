@@ -17,6 +17,23 @@ export interface LeadContext {
   interestLevel: number | null;
 }
 
+/** Fila de `leads` (con el rubro resuelto) → el contexto que reciben los prompts. */
+export function toLeadContext(lead: {
+  name: string;
+  status: string;
+  interest_level: number | null;
+  city: string | null;
+  industries: { name: string } | null;
+}): LeadContext {
+  return {
+    name: lead.name,
+    industryName: lead.industries?.name ?? null,
+    city: lead.city,
+    status: lead.status,
+    interestLevel: lead.interest_level,
+  };
+}
+
 export interface LeadMemory {
   business_context?: string;
   current_process?: string;

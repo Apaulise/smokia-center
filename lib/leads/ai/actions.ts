@@ -12,7 +12,7 @@ import { getGeminiApiKey, getGroqApiKey } from "@/lib/leads/ai/key";
 import { rebuildLeadMemory } from "@/lib/leads/ai/memory";
 import { computeNextBestAction, isReplyWorthyAction } from "@/lib/leads/ai/next-action";
 import { generateOpening, type GeneratedOpening } from "@/lib/leads/ai/opening";
-import type { LeadContext, LeadMemory } from "@/lib/leads/ai/prompts";
+import { toLeadContext, type LeadMemory } from "@/lib/leads/ai/prompts";
 import { generateNextReply } from "@/lib/leads/ai/reply";
 import { rewriteMessage } from "@/lib/leads/ai/rewrite";
 import { REWRITE_TONES, type RewriteTone } from "@/lib/leads/ai/rewrite-tones";
@@ -241,15 +241,6 @@ export async function enrichSelectedLeads(leadIds: string[]): Promise<ActionStat
 // ── Generador de apertura (Plan §1.11) ──────────────────────────────────────
 
 /** El bloque de estado del turno (§1.7) parte siempre del mismo recorte de la fila de `leads`. */
-function toLeadContext(lead: { name: string; status: string; interest_level: number | null; city: string | null; industries: { name: string } | null }): LeadContext {
-  return {
-    name: lead.name,
-    industryName: lead.industries?.name ?? null,
-    city: lead.city,
-    status: lead.status,
-    interestLevel: lead.interest_level,
-  };
-}
 
 export type OpeningActionState = { ok: true; opening: GeneratedOpening } | { ok: false; message: string };
 
