@@ -29,7 +29,7 @@ Este trabajo es transversal, no un paso de fase, así que se guarda como `Plans/
   - **`proxy.ts`:** con sesión válida pero mail fuera de la lista, hace `signOut` y redirige a `/login?error=not_allowed`. Esto cubre también una cuenta de Google ajena que Supabase haya llegado a crear.
   - **`app/auth/callback/route.ts`:** después de `exchangeCodeForSession`, el mismo chequeo con `signOut` y `error=not_allowed`.
   - **Registro:** el `signUp` pasa a una Server Action nueva, `signUpWithEmail` en `app/(auth)/login/actions.ts`, que valida con Zod y con la allowlist antes de llamar a Supabase. `email-form.tsx` usa esa acción para el registro. El sign-in sigue en el cliente, como hoy.
-- **`login-screen.tsx`:** un mensaje específico para `not_allowed` ("Esta cuenta no tiene acceso a Awareness AI").
+- **`login-screen.tsx`:** un mensaje específico para `not_allowed` ("Esta cuenta no tiene acceso a SmokIA").
 - **Archivos de entorno:** sumar `ALLOWED_EMAILS` a `.env.example`. El usuario lo carga en `.env.local` y en Vercel.
 
 ## 2. Login con Google

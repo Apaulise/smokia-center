@@ -32,7 +32,7 @@ type SearchParams = {
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const list = await getLeadList(id);
-  return { title: list ? `${list.name} · Awareness AI` : "Lista de leads · Awareness AI" };
+  return { title: list ? `${list.name} · SmokIA` : "Lista de leads · SmokIA" };
 }
 
 export default async function LeadListaDetallePage({

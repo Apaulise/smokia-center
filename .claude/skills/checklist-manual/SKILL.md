@@ -1,6 +1,6 @@
 ---
 name: checklist-manual
-description: Genera y conduce el checklist de pruebas manuales de un paso §x de un plan de Awareness AI (CLAUDE.md §13) — ítems puntuales, confirmación ítem por ítem, ítems que gastan tokens al final como opcionales, y cierre del paso con estado actualizado. Usar al terminar de implementar un §x, o al retomar uno con checklist pendiente.
+description: Genera y conduce el checklist de pruebas manuales de un paso §x de un plan de SmokIA (CLAUDE.md §13) — ítems puntuales, confirmación ítem por ítem, ítems que gastan tokens al final como opcionales, y cierre del paso con estado actualizado. Usar al terminar de implementar un §x, o al retomar uno con checklist pendiente.
 ---
 
 # Checklist manual de un paso del plan

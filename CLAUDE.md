@@ -1,12 +1,12 @@
-# CLAUDE.md — Awareness AI
+# CLAUDE.md — SmokIA
 
 Guía de trabajo de este repo. Leer antes de escribir código.
 
 ---
 
-## 1. Qué es Awareness AI
+## 1. Qué es SmokIA
 
-Panel central del negocio de Awareness AI, una agencia de IA y automatización. El negocio tiene **tres patas**, y el panel las agrupa:
+Panel central del negocio de SmokIA, una agencia de IA y automatización. El negocio tiene **tres patas**, y el panel las agrupa:
 
 | Módulo | Qué hace | Estado |
 |---|---|---|
@@ -15,7 +15,7 @@ Panel central del negocio de Awareness AI, una agencia de IA y automatización. 
 | **Gestor de Facturación** | Ingresos, clientes, cobros | Fase 2 — no empezado |
 | **Gestor de Marca Personal** | Contenido y presencia | Fase 3 — reabierta para §3.13 (objetivo de seguidores, checklist manual hecho salvo 8 y 10, que piden publicar un reel real), §3.14 (competencia accionable, cerrado el 2026-09-20 con checklist manual hecho) §3.15 (descubrir virales, implementado el 2026-09-23, checklist manual pendiente) y §3.16 (importar publicados al planificador con análisis de Gemini, código escrito el 2026-10-05, migración aplicada, checklist manual pendiente); §3.7 sin verificar, §3.9 YouTube diferido |
 
-Los planes viven en `Plans/`, numerados por fase: [01 — Gestor de Leads](Plans/01-gestor-de-leads.md) —**reabierto en §1.7–§1.19** para el Sistema de Prospección Asistida por IA, cuyo prompt canónico es [Awareness_AI_Sistema_de_Prospeccion.md](Awareness_AI_Sistema_de_Prospeccion.md); §1.7–§1.19 están implementados de punta a punta (falta el checklist manual de los nueve pasos, uno por uno)— y [03 — Gestor de Marca Personal](Plans/03-gestor-de-marca-personal.md), este último escrito por adelantado y hoy **reabierto para §3.13, §3.14 y §3.15**: §3.1–§3.8 y §3.10–§3.12 están construidos, §3.7 (planificador y publicación) sigue sin verificar en la app real, §3.13 (objetivo de seguidores) tiene checklist manual pendiente en los ítems 8 y 10, §3.14 (competencia accionable) está cerrado, §3.15 (descubrir virales) está implementado con checklist manual pendiente, y §3.9 (YouTube) queda diferido (ver §2). El manual de identidad visual, en [Awareness_AI_Manual_de_Marca.md](Awareness_AI_Manual_de_Marca.md).
+Los planes viven en `Plans/`, numerados por fase: [01 — Gestor de Leads](Plans/01-gestor-de-leads.md) —**reabierto en §1.7–§1.19** para el Sistema de Prospección Asistida por IA, cuyo prompt canónico es [SmokIA_Sistema_de_Prospeccion.md](SmokIA_Sistema_de_Prospeccion.md); §1.7–§1.19 están implementados de punta a punta (falta el checklist manual de los nueve pasos, uno por uno)— y [03 — Gestor de Marca Personal](Plans/03-gestor-de-marca-personal.md), este último escrito por adelantado y hoy **reabierto para §3.13, §3.14 y §3.15**: §3.1–§3.8 y §3.10–§3.12 están construidos, §3.7 (planificador y publicación) sigue sin verificar en la app real, §3.13 (objetivo de seguidores) tiene checklist manual pendiente en los ítems 8 y 10, §3.14 (competencia accionable) está cerrado, §3.15 (descubrir virales) está implementado con checklist manual pendiente, y §3.9 (YouTube) queda diferido (ver §2). El manual de identidad visual, en [SmokIA_Manual_de_Marca.md](SmokIA_Manual_de_Marca.md).
 
 Hay además planes transversales, sin número de fase porque no son una pata del negocio sino infraestructura que atraviesa Leads y Marca. [Acceso multiusuario](Plans/acceso-multiusuario.md): login con Google, reset de contraseña por código y la app compartida con el socio (allowlist + Instagram por usuario), implementado el 2026-10-03, checklist manual pendiente. Y [Migración fuera de Anthropic (Etapa 1)](Plans/migracion-fuera-de-anthropic.md) — sacar Claude de los 7 llamados de una sola pasada (reemplazo por Groq y Gemini, ambos free tier). Implementada de punta a punta el 2026-09-27 (código y build); checklist manual de los 7 pasos de verificación pendiente. El chat de Marca (la Etapa 2) también corre ya en Gemini (`lib/brand/ai/chat.ts`): la app no llama más a Anthropic, y el SDK y la key de Anthropic se sacaron el 2026-10-08.
 
@@ -82,7 +82,7 @@ Es el único lugar del código donde el aislamiento depende del código y no de 
 
 ## 6. Marca
 
-Ver [Awareness_AI_Manual_de_Marca.md](Awareness_AI_Manual_de_Marca.md). La app es **dark-only**: el manual es dark-first y no define paleta clara, así que no se inventa una.
+Ver [SmokIA_Manual_de_Marca.md](SmokIA_Manual_de_Marca.md). La app es **dark-only**: el manual es dark-first y no define paleta clara, así que no se inventa una.
 
 Tokens de color definidos en `app/globals.css`.
 
@@ -92,9 +92,9 @@ Tokens de color definidos en `app/globals.css`.
 - **Un solo efecto protagonista por vista.** Glow al 10–30% de opacidad, reservado para el foco principal
 - Espaciado 8/16/24/32/48/64; radios 16–24px en contenedores
 
-**El criterio editorial de la marca personal es otro documento y otra marca**: [Awareness_AI_Sistema_de_Contenido.md](Awareness_AI_Sistema_de_Contenido.md). Es el **system prompt literal** del agente de la Fase 3 ([Plans/03 §3.10](Plans/03-gestor-de-marca-personal.md)), no un documento sobre el prompt — todo lo que se escriba ahí se le manda al modelo en cada mensaje. El manual de arriba es identidad visual de la agencia; no sirve para deducir una voz de escritura.
+**El criterio editorial de la marca personal es otro documento y otra marca**: [SmokIA_Sistema_de_Contenido.md](SmokIA_Sistema_de_Contenido.md). Es el **system prompt literal** del agente de la Fase 3 ([Plans/03 §3.10](Plans/03-gestor-de-marca-personal.md)), no un documento sobre el prompt — todo lo que se escriba ahí se le manda al modelo en cada mensaje. El manual de arriba es identidad visual de la agencia; no sirve para deducir una voz de escritura.
 
-**Hay un segundo prompt literal, y es de otro módulo**: [Awareness_AI_Sistema_de_Prospeccion.md](Awareness_AI_Sistema_de_Prospeccion.md), el del copiloto comercial de la Fase 1 ([Plans/01 §1.7](Plans/01-gestor-de-leads.md)). Misma regla: el archivo **es** el prompt. Los dos se leen del disco en runtime y por eso los dos están declarados en `outputFileTracingIncludes` de `next.config.ts` — agregar un tercero y olvidarse de esa línea es un `ENOENT` que sólo aparece en producción.
+**Hay un segundo prompt literal, y es de otro módulo**: [SmokIA_Sistema_de_Prospeccion.md](SmokIA_Sistema_de_Prospeccion.md), el del copiloto comercial de la Fase 1 ([Plans/01 §1.7](Plans/01-gestor-de-leads.md)). Misma regla: el archivo **es** el prompt. Los dos se leen del disco en runtime y por eso los dos están declarados en `outputFileTracingIncludes` de `next.config.ts` — agregar un tercero y olvidarse de esa línea es un `ENOENT` que sólo aparece en producción.
 
 ---
 
@@ -144,7 +144,7 @@ Las políticas se aplican con `drop policy if exists` + `create policy`: `CREATE
 - **El webhook de Apify no viene firmado.** Sólo permite un secreto en la URL. Por eso se trata el POST como una señal ("el job X puede haber terminado"), no como fuente de datos: el servidor re-consulta la corrida con nuestro propio token antes de importar
 - **Apify no puede alcanzar `localhost`.** Y no es sólo que el aviso no llegue: Apify valida el `requestUrl` del webhook contra su propio servidor y **rechaza la corrida entera (400 schema-validation)** si apunta a localhost. Por eso `lib/apify/client.ts` omite el webhook por completo cuando `NEXT_PUBLIC_APP_URL` es localhost — en desarrollo la importación entra sólo por la reconciliación al abrir la pantalla. Esperado, no un bug
 - **Vercel Cron en plan Hobby corre una vez por día.** Por eso el cron es un extra y no el mecanismo principal. La app funciona completa sin él
-- **La ruta del proyecto tiene un espacio** (`Awareness AI`). Comillas en todo comando de shell
+- **La ruta del proyecto tiene un espacio** (`SmokIA`). Comillas en todo comando de shell
 - **Apify cobra por resultado.** Al probar, usar `maxResults` chico (5) — cada corrida de prueba cuesta plata real
 - **`APP_ENCRYPTION_KEY` (`.env.local`) no se puede regenerar sin perder datos.** Todo lo cifrado en `settings` (API keys, perfil del vendedor, actores de Apify) queda ilegible para siempre si esa clave cambia — `lib/crypto.ts` no distingue "no configurado" de "cifrado con otra clave", así que la pantalla de Configuración muestra vacío en los dos casos por igual. Nunca correr `git clean`/`checkout` sobre archivos sueltos sin revisar antes si `.env.local` queda pisado, y guardar una copia de la clave fuera del repo (no vive en git a propósito: `.env*` está en `.gitignore`)
 - **Cuidado con patrones de `.gitignore` por substring.** `*api-key*` (ya sacado) alguna vez ignoró sin querer `components/settings/api-key-form.tsx` — un archivo de código real, invisible para git desde que se creó. Antes de agregar un patrón de ignore por nombre suelto, probarlo con `git status --short` sobre el archivo real que se quiere tapar, no asumir que sólo va a matchear secretos

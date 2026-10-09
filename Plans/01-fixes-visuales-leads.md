@@ -33,14 +33,14 @@ No se tocan `page-header.tsx`, `stat-tile.tsx`, `empty-state.tsx`, `button.tsx` 
 Objetivo: en desktop, poder achicar el sidebar a una franja angosta con sólo íconos (sin texto), para ganar ancho en pantallas como Lista de leads. Un botón lo vuelve a expandir.
 
 **Cambios en `components/shell/sidebar.tsx`:**
-- Nuevo estado `collapsed` (`useState`), inicializado leyendo `localStorage.getItem("awareness-ai:sidebar-collapsed")` en un `useEffect` (para no romper hydration — arranca `false` en el render del servidor/primer render y se ajusta en el cliente).
+- Nuevo estado `collapsed` (`useState`), inicializado leyendo `localStorage.getItem("smokia:sidebar-collapsed")` en un `useEffect` (para no romper hydration — arranca `false` en el render del servidor/primer render y se ajusta en el cliente).
 - Botón de toggle (ícono `ChevronLeft`/`ChevronRight` de `lucide-react`), visible sólo en desktop (`hidden lg:flex`), ubicado junto al wordmark en la parte superior. Al hacer click, invierte `collapsed` y lo persiste con `localStorage.setItem(...)`.
 - Ancho del `<aside>`: cuando `collapsed` es `true`, `lg:w-[76px]` en vez de `lg:w-72`; agregar `transition-[width] duration-200` para que el cambio sea animado.
 - Con `collapsed = true`:
   - Ocultar el texto de cada módulo (`module.label`) y el badge "Pronto" — dejar sólo el ícono centrado. Agregar `title={module.label}` al link/div para que quede como tooltip nativo al hover.
   - Ocultar el submenú de hijos (`module.children`) aunque el módulo esté activo — no tiene sentido una lista de texto en una franja de íconos.
   - En el bloque inferior: ocultar el texto "Configuración" y "Salir" (dejar sólo íconos con `title`), y ocultar el email.
-  - Ocultar el wordmark "Awareness AI" completo o dejar sólo una marca corta (a definir en implementación, algo simple tipo la "A" o el ícono de marca).
+  - Ocultar el wordmark "SmokIA" completo o dejar sólo una marca corta (a definir en implementación, algo simple tipo la "A" o el ícono de marca).
 
 No hace falta tocar `app/(app)/layout.tsx`: `<main className="min-w-0 flex-1">` ya se reacomoda solo al ancho que le deje el sidebar.
 

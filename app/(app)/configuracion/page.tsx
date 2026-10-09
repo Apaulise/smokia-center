@@ -19,7 +19,7 @@ import {
   listIndustries,
 } from "@/lib/settings/queries";
 
-export const metadata = { title: "Configuración · Awareness AI" };
+export const metadata = { title: "Configuración · SmokIA" };
 
 export default async function ConfiguracionPage() {
   const [apifyStatus, geminiStatus, groqStatus, salesProfile, industries, actorOverrides, instagramStatus] =

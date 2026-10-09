@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Tokens de Awareness_AI_Manual_de_Marca.md §3.
+ * Tokens de SmokIA_Manual_de_Marca.md §3.
  * App dark-only: el manual es dark-first y no define paleta clara, así que no
  * se inventa una. No agregar colores acá sin que estén en el manual.
  */
@@ -37,7 +37,7 @@
 
   /*
    * Sistema "Señal y humo" — Gestor de Leads (Design System artifact
-   * "Awareness AI — Señal y Humo", 2026-09-26). Namespace `lm-` a propósito:
+   * "SmokIA — Señal y Humo", 2026-09-26). Namespace `lm-` a propósito:
    * el Gestor de Marca Personal sigue con los tokens de arriba mientras no se
    * rediseñe (CLAUDE.md §2, un gestor por vez); nombres nuevos evitan pisar
    * --color-surface/--color-line/--color-ink existentes. Sólo tema oscuro:
@@ -223,6 +223,109 @@
 
   @media (prefers-reduced-motion: reduce) {
     .lm-smoke {
+      animation: none;
+    }
+  }
+
+  /*
+   * Preview de un gestor en la pantalla global. Ease-in-out simétrico a propósito:
+   * una curva expo-out concentra casi todo el movimiento en los primeros
+   * milisegundos y se siente brusca aunque dure mucho. Acá arranca y frena
+   * despacio. El brillo del borde (amarillo `signal`, #f2c14e) es un ::after para animar sólo opacidad.
+   */
+  .hub-preview {
+    --hub-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    border-radius: var(--radius-lm-md);
+    transform: translate3d(0, 0, 0) scale(1);
+    transition: transform 450ms var(--hub-ease);
+    will-change: transform;
+    contain: layout style;
+    backface-visibility: hidden;
+  }
+  .hub-preview::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    box-shadow:
+      inset 0 0 0 1px rgb(242 193 78 / 0.7),
+      inset 0 0 22px rgb(242 193 78 / 0.14),
+      0 0 32px rgb(242 193 78 / 0.2),
+      0 28px 60px -24px rgb(0 0 0 / 0.85);
+    transition: opacity 450ms var(--hub-ease);
+  }
+  .hub-preview:hover {
+    z-index: 20;
+    transform: translate3d(0, 0, 0) scale(1.03);
+  }
+  /* Mientras se mira un preview, el humo se pausa: una animación menos compitiendo. */
+  body:has(.hub-preview:hover) .hub-backdrop::before {
+    animation-play-state: paused;
+  }
+  .hub-preview:hover::after {
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hub-preview,
+    .hub-preview::after {
+      transition: none;
+    }
+    .hub-preview:hover {
+      transform: none;
+    }
+  }
+
+  /*
+   * Fondo de la pantalla global ("Señal y humo"): base lm-bg, humo en grises de la
+   * paleta smoke a la deriva muy lenta —el único efecto protagonista de la vista— y
+   * un halo cálido de signal arriba, que es la "señal". El grano evita el degradé
+   * plano de pantalla genérica. Sin filter: blur —los radiales ya son difusos y un
+   * blur sobre una capa a pantalla completa animada es lo más caro de pintar—.
+   * Todo a baja opacidad: ~70% oscuro (CLAUDE.md §6).
+   */
+  .hub-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: -10;
+    overflow: hidden;
+    pointer-events: none;
+    background: var(--color-lm-bg);
+    contain: strict;
+  }
+  .hub-backdrop::before {
+    content: "";
+    position: absolute;
+    inset: -25%;
+    background:
+      radial-gradient(ellipse 46% 38% at 18% 28%, rgb(242 193 78 / 0.16), transparent 70%),
+      radial-gradient(ellipse 42% 34% at 82% 18%, rgb(69 71 76 / 0.42), transparent 70%),
+      radial-gradient(ellipse 58% 40% at 62% 92%, rgb(242 193 78 / 0.15), transparent 70%),
+      radial-gradient(ellipse 36% 30% at 8% 86%, rgb(214 160 52 / 0.12), transparent 70%);
+    animation: hub-smoke 60s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+  .hub-backdrop::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+      radial-gradient(ellipse 70% 48% at 50% -8%, rgb(242 193 78 / 0.2), transparent 70%),
+      radial-gradient(ellipse 120% 90% at 50% 40%, transparent 55%, rgb(19 19 21 / 0.75) 100%);
+  }
+  @keyframes hub-smoke {
+    from {
+      transform: translate3d(-3%, 2%, 0) scale(1.04);
+    }
+    to {
+      transform: translate3d(3%, -2%, 0) scale(1.14);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hub-backdrop::before {
       animation: none;
     }
   }

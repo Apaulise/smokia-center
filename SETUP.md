@@ -7,7 +7,7 @@ Pasos manuales que hay que hacer una sola vez. Todo lo demás lo corre la app.
 ## 1. Crear el proyecto en Supabase
 
 1. Entrar a [supabase.com/dashboard](https://supabase.com/dashboard) y crear un proyecto nuevo
-   - **Nombre:** `awareness-ai`
+   - **Nombre:** `smokia`
    - **Región:** la más cercana (São Paulo para Argentina)
    - **Database password:** generarla y guardarla — hace falta en el paso 2 y no se puede recuperar después, sólo resetear
 2. Esperar a que termine de aprovisionar (~2 minutos)
@@ -87,11 +87,11 @@ El SMTP por defecto de Supabase sólo le manda a miembros de la organización y 
 1. **En Resend:** verificar un dominio propio (DNS) y crear una API key. Sin dominio verificado, Resend sólo le manda al mail dueño de la cuenta de Resend — el socio no recibiría nada
 2. **En Supabase** → Authentication → Emails → SMTP Settings → *Enable custom SMTP*:
    - Host `smtp.resend.com`, puerto `465`, usuario `resend`, password = la API key de Resend
-   - Sender: `no-reply@<tu-dominio>`, nombre `Awareness AI`
+   - Sender: `no-reply@<tu-dominio>`, nombre `SmokIA`
 3. **En Supabase** → Authentication → Emails → Templates → **Reset Password**: el cuerpo tiene que mostrar el código, no el link. Por ejemplo:
    ```html
    <h2>Recuperá tu contraseña</h2>
-   <p>Tu código para Awareness AI es:</p>
+   <p>Tu código para SmokIA es:</p>
    <p style="font-size:28px;font-family:monospace;letter-spacing:6px"><strong>{{ .Token }}</strong></p>
    <p>Vence en una hora. Si no lo pediste, ignorá este mail.</p>
    ```

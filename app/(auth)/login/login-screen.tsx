@@ -22,7 +22,7 @@ const COPY: Record<Mode, { title: string; description: string; quote: string }> 
 
 const ERRORS = {
   failed: "No pudimos completar el ingreso. Probá de nuevo.",
-  not_allowed: "Esta cuenta no tiene acceso a Awareness AI.",
+  not_allowed: "Esta cuenta no tiene acceso a SmokIA.",
 } as const;
 
 /**
@@ -68,7 +68,7 @@ export function AuthShell({
     <div className="grid min-h-dvh bg-lm-bg font-lm-sans text-lm-ink lg:grid-cols-2">
       <div className="flex flex-col justify-between px-6 py-8 sm:px-12 sm:py-10">
         <span className="font-lm-sans text-sm font-semibold text-lm-ink">
-          Awareness <span className="text-lm-ink-2">AI</span>
+          Smok<span className="text-lm-ink-2">IA</span>
         </span>
 
         <div className="mx-auto w-full max-w-[350px] py-12">
@@ -78,7 +78,7 @@ export function AuthShell({
           <div className="mt-8">{children}</div>
         </div>
 
-        <p className="font-mono text-[11px] text-lm-ink-3">© 2026 Awareness AI</p>
+        <p className="font-mono text-[11px] text-lm-ink-3">© 2026 SmokIA</p>
       </div>
 
       <div
@@ -92,7 +92,7 @@ export function AuthShell({
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-lm-surface to-transparent" />
         <div className="relative flex flex-col items-center gap-10 px-12 text-center">
           <span className="font-lm-sans text-[40px] leading-none font-semibold tracking-[-0.02em] text-lm-ink">
-            Awareness <span className="text-lm-ink-2">AI</span>
+            Smok<span className="text-lm-ink-2">IA</span>
           </span>
           <p className="max-w-xs text-[22px] leading-8 text-lm-ink-2">
             “{quote}”

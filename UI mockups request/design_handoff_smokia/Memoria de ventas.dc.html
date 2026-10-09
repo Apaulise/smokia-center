@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><link href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><style>body{margin:0;background:#0C0C0D;font-family:'Host Grotesk',sans-serif;-webkit-font-smoothing:antialiased}a{color:#EDEBE6;text-decoration:none}a:hover{color:#F2C14E}</style></helmet>
+<div style="padding:56px 64px;display:flex;flex-direction:column;gap:72px">
+  <header style="display:flex;flex-direction:column;gap:8px;max-width:760px">
+    <span style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:0.14em;color:#85837E">SMOKIA · GESTOR DE LEADS · 06</span>
+    <h1 style="margin:0;font-weight:500;font-size:40px;letter-spacing:-0.025em;color:#EDEBE6">Memoria de ventas</h1>
+    <p style="margin:0;color:#9A9893;font-size:14px;line-height:1.6;text-wrap:pretty">Lo que el Copilot aprendió de todas las conversaciones: objeciones, dolores, señales de compra y aperturas que funcionan. Cada aprendizaje muestra con qué frecuencia aparece, la evidencia textual y la respuesta que la IA va a usar. <a href="Dashboard.dc.html">← Dashboard</a></p>
+  </header>
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <span style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:0.1em;color:#85837E">06.A · MEMORIA · 1440</span>
+    <div style="width:1440px;display:flex;background:#161618;border:1px solid rgba(237,235,230,0.08);border-radius:8px;overflow:hidden;color:#EDEBE6">
+      <div style="flex:none;align-self:stretch"><dc-import name="Sidebar" active="memoria" hint-size="232px,100%" style="height:100%"></dc-import></div>
+      <main style="flex:1;min-width:0;display:flex;flex-direction:column">
+        <div style="height:56px;display:flex;align-items:center;gap:8px;padding:0 32px;border-bottom:1px solid rgba(237,235,230,0.06);font-size:12px;color:#85837E"><span>Gestor de Leads</span><span style="color:#65635F">/</span><span style="color:#EDEBE6">Memoria de ventas</span><span style="flex:1"></span><span style="font:400 11px 'JetBrains Mono',monospace">Aprendido de 31 conversaciones</span></div>
+        <div style="padding:28px 32px 0;display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:240px"><h2 style="margin:0;font-weight:500;font-size:28px;letter-spacing:-0.02em">Memoria de ventas</h2><span style="font-size:13px;color:#9A9893">Revisá y corregí lo que la IA usa para responder en tu nombre.</span></div>
+          <div style="height:32px;width:240px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid rgba(237,235,230,0.1);border-radius:5px;color:#85837E;font-size:12.5px;box-sizing:border-box"><span style="width:13px;height:13px;background:currentColor;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/search.svg) center/13px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/search.svg) center/13px no-repeat"></span>Buscar en la memoria</div>
+          <button style="height:32px;padding:0 12px;background:transparent;color:#EDEBE6;border:1px solid rgba(237,235,230,0.14);border-radius:5px;font:500 12.5px 'Host Grotesk',sans-serif;cursor:pointer" style-hover="background:rgba(237,235,230,0.05)">+ Agregar a mano</button>
+        </div>
+        <div style="padding:20px 32px 0;display:flex;gap:20px;border-bottom:1px solid rgba(237,235,230,0.08);font-size:13px">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+            <span style="position:relative;padding:0 0 12px;display:flex;gap:6px;color:{{ t.color }};font-weight:{{ t.weight }};cursor:pointer">{{ t.label }}<span style="font:400 11px 'JetBrains Mono',monospace;color:#85837E">{{ t.n }}</span><span style="position:absolute;left:0;right:0;bottom:-1px;height:2px;background:{{ t.bar }}"></span></span>
+          </sc-for>
+        </div>
+        <div style="display:flex;min-height:680px">
+          <div style="width:520px;flex:none;border-right:1px solid rgba(237,235,230,0.08);padding:8px 0">
+            <sc-for list="{{ items }}" as="i" hint-placeholder-count="7">
+              <div style="position:relative;display:flex;gap:14px;padding:14px 24px 14px 32px;background:{{ i.bg }};cursor:pointer" style-hover="background:#1C1C1F">
+                <sc-if value="{{ i.active }}"><span style="position:absolute;left:0;top:12px;bottom:12px;width:2px;background:#F2C14E"></span></sc-if>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+                  <span style="font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.1em;color:#85837E">{{ i.type }}</span>
+                  <span style="font-size:13.5px;line-height:1.4;text-wrap:pretty">{{ i.title }}</span>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+                  <span style="font:400 13px 'JetBrains Mono',monospace">{{ i.n }}</span>
+                  <span style="font:400 10.5px 'JetBrains Mono',monospace;color:#65635F">{{ i.when }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="flex:1;min-width:0;padding:28px 32px 40px;display:flex;flex-direction:column;gap:28px;max-width:720px">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <span style="font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E">OBJECIÓN</span>
+              <h3 style="margin:0;font-weight:500;font-size:22px;line-height:1.3;letter-spacing:-0.015em">“Ya probamos un bot y se sentía robótico”</h3>
+              <div style="display:flex;gap:20px;font-size:12.5px;color:#9A9893;flex-wrap:wrap"><span><b style="font:400 12.5px 'JetBrains Mono',monospace;color:#EDEBE6">5</b> leads</span><span>Rubro: <span style="color:#EDEBE6">Clínicas estéticas</span></span><span>Etapa típica: <span style="color:#EDEBE6">Respondió</span></span><span>Visto por última vez <span style="font-family:'JetBrains Mono',monospace;color:#EDEBE6">24/09</span></span></div>
+            </div>
+            <section style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;gap:8px"><span style="width:13px;height:13px;background:#9A9893;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/sparkles.svg) center/13px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/sparkles.svg) center/13px no-repeat"></span><span style="font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E;flex:1">CÓMO RESPONDE EL COPILOT</span><a href="#" style="font-size:12px;color:#9A9893">Editar</a></div>
+              <div style="padding:14px 16px;background:#1C1C1F;border:1px solid rgba(237,235,230,0.1);border-radius:8px;font-size:13.5px;line-height:1.6;text-wrap:pretty">Reconocer la experiencia sin defender “los bots”. Ofrecer escuchar 3 conversaciones reales del agente con clientes de su rubro antes de hablar de precio, y aclarar que el agente deriva a una persona cuando no sabe.</div>
+              <span style="font-size:12px;color:#85837E">Usada en 4 respuestas · 2 avanzaron a Calificado</span>
+            </section>
+            <section style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E;padding-bottom:8px">EVIDENCIA</span>
+              <sc-for list="{{ evidence }}" as="e" hint-placeholder-count="3">
+                <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 16px;padding:12px 0;border-bottom:1px solid rgba(237,235,230,0.06)">
+                  <span style="font-size:13.5px;line-height:1.5;color:#DAD8D2;text-wrap:pretty">“{{ e.q }}”</span>
+                  <span style="font:400 11px 'JetBrains Mono',monospace;color:#85837E">{{ e.when }}</span>
+                  <a href="Lead Detail.dc.html" style="font-size:12px;color:#9A9893">{{ e.lead }} · {{ e.ch }} →</a>
+                </div>
+              </sc-for>
+            </section>
+            <div style="display:flex;gap:8px;padding-top:4px">
+              <button style="height:32px;padding:0 12px;background:transparent;color:#EDEBE6;border:1px solid rgba(237,235,230,0.14);border-radius:5px;font:500 12.5px 'Host Grotesk',sans-serif">Unir con otra</button>
+              <button style="height:32px;padding:0 12px;background:transparent;color:#9A9893;border:0;font:500 12.5px 'Host Grotesk',sans-serif">Archivar</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <span style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:0.1em;color:#85837E">06.B · VACÍO</span>
+    <div style="width:920px;height:440px;display:flex;background:#161618;border:1px solid rgba(237,235,230,0.08);border-radius:8px;overflow:hidden;color:#EDEBE6">
+      <div style="flex:none"><dc-import name="Sidebar" active="memoria" collapsed="{{ true }}" hint-size="56px,440px" style="height:100%"></dc-import></div>
+      <div style="flex:1;padding:32px 40px;display:flex;flex-direction:column;gap:18px;justify-content:center;max-width:480px">
+        <span style="font:500 11px 'Host Grotesk',sans-serif;letter-spacing:0.12em;color:#85837E">TODAVÍA SIN MEMORIA</span>
+        <p style="margin:0;font-size:22px;line-height:1.35;letter-spacing:-0.015em;text-wrap:pretty">La memoria se arma sola cuando analizás respuestas de prospectos. Pegá la primera en el detalle de un lead.</p>
+        <a href="Listas.dc.html" style="align-self:flex-start;height:34px;padding:0 14px;display:flex;align-items:center;border:1px solid rgba(237,235,230,0.14);border-radius:5px;font-size:13px;font-weight:500">Ir a Listas</a>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const tabs = [['Todo',14],['Objeciones',4],['Dolores',5],['Señales de compra',3],['Aperturas',2]]
+      .map(([label,n],i) => ({ label, n, color: i === 0 ? '#EDEBE6' : '#9A9893', weight: i === 0 ? 500 : 400, bar: i === 0 ? '#EDEBE6' : 'transparent' }));
+    const items = [
+      ['OBJECIÓN','“Ya probamos un bot y se sentía robótico”',5,'24/09'],
+      ['DOLOR','Demora en responder consultas de turnos por WhatsApp',9,'25/09'],
+      ['SEÑAL DE COMPRA','Pide precio sin que se lo ofrezcas',4,'hoy'],
+      ['APERTURA · VARIANTE A','Citar reseñas que mencionan demora + pregunta por fuera de horario',3,'22/09'],
+      ['OBJECIÓN','“Ahora no, estamos en temporada alta”',3,'20/09'],
+      ['DOLOR','Recepcionistas saturadas en temporada alta',4,'19/09'],
+      ['OBJECIÓN','“Lo tengo que hablar con mi socia”',2,'18/09']
+    ].map(([type,title,n,when],i) => ({ type, title, n, when, active: i === 0, bg: i === 0 ? 'rgba(237,235,230,0.04)' : 'transparent' }));
+    return {
+      tabs, items,
+      evidence: [
+        {q:'Tuvimos uno el año pasado y las clientas se quejaban, contestaba cualquier cosa.', lead:'Ebenezer centro estética', ch:'WhatsApp', when:'24/09'},
+        {q:'Probamos algo parecido y era muy robótico, preferimos que atienda una persona.', lead:'Definitivamente Bella', ch:'WhatsApp', when:'19/09'},
+        {q:'Ya tuvimos un chatbot, no nos funcionó.', lead:'Clínica del Parque Centenario', ch:'Llamada', when:'17/09'}
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

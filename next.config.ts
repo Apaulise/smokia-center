@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
   // `import` los ata al bundle, así que el trace de salida no los incluye
   // solo y en producción el readFileSync tiraría ENOENT sin esta declaración.
   outputFileTracingIncludes: {
-    "/*": ["Awareness_AI_Sistema_de_Contenido.md", "Awareness_AI_Sistema_de_Prospeccion.md"],
+    "/*": ["SmokIA_Sistema_de_Contenido.md", "SmokIA_Sistema_de_Prospeccion.md"],
   },
 };
 

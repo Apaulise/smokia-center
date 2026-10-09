@@ -20,6 +20,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { CommandPalette } from "@/components/shell/command-palette";
 import { MODULES, type NavModule } from "@/components/shell/nav";
+import { ProfileAvatar } from "@/components/shell/profile-avatar";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -37,9 +38,9 @@ const ICONS = {
   marca: Megaphone,
 } as const;
 
-const COLLAPSE_STORAGE_KEY = "awareness-ai:sidebar-collapsed";
+const COLLAPSE_STORAGE_KEY = "smokia:sidebar-collapsed";
 /** `storage` sólo avisa a las otras pestañas; este evento avisa a la propia. */
-const COLLAPSE_EVENT = "awareness-ai:sidebar-collapsed-change";
+const COLLAPSE_EVENT = "smokia:sidebar-collapsed-change";
 
 function readCollapsed() {
   try {
@@ -62,7 +63,15 @@ function isModuleActive(pathname: string, module: NavModule) {
   return pathname === module.href || pathname.startsWith(`${module.href}/`);
 }
 
-export function Sidebar({ email, badges }: { email?: string; badges?: Record<string, number> }) {
+export function Sidebar({
+  name,
+  avatarUrl,
+  badges,
+}: {
+  name: string;
+  avatarUrl: string | null;
+  badges?: Record<string, number>;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -115,7 +124,7 @@ export function Sidebar({ email, badges }: { email?: string; badges?: Record<str
           shell la reemplaza por el tab bar inferior, ver AppShellMobileNav. */}
       <header className="flex items-center justify-between border-b border-lm-line bg-lm-surface px-4 py-3 lg:hidden">
         <span className="font-lm-sans text-sm font-semibold text-lm-ink">
-          Awareness <span className="text-lm-ink-2">AI</span>
+          Smok<span className="text-lm-ink-2">IA</span>
         </span>
         <button
           type="button"
@@ -146,7 +155,7 @@ export function Sidebar({ email, badges }: { email?: string; badges?: Record<str
             <Link href="/" className="flex items-center gap-2 text-[15px] font-semibold text-lm-ink">
               {/* 230×400 real: declarar el ratio real evita el warning de Next por width/height que no matchean el CSS. */}
               <Image src="/logo-mark.png" alt="" width={15} height={26} className="h-[26px] w-auto shrink-0" priority />
-              Awareness AI
+              SmokIA
             </Link>
           )}
           <button
@@ -256,11 +265,13 @@ export function Sidebar({ email, badges }: { email?: string; badges?: Record<str
             <span className={cn(collapsed && "lg:hidden")}>Salir</span>
           </button>
 
-          {email ? (
-            <p className={cn("truncate px-2 pt-1.5 text-xs text-lm-ink-3", collapsed && "lg:hidden")} title={email}>
-              {email}
-            </p>
-          ) : null}
+          <div
+            className={cn("flex items-center gap-2.5 px-2 pt-2", collapsed && "lg:justify-center lg:px-0")}
+            title={collapsed ? name : undefined}
+          >
+            <ProfileAvatar url={avatarUrl} name={name} className="size-7 text-xs" />
+            <span className={cn("min-w-0 flex-1 truncate text-sm text-lm-ink", collapsed && "lg:hidden")}>{name}</span>
+          </div>
         </div>
       </aside>
 

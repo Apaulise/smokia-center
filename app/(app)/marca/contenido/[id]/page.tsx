@@ -61,7 +61,7 @@ function formatDate(iso: string) {
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const post = await getBrandPost(id);
-  return { title: post ? `${KIND_LABEL[post.kind]} · Awareness AI` : "Contenido · Awareness AI" };
+  return { title: post ? `${KIND_LABEL[post.kind]} · SmokIA` : "Contenido · SmokIA" };
 }
 
 export default async function ContenidoDetallePage({ params }: { params: Promise<{ id: string }> }) {

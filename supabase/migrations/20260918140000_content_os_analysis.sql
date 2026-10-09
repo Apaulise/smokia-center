@@ -1,7 +1,7 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Sistema Operativo de Contenido — ampliación de §3.5 (Plans/03 §3.10)
 --
--- El prompt canónico (Awareness_AI_Sistema_de_Contenido.md) reemplaza al
+-- El prompt canónico (SmokIA_Sistema_de_Contenido.md) reemplaza al
 -- system prompt improvisado de §3.5, y eso trae dos cambios de datos:
 --
 -- 1. `objective` en brand_recommendations: el SOC §16 es explícito en que no

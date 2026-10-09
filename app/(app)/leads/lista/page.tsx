@@ -7,7 +7,7 @@ import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
 import { listLeadListsOverview } from "@/lib/leads/queries";
 import { listIndustries } from "@/lib/settings/queries";
 
-export const metadata = { title: "Listas de leads · Awareness AI" };
+export const metadata = { title: "Listas de leads · SmokIA" };
 
 /**
  * Previsualización de listas (Design System §03/04): tabla densa por

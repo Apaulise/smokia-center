@@ -57,7 +57,7 @@ export function buildIcsCalendar(appointments: IcsAppointment[]): string {
   const lines: string[] = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Awareness AI//Gestor de Leads//ES",
+    "PRODID:-//SmokIA//Gestor de Leads//ES",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
   ];
@@ -67,7 +67,7 @@ export function buildIcsCalendar(appointments: IcsAppointment[]): string {
 
     lines.push(
       "BEGIN:VEVENT",
-      `UID:${appt.id}@awareness-ai`,
+      `UID:${appt.id}@smokia`,
       `DTSTAMP:${now}`,
       `DTSTART:${formatIcsDate(appt.starts_at)}`,
       `DTEND:${formatIcsDate(appt.ends_at)}`,

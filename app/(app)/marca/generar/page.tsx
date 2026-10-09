@@ -9,7 +9,7 @@ import { getBrandChatMessages, getBrandChatThreads } from "@/lib/brand/queries";
 import { getGeminiKeyStatus } from "@/lib/settings/queries";
 import { requireUser } from "@/lib/supabase/server";
 
-export const metadata = { title: "Generar contenido · Awareness AI" };
+export const metadata = { title: "Generar contenido · SmokIA" };
 // El turno completo (varias vueltas de herramientas + búsqueda web a veces)
 // corre en un after() de la Server Action — mismo límite que analisis/page.tsx.
 export const maxDuration = 60;

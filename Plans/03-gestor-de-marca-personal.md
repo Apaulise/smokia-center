@@ -1,4 +1,4 @@
-# Awareness AI — Gestor de Marca Personal
+# SmokIA — Gestor de Marca Personal
 
 ## Context
 
@@ -23,13 +23,13 @@ Instagram es la única plataforma real de esta fase. YouTube queda como tab visi
 | Motor de IA | **Claude Opus 5** (`claude-opus-5`) vía `@anthropic-ai/sdk` |
 | Historial de métricas | **Snapshot diario propio.** Instagram no devuelve historial (ver §3.2) |
 | Archivos de video | **Supabase Storage**, bucket público — Meta exige una URL que pueda buscar (ver §3.7) |
-| Criterio editorial del agente | **[Sistema Operativo de Contenido](../Awareness_AI_Sistema_de_Contenido.md)** — el prompt canónico de la marca personal (ver §3.10) |
+| Criterio editorial del agente | **[Sistema Operativo de Contenido](../SmokIA_Sistema_de_Contenido.md)** — el prompt canónico de la marca personal (ver §3.10) |
 
 ### El Sistema Operativo de Contenido — cambio del 2026-09-18
 
 El plan original trataba a la IA como un redactor: §3.5 le pedía leer patrones y §3.6 le pedía escribir guiones. Eso resultó ser la mitad del trabajo, y la mitad menos valiosa — escribir un guion es lo que cualquier modelo hace gratis.
 
-Lo que la app puede hacer y el chat suelto no es **operar un ciclo**: investigar el mercado, formular una hipótesis, publicar, medir contra el rendimiento propio, aprender del resultado y explotar lo que funcionó. `Awareness_AI_Sistema_de_Contenido.md` es ese criterio escrito completo — norte de la marca, audiencia, filtro editorial, prioridad de evidencia, clasificación de resultados y las colecciones de memoria que el sistema debe mantener.
+Lo que la app puede hacer y el chat suelto no es **operar un ciclo**: investigar el mercado, formular una hipótesis, publicar, medir contra el rendimiento propio, aprender del resultado y explotar lo que funcionó. `SmokIA_Sistema_de_Contenido.md` es ese criterio escrito completo — norte de la marca, audiencia, filtro editorial, prioridad de evidencia, clasificación de resultados y las colecciones de memoria que el sistema debe mantener.
 
 El documento no se adapta ni se resume: **es el system prompt, literal**. Pero tres de sus reglas piden cosas que el gestor todavía no tiene, y de ahí salen los tres pasos nuevos:
 
@@ -41,7 +41,7 @@ El documento no se adapta ni se resume: **es el system prompt, literal**. Pero t
 
 El orden es §3.10 → §3.11 → §3.12, y recién después §3.7. El prompt va primero porque el propio SOC §26 está escrito para degradar bien (*"si el entorno permite memoria…"*): el agente mejora el mismo día en que se carga, y después se le va dando la infraestructura que le falta.
 
-> **Este documento es sobre la marca personal de Agus, no sobre la agencia.** `Awareness_AI_Manual_de_Marca.md` es identidad visual — el `buildBrandVoicePrompt()` que hay hoy en `lib/brand/ai/prompts.ts` improvisa una voz a partir de un manual de colores y tipografías, y su propio comentario lo admite. Esa función se borra en §3.10. Son dos marcas distintas con dos documentos distintos.
+> **Este documento es sobre la marca personal de Agus, no sobre la agencia.** `SmokIA_Manual_de_Marca.md` es identidad visual — el `buildBrandVoicePrompt()` que hay hoy en `lib/brand/ai/prompts.ts` improvisa una voz a partir de un manual de colores y tipografías, y su propio comentario lo admite. Esa función se borra en §3.10. Son dos marcas distintas con dos documentos distintos.
 
 ### Costos y límites
 
@@ -348,7 +348,7 @@ Van numerados al final para no correr la numeración de los pasos ya escritos �
 
 ### 3.10 El prompt canónico
 
-`Awareness_AI_Sistema_de_Contenido.md`, en la raíz, al lado del manual de marca. Regla de una línea, y es la que evita que el archivo se pudra:
+`SmokIA_Sistema_de_Contenido.md`, en la raíz, al lado del manual de marca. Regla de una línea, y es la que evita que el archivo se pudra:
 
 > **El archivo es el prompt, no un documento sobre el prompt.** Todo lo que se escriba ahí se le manda al modelo en cada mensaje. Nada de notas al margen, TODOs, ni comentarios de implementación.
 
@@ -356,7 +356,7 @@ Van numerados al final para no correr la numeración de los pasos ya escritos �
 
 ```ts
 const nextConfig: NextConfig = {
-  outputFileTracingIncludes: { "/*": ["Awareness_AI_Sistema_de_Contenido.md"] },
+  outputFileTracingIncludes: { "/*": ["SmokIA_Sistema_de_Contenido.md"] },
 };
 ```
 
@@ -543,7 +543,7 @@ Una tabla porque las nueve tienen la misma forma —una nota con campos flexible
 ## Archivos principales
 
 ```
-Awareness_AI_Sistema_de_Contenido.md         ← el system prompt, literal (§3.10)
+SmokIA_Sistema_de_Contenido.md         ← el system prompt, literal (§3.10)
 next.config.ts                               ← outputFileTracingIncludes del .md
 supabase/migrations/*.sql                    ← tablas de marca + RLS + Realtime
 app/(app)/marca/page.tsx                     ← dashboard, tabs por plataforma

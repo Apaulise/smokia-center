@@ -29,7 +29,7 @@ const CONTACT_LABEL: Record<"WHATSAPP" | "EMAIL" | "LLAMADA", string> = {
 export function ContactActions({ lead }: { lead: LeadWithRelations }) {
   const [dialogType, setDialogType] = useState<"WHATSAPP" | "EMAIL" | "LLAMADA" | null>(null);
 
-  const defaultMessage = `Hola ${lead.name}, te escribo de Awareness AI.`;
+  const defaultMessage = `Hola ${lead.name}, te escribo de SmokIA.`;
 
   function openWhatsapp() {
     if (!lead.phone) return;
@@ -39,7 +39,7 @@ export function ContactActions({ lead }: { lead: LeadWithRelations }) {
 
   function openEmail() {
     if (!lead.email) return;
-    window.location.href = buildMailtoLink(lead.email, "Contacto — Awareness AI", defaultMessage);
+    window.location.href = buildMailtoLink(lead.email, "Contacto — SmokIA", defaultMessage);
     setDialogType("EMAIL");
   }
 

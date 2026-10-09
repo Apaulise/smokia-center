@@ -1,6 +1,6 @@
 import { ComingSoon } from "@/components/shell/coming-soon";
 
-export const metadata = { title: "Panel principal · Awareness AI" };
+export const metadata = { title: "Panel principal · SmokIA" };
 
 export default function PanelPage() {
   return (

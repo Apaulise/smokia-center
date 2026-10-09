@@ -1,6 +1,6 @@
 ---
 name: agregar-fuente-de-leads
-description: Receta para sumar una nueva fuente de leads (provider) a Awareness AI — LeadSourceProvider, registry, enum lead_source y tipos. Usar al agregar o modificar una fuente de leads.
+description: Receta para sumar una nueva fuente de leads (provider) a SmokIA — LeadSourceProvider, registry, enum lead_source y tipos. Usar al agregar o modificar una fuente de leads.
 ---
 
 # Receta: agregar una fuente de leads

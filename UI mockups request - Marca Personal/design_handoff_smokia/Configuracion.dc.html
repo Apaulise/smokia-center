@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><link href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><style>body{margin:0;background:#0C0C0D;font-family:'Host Grotesk',sans-serif;-webkit-font-smoothing:antialiased}a{color:#EDEBE6;text-decoration:none}a:hover{color:#F2C14E}input{font-family:inherit}input::placeholder{color:#65635F}input::-ms-reveal{display:none}@keyframes blink{50%{opacity:0}}</style></helmet>
+<div style="padding:56px 64px;display:flex;flex-direction:column;gap:72px">
+  <header style="display:flex;flex-direction:column;gap:8px;max-width:760px">
+    <span style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:0.14em;color:#85837E">SMOKIA · 08 + 09</span>
+    <h1 style="margin:0;font-weight:500;font-size:40px;letter-spacing:-0.025em;color:#EDEBE6">Login y Configuración</h1>
+    <p style="margin:0;color:#9A9893;font-size:14px;line-height:1.6;text-wrap:pretty">El login sigue la estructura del componente AuthUI de 21st (formulario a la izquierda, panel con cita en máquina de escribir a la derecha, toggle ingresar/crear cuenta, Google) con los tokens de SmokIA. El formulario es interactivo: probá el ojo de la contraseña y el cambio a “Crear cuenta”. <a href="Dashboard.dc.html">← Dashboard</a></p>
+  </header>
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <span style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:0.1em;color:#85837E">08.A · LOGIN · 1440 · INTERACTIVO</span>
+    <div style="width:1440px;height:880px;display:grid;grid-template-columns:1fr 1fr;background:#161618;border:1px solid rgba(237,235,230,0.08);border-radius:8px;overflow:hidden;color:#EDEBE6">
+      <div style="display:flex;flex-direction:column;padding:32px 40px">
+        <div style="display:flex;align-items:center;gap:10px"><img src="assets/logo-dark.png" alt="" style="height:28px;width:auto"><span style="font-weight:500;font-size:15px;letter-spacing:-0.01em">Smok<span style="color:#9A9893">IA</span></span></div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:center">
+          <form onSubmit="{{ submit }}" style="width:350px;display:flex;flex-direction:column;gap:28px">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <h2 style="margin:0;font-weight:500;font-size:26px;letter-spacing:-0.02em">{{ title }}</h2>
+              <p style="margin:0;font-size:13.5px;color:#9A9893">{{ subtitle }}</p>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <sc-if value="{{ isSignUp }}">
+                <label style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12.5px;font-weight:500;color:#B8B6B0">Nombre completo</span><input type="text" placeholder="Tomás Paggi" style="height:40px;padding:0 12px;background:#1E1E21;border:1px solid rgba(237,235,230,0.12);border-radius:5px;color:#EDEBE6;font-size:14px;outline:none" style-focus="border-color:rgba(242,193,78,0.6)"></label>
+              </sc-if>
+              <label style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12.5px;font-weight:500;color:#B8B6B0">Email</span><input type="email" placeholder="vos@empresa.com" style="height:40px;padding:0 12px;background:#1E1E21;border:1px solid rgba(237,235,230,0.12);border-radius:5px;color:#EDEBE6;font-size:14px;outline:none" style-focus="border-color:rgba(242,193,78,0.6)"></label>
+              <label style="display:flex;flex-direction:column;gap:8px">
+                <span style="display:flex;font-size:12.5px;font-weight:500;color:#B8B6B0"><span style="flex:1">Contraseña</span><sc-if value="{{ isSignIn }}"><a href="#" style="font-weight:400;color:#85837E">¿La olvidaste?</a></sc-if></span>
+                <span style="position:relative;display:flex">
+                  <input type="{{ pwType }}" placeholder="••••••••" style="flex:1;height:40px;padding:0 40px 0 12px;background:#1E1E21;border:1px solid rgba(237,235,230,0.12);border-radius:5px;color:#EDEBE6;font-size:14px;outline:none" style-focus="border-color:rgba(242,193,78,0.6)">
+                  <button type="button" onClick="{{ togglePw }}" aria-label="Mostrar contraseña" style="position:absolute;right:0;top:0;width:40px;height:40px;display:grid;place-items:center;background:none;border:0;color:#85837E;cursor:pointer" style-hover="color:#EDEBE6"><span style="width:16px;height:16px;background:currentColor;mask:{{ eyeMask }};-webkit-mask:{{ eyeMask }}"></span></button>
+                </span>
+              </label>
+              <button type="submit" style="height:40px;margin-top:4px;background:#F2C14E;color:#17150F;border:0;border-radius:5px;font:500 14px 'Host Grotesk',sans-serif;cursor:pointer;transition:background 140ms" style-hover="background:#F6CE6A">{{ cta }}</button>
+            </div>
+            <div style="display:flex;justify-content:center;gap:6px;font-size:13px;color:#9A9893"><span>{{ switchQ }}</span><a href="#" onClick="{{ toggleMode }}" style="color:#EDEBE6;border-bottom:1px solid rgba(237,235,230,0.3)">{{ switchA }}</a></div>
+            <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:#85837E"><span style="flex:1;height:1px;background:rgba(237,235,230,0.08)"></span>o continuá con<span style="flex:1;height:1px;background:rgba(237,235,230,0.08)"></span></div>
+            <button type="button" style="height:40px;display:flex;align-items:center;justify-content:center;gap:10px;background:transparent;border:1px solid rgba(237,235,230,0.14);border-radius:5px;color:#EDEBE6;font:500 14px 'Host Grotesk',sans-serif;cursor:pointer" style-hover="background:rgba(237,235,230,0.05)"><img src="https://cdn.21st.dev/assets/mirror/38/38146bfd9eff6dbf0d74771f2e625c70d87d3770e0d080dbb6e50db1d5403f46.svg" alt="" style="width:16px;height:16px">Continuar con Google</button>
+          </form>
+        </div>
+        <span style="font:400 11px 'JetBrains Mono',monospace;color:#65635F">© 2026 SmokIA</span>
+      </div>
+      <div style="position:relative;background:#141416;border-left:1px solid rgba(237,235,230,0.08);overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 56px 64px">
+        <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(237,235,230,0.035) 1px,transparent 1px),linear-gradient(90deg,rgba(237,235,230,0.035) 1px,transparent 1px);background-size:48px 48px"></div>
+        <img src="assets/logo-dark.png" alt="" style="position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);height:340px;width:auto;opacity:0.95">
+        <div style="position:absolute;inset:auto 0 0 0;height:260px;background:linear-gradient(to top,#141416 30%,rgba(20,20,22,0))"></div>
+        <blockquote style="position:relative;margin:0;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;max-width:460px">
+          <p style="margin:0;min-height:62px;font-size:22px;line-height:1.4;letter-spacing:-0.015em;text-wrap:balance">“{{ typed }}<span style="color:#F2C14E;animation:blink 1s steps(1) infinite">|</span>”</p>
+          <cite style="font-style:normal;font-size:12.5px;color:#85837E">— SmokIA</cite>
+        </blockquote>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <span style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:0.1em;color:#85837E">08.B · LOGIN · MOBILE 390</span>
+    <div style="width:390px;height:844px;display:flex;flex-direction:column;padding:64px 24px 40px;box-sizing:border-box;background:#161618;border:1px solid rgba(237,235,230,0.1);border-radius:44px;color:#EDEBE6;gap:40px">
+      <img src="assets/logo-dark.png" alt="" style="height:40px;width:auto;align-self:flex-start">
+      <div style="display:flex;flex-direction:column;gap:8px"><h2 style="margin:0;font-weight:500;font-size:26px;letter-spacing:-0.02em">Ingresá a tu cuenta</h2><p style="margin:0;font-size:14px;color:#9A9893">Usá tu email para continuar.</p></div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;font-weight:500;color:#B8B6B0">Email</span><span style="height:48px;display:flex;align-items:center;padding:0 14px;background:#1E1E21;border:1px solid rgba(237,235,230,0.12);border-radius:6px;font-size:15px;color:#65635F">vos@empresa.com</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;font-weight:500;color:#B8B6B0">Contraseña</span><span style="height:48px;display:flex;align-items:center;padding:0 14px;background:#1E1E21;border:1px solid rgba(237,235,230,0.12);border-radius:6px;font-size:15px;color:#65635F">••••••••</span></div>
+        <span style="height:48px;display:grid;place-items:center;background:#F2C14E;color:#17150F;border-radius:6px;font-size:15px;font-weight:500">Ingresar</span>
+        <span style="height:48px;display:flex;align-items:center;justify-content:center;gap:10px;border:1px solid rgba(237,235,230,0.14);border-radius:6px;font-size:15px;font-weight:500"><img src="https://cdn.21st.dev/assets/mirror/38/38146bfd9eff6dbf0d74771f2e625c70d87d3770e0d080dbb6e50db1d5403f46.svg" alt="" style="width:16px;height:16px">Continuar con Google</span>
+      </div>
+      <span style="margin-top:auto;text-align:center;font-size:13.5px;color:#9A9893">¿No tenés cuenta? <span style="color:#EDEBE6;border-bottom:1px solid rgba(237,235,230,0.3)">Crear cuenta</span></span>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <span style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:0.1em;color:#85837E">09.A · CONFIGURACIÓN · 1440</span>
+    <div style="width:1440px;display:flex;background:#161618;border:1px solid rgba(237,235,230,0.08);border-radius:8px;overflow:hidden;color:#EDEBE6">
+      <div style="flex:none;align-self:stretch"><dc-import name="Sidebar" active="config" hint-size="232px,100%" style="height:100%"></dc-import></div>
+      <main style="flex:1;min-width:0;display:flex;flex-direction:column">
+        <div style="height:56px;display:flex;align-items:center;gap:8px;padding:0 32px;border-bottom:1px solid rgba(237,235,230,0.06);font-size:12px;color:#85837E"><span style="color:#EDEBE6">Configuración</span></div>
+        <div style="display:flex;min-height:820px">
+          <nav style="width:200px;flex:none;padding:28px 16px 28px 32px;display:flex;flex-direction:column;gap:2px;font-size:13px">
+            <sc-for list="{{ sections }}" as="s" hint-placeholder-count="5">
+              <a href="#{{ s.id }}" style="position:relative;height:30px;display:flex;align-items:center;padding:0 10px;border-radius:5px;color:{{ s.color }};font-weight:{{ s.weight }}" style-hover="background:rgba(237,235,230,0.04);color:#EDEBE6">{{ s.label }}</a>
+            </sc-for>
+          </nav>
+          <div style="flex:1;min-width:0;max-width:760px;padding:28px 32px 48px;display:flex;flex-direction:column;gap:40px">
+            <h2 style="margin:0;font-weight:500;font-size:28px;letter-spacing:-0.02em">Configuración</h2>
+
+            <section style="display:flex;flex-direction:column;gap:16px">
+              <div style="display:flex;flex-direction:column;gap:4px"><h3 style="margin:0;font-weight:500;font-size:15px">Negocio</h3><span style="font-size:12.5px;color:#85837E">La IA usa estos datos para escribir aperturas y seguimientos.</span></div>
+              <div style="display:grid;grid-template-columns:160px minmax(0,1fr);border-top:1px solid rgba(237,235,230,0.08)">
+                <sc-for list="{{ business }}" as="b" hint-placeholder-count="4">
+                  <div style="display:contents">
+                    <span style="padding:14px 0;font-size:12.5px;color:#9A9893;border-bottom:1px solid rgba(237,235,230,0.06)">{{ b.k }}</span>
+                    <span style="padding:14px 0;font-size:13px;line-height:1.5;border-bottom:1px solid rgba(237,235,230,0.06);display:flex;gap:12px"><span style="flex:1;text-wrap:pretty">{{ b.v }}</span><a href="#" style="font-size:12px;color:#85837E">Editar</a></span>
+                  </div>
+                </sc-for>
+              </div>
+            </section>
+
+            <section style="display:flex;flex-direction:column;gap:16px">
+              <div style="display:flex;flex-direction:column;gap:4px"><h3 style="margin:0;font-weight:500;font-size:15px">Integraciones</h3><span style="font-size:12.5px;color:#85837E">Fuentes de leads, canales y calendario.</span></div>
+              <div style="display:flex;flex-direction:column;border-top:1px solid rgba(237,235,230,0.08)">
+                <sc-for list="{{ integrations }}" as="i" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid rgba(237,235,230,0.06)">
+                    <span style="width:32px;height:32px;flex:none;display:grid;place-items:center;border:1px solid rgba(237,235,230,0.1);border-radius:6px"><span style="width:15px;height:15px;background:#B8B6B0;mask:{{ i.mask }};-webkit-mask:{{ i.mask }}"></span></span>
+                    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:13.5px">{{ i.name }}</span><span style="font-size:12px;color:#85837E">{{ i.meta }}</span></div>
+                    <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:{{ i.stColor }}"><span style="width:6px;height:6px;border-radius:50%;border:1.5px solid currentColor;background:{{ i.stFill }};box-sizing:border-box"></span>{{ i.status }}</span>
+                    <button style="height:30px;padding:0 12px;background:transparent;border:1px solid rgba(237,235,230,0.14);border-radius:5px;color:#EDEBE6;font:500 12.5px 'Host Grotesk',sans-serif;cursor:pointer" style-hover="background:rgba(237,235,230,0.05)">{{ i.action }}</button>
+                  </div>
+                </sc-for>
+              </div>
+            </section>
+
+            <section style="display:flex;flex-direction:column;gap:16px">
+              <div style="display:flex;flex-direction:column;gap:4px"><h3 style="margin:0;font-weight:500;font-size:15px">IA</h3><span style="font-size:12.5px;color:#85837E">Cómo escribe el Copilot en tu nombre.</span></div>
+              <div style="display:flex;flex-direction:column;gap:18px;padding-top:16px;border-top:1px solid rgba(237,235,230,0.08)">
+                <div style="display:flex;align-items:center;gap:16px"><span style="width:160px;font-size:12.5px;color:#9A9893">Tono</span><div style="display:flex;padding:2px;gap:2px;border:1px solid rgba(237,235,230,0.1);border-radius:6px;font-size:12.5px"><span style="padding:5px 12px;color:#9A9893">Formal</span><span style="padding:5px 12px;background:#26262A;border-radius:4px">Cercano</span><span style="padding:5px 12px;color:#9A9893">Directo</span></div></div>
+                <div style="display:flex;align-items:center;gap:16px"><span style="width:160px;font-size:12.5px;color:#9A9893">Tratamiento</span><div style="display:flex;padding:2px;gap:2px;border:1px solid rgba(237,235,230,0.1);border-radius:6px;font-size:12.5px"><span style="padding:5px 12px;background:#26262A;border-radius:4px">Vos</span><span style="padding:5px 12px;color:#9A9893">Tú</span><span style="padding:5px 12px;color:#9A9893">Usted</span></div></div>
+                <div style="display:flex;align-items:center;gap:16px"><span style="width:160px;font-size:12.5px;color:#9A9893">Variantes por apertura</span><span style="font:400 13px 'JetBrains Mono',monospace;padding:5px 12px;border:1px solid rgba(237,235,230,0.12);border-radius:5px">2</span><span style="font-size:12px;color:#85837E">Para experimentación A/B</span></div>
+                <div style="display:flex;align-items:center;gap:16px"><span style="width:160px;font-size:12.5px;color:#9A9893">Enriquecer al importar</span><span style="width:32px;height:18px;border-radius:9px;background:#EDEBE6;position:relative"><span style="position:absolute;right:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#161618"></span></span><span style="font-size:12px;color:#85837E">Consume crédito de IA por lead</span></div>
+              </div>
+            </section>
+
+            <section style="display:flex;flex-direction:column;gap:16px">
+              <h3 style="margin:0;font-weight:500;font-size:15px">Cuenta</h3>
+              <div style="display:flex;flex-direction:column;border-top:1px solid rgba(237,235,230,0.08)">
+                <div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid rgba(237,235,230,0.06)"><span style="width:32px;height:32px;border-radius:50%;background:#26262A;display:grid;place-items:center;font-size:12px;font-weight:500">TP</span><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:13.5px">Tomás Paggi</span><span style="font-size:12px;color:#85837E">paggustintomas@gmail.com · Google</span></div><button style="height:30px;padding:0 12px;background:transparent;border:1px solid rgba(237,235,230,0.14);border-radius:5px;color:#EDEBE6;font:500 12.5px 'Host Grotesk',sans-serif">Cambiar contraseña</button></div>
+                <div style="display:flex;align-items:center;gap:12px;padding:14px 0"><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:13.5px;color:#D98A76">Eliminar cuenta</span><span style="font-size:12px;color:#85837E">Borra leads, listas y conversaciones. No se puede deshacer.</span></div><button style="height:30px;padding:0 12px;background:transparent;border:1px solid rgba(217,138,118,0.4);border-radius:5px;color:#D98A76;font:500 12.5px 'Host Grotesk',sans-serif">Eliminar…</button></div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { signIn: true, showPw: false, typed: '' };
+  quotes = { in: 'Cada conversación, un paso más cerca del cierre.', up: 'Tu próxima lista de clientes empieza acá.' };
+  componentDidMount() { this.startType(); }
+  componentWillUnmount() { clearInterval(this.t); }
+  startType() {
+    clearInterval(this.t);
+    const q = this.state.signIn ? this.quotes.in : this.quotes.up;
+    let i = 0;
+    this.setState({ typed: '' });
+    this.t = setInterval(() => { i++; this.setState({ typed: q.slice(0, i) }); if (i >= q.length) clearInterval(this.t); }, 55);
+  }
+  renderVals() {
+    const s = this.state, base = 'https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/';
+    const m = (i, px = 16) => `url(${base}${i}.svg) center/${px}px no-repeat`;
+    const st = { ok: ['#8FAE8B', '#8FAE8B'], warn: ['#F2C14E', 'transparent'], off: ['#65635F', 'transparent'] };
+    return {
+      isSignIn: s.signIn, isSignUp: !s.signIn,
+      title: s.signIn ? 'Ingresá a tu cuenta' : 'Creá tu cuenta',
+      subtitle: s.signIn ? 'Usá tu email para continuar.' : 'Completá tus datos para empezar.',
+      cta: s.signIn ? 'Ingresar' : 'Crear cuenta',
+      switchQ: s.signIn ? '¿No tenés cuenta?' : '¿Ya tenés cuenta?',
+      switchA: s.signIn ? 'Crear cuenta' : 'Ingresar',
+      pwType: s.showPw ? 'text' : 'password',
+      eyeMask: m(s.showPw ? 'eye-off' : 'eye'),
+      togglePw: () => this.setState({ showPw: !s.showPw }),
+      toggleMode: e => { e.preventDefault(); this.setState({ signIn: !s.signIn }, () => this.startType()); },
+      submit: e => e.preventDefault(),
+      typed: s.typed,
+      sections: [['negocio','Negocio'],['integraciones','Integraciones'],['ia','IA'],['etapas','Etapas del pipeline'],['cuenta','Cuenta']]
+        .map(([id,label],i) => ({ id, label, color: i === 0 ? '#EDEBE6' : '#9A9893', weight: i === 0 ? 500 : 400 })),
+      business: [
+        {k:'Nombre', v:'SmokIA'},
+        {k:'Qué ofrecés', v:'Agentes de IA que responden consultas y agendan turnos por WhatsApp.'},
+        {k:'Cliente ideal', v:'Clínicas estéticas, barberías y consultorios con alto volumen de mensajes.'},
+        {k:'Firma', v:'Tomás · SmokIA'}
+      ],
+      integrations: [
+        {name:'Apify · Google Maps', meta:'Crédito restante: USD 3,40', status:'Crédito bajo', action:'Recargar', mask:m('map-pin',15), stColor:st.warn[0], stFill:st.warn[1]},
+        {name:'WhatsApp', meta:'Abre chats con el mensaje copiado', status:'Conectado', action:'Configurar', mask:m('message-circle',15), stColor:st.ok[0], stFill:st.ok[1]},
+        {name:'Google Calendar', meta:'Sincroniza turnos de la Agenda', status:'Conectado', action:'Configurar', mask:m('calendar',15), stColor:st.ok[0], stFill:st.ok[1]},
+        {name:'Email (SMTP)', meta:'Para aperturas por email', status:'Sin conectar', action:'Conectar', mask:m('mail',15), stColor:st.off[0], stFill:st.off[1]}
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

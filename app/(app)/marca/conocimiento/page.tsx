@@ -8,7 +8,7 @@ import { getKnowledgeCounts, searchKnowledge } from "@/lib/brand/knowledge/queri
 import { COLLECTION_LABEL, isKnowledgeCollection, KNOWLEDGE_COLLECTIONS } from "@/lib/brand/knowledge/schema";
 import { cn } from "@/lib/utils";
 
-export const metadata = { title: "Base de conocimiento · Awareness AI" };
+export const metadata = { title: "Base de conocimiento · SmokIA" };
 
 type SearchParams = { c?: string; q?: string };
 

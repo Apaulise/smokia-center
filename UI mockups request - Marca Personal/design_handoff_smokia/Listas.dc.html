@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><link href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><style>body{margin:0;background:#0C0C0D;font-family:'Host Grotesk',sans-serif;-webkit-font-smoothing:antialiased}a{color:#EDEBE6;text-decoration:none}a:hover{color:#F2C14E}@keyframes smoke{0%{background-position:-400px 0}100%{background-position:400px 0}}</style></helmet>
+<div style="padding:56px 64px;display:flex;flex-direction:column;gap:72px">
+  <header style="display:flex;flex-direction:column;gap:8px;max-width:760px">
+    <span style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:0.14em;color:#85837E">SMOKIA · GESTOR DE LEADS · 03 + 04</span>
+    <h1 style="margin:0;font-weight:500;font-size:40px;letter-spacing:-0.025em;color:#EDEBE6">Listas y detalle de lista</h1>
+    <p style="margin:0;color:#9A9893;font-size:14px;line-height:1.6;text-wrap:pretty">Tabla como vista por defecto, grilla opcional. Editar y eliminar viven en el menú ⋯ de cada fila. En el detalle, la etapa se lee con un medidor de 5 segmentos: forma y posición, no color. <a href="Dashboard.dc.html">← Dashboard</a></p>
+  </header>
+
+  <sc-for list="{{ frames }}" as="f" hint-placeholder-count="1">
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <span style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:0.1em;color:#85837E">{{ f.label }}</span>
+    <div style="width:{{ f.w }}px;min-height:720px;display:flex;background:#161618;border:1px solid rgba(237,235,230,0.08);border-radius:8px;overflow:hidden;color:#EDEBE6">
+      <div style="flex:none;align-self:stretch"><dc-import name="Sidebar" active="listas" collapsed="{{ f.collapsed }}" hint-size="232px,100%" style="height:100%"></dc-import></div>
+      <main style="flex:1;min-width:0;display:flex;flex-direction:column">
+        <div style="height:56px;display:flex;align-items:center;gap:8px;padding:0 32px;border-bottom:1px solid rgba(237,235,230,0.06);font-size:12px;color:#85837E"><span>Gestor de Leads</span><span style="color:#65635F">/</span><span style="color:#EDEBE6">Listas</span></div>
+        <div style="padding:28px 32px;display:flex;flex-direction:column;gap:20px">
+          <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:220px"><h2 style="margin:0;font-weight:500;font-size:28px;letter-spacing:-0.02em">Listas</h2><span style="font-size:13px;color:#9A9893">Elegí una lista para trabajar sus leads.</span></div>
+            <div style="height:32px;width:220px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid rgba(237,235,230,0.1);border-radius:5px;color:#85837E;font-size:12.5px;box-sizing:border-box"><span style="width:13px;height:13px;background:currentColor;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/search.svg) center/13px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/search.svg) center/13px no-repeat"></span>Filtrar listas</div>
+            <div style="display:flex;padding:2px;gap:2px;border:1px solid rgba(237,235,230,0.1);border-radius:5px">
+              <span title="Tabla" style="width:28px;height:26px;display:grid;place-items:center;background:#26262A;border-radius:3px"><span style="width:14px;height:14px;background:#EDEBE6;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/rows-3.svg) center/14px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/rows-3.svg) center/14px no-repeat"></span></span>
+              <span title="Grilla" style="width:28px;height:26px;display:grid;place-items:center"><span style="width:14px;height:14px;background:#85837E;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/layout-grid.svg) center/14px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/layout-grid.svg) center/14px no-repeat"></span></span>
+            </div>
+            <a href="Generar lista.dc.html" style="height:32px;padding:0 14px;display:flex;align-items:center;background:#F2C14E;color:#17150F;border-radius:5px;font:500 13px 'Host Grotesk',sans-serif">Generar lista</a>
+          </div>
+          <div style="display:grid;grid-template-columns:minmax(180px,1.6fr) 110px minmax(0,1fr) 96px 64px 130px 112px 36px;font-size:13px">
+            <div style="display:contents;font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.1em;color:#85837E">
+              <span style="padding:8px 0;border-bottom:1px solid rgba(237,235,230,0.08)">NOMBRE</span><span style="padding:8px 0;border-bottom:1px solid rgba(237,235,230,0.08)">FUENTE</span><span style="padding:8px 0;border-bottom:1px solid rgba(237,235,230,0.08)">RUBRO</span><span style="padding:8px 0;border-bottom:1px solid rgba(237,235,230,0.08);color:#EDEBE6">CREADA ↓</span><span style="padding:8px 0;border-bottom:1px solid rgba(237,235,230,0.08);text-align:right">LEADS</span><span style="padding:8px 0 8px 20px;border-bottom:1px solid rgba(237,235,230,0.08)">CONTACTADO</span><span style="padding:8px 0;border-bottom:1px solid rgba(237,235,230,0.08)">ESTADO</span><span style="border-bottom:1px solid rgba(237,235,230,0.08)"></span>
+            </div>
+            <sc-for list="{{ lists }}" as="l" hint-placeholder-count="7">
+              <div style="display:contents">
+                <a href="#t2" style="padding:12px 0;border-bottom:1px solid rgba(237,235,230,0.06);background:{{ l.hover }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500">{{ l.name }}</a>
+                <span style="padding:12px 0;border-bottom:1px solid rgba(237,235,230,0.06);background:{{ l.hover }};font-size:12px;color:#9A9893">{{ l.src }}</span>
+                <span style="padding:12px 8px 12px 0;border-bottom:1px solid rgba(237,235,230,0.06);background:{{ l.hover }};font-size:12px;color:{{ l.rubroColor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ l.rubro }}</span>
+                <span style="padding:12px 0;border-bottom:1px solid rgba(237,235,230,0.06);background:{{ l.hover }};font:400 12px 'JetBrains Mono',monospace;color:#9A9893">{{ l.date }}</span>
+                <span style="padding:12px 0;border-bottom:1px solid rgba(237,235,230,0.06);background:{{ l.hover }};text-align:right;font-family:'JetBrains Mono',monospace">{{ l.n }}</span>
+                <span style="padding:12px 0 12px 20px;border-bottom:1px solid rgba(237,235,230,0.06);background:{{ l.hover }};display:flex;align-items:center;gap:8px"><span style="flex:1;height:3px;background:rgba(237,235,230,0.06);border-radius:2px;overflow:hidden"><span style="display:block;height:100%;width:{{ l.pct }}%;background:#8A8C8F"></span></span><span style="font:400 11.5px 'JetBrains Mono',monospace;width:30px;text-align:right;color:#9A9893">{{ l.pct }}%</span></span>
+                <span style="padding:12px 0;border-bottom:1px solid rgba(237,235,230,0.06);background:{{ l.hover }};display:flex;align-items:center;gap:7px;font-size:12px;color:{{ l.stColor }}"><span style="width:6px;height:6px;border-radius:{{ l.stShape }};border:1.5px solid currentColor;background:{{ l.stFill }};box-sizing:border-box"></span>{{ l.status }}</span>
+                <span style="padding:12px 0;border-bottom:1px solid rgba(237,235,230,0.06);background:{{ l.hover }};display:flex;justify-content:center;color:{{ l.dots }}">⋯</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="position:relative;height:0"><div style="position:absolute;right:0;top:-190px;width:168px;padding:4px;background:#26262A;border:1px solid rgba(237,235,230,0.12);border-radius:6px;box-shadow:0 12px 32px rgba(0,0,0,0.4);font-size:12.5px">
+            <div style="padding:6px 8px;border-radius:3px;background:rgba(237,235,230,0.05)">Renombrar</div><div style="padding:6px 8px">Asignar rubro</div><div style="padding:6px 8px">Exportar CSV</div><div style="height:1px;background:rgba(237,235,230,0.08);margin:4px 0"></div><div style="padding:6px 8px;color:#D98A76">Eliminar lista…</div>
+          </div></div>
+        </div>
+      </main>
+    </div>
+  </div>
+  </sc-for>
+
+  <div style="display:flex;gap:48px;flex-wrap:wrap;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <span style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:0.1em;color:#85837E">03.C · VISTA GRILLA (OPCIONAL)</span>
+      <div style="width:880px;padding:24px;background:#161618;border:1px solid rgba(237,235,230,0.08);border-radius:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;color:#EDEBE6">
+        <sc-for list="{{ gridLists }}" as="l" hint-placeholder-count="6">
+          <div style="padding:18px;display:flex;flex-direction:column;gap:14px;outline:1px solid rgba(237,235,230,0.07)" style-hover="background:#1C1C1F">
+            <div style="display:flex;gap:8px"><span style="flex:1;font-weight:500;font-size:14px">{{ l.name }}</span><span style="color:#65635F">⋯</span></div>
+            <span style="font-size:12px;color:#85837E">{{ l.src }} · <span style="font-family:'JetBrains Mono',monospace">{{ l.date }}</span></span>
+            <div style="display:flex;align-items:baseline;gap:8px"><span style="font:400 22px/1 'JetBrains Mono',monospace">{{ l.n }}</span><span style="font-size:12px;color:#85837E">leads</span><span style="flex:1"></span><span style="font:400 11.5px 'JetBrains Mono',monospace;color:#9A9893">{{ l.pct }}% contact.</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <span style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:0.1em;color:#85837E">03.D · VACÍO</span>
+      <div style="width:460px;height:280px;padding:32px;box-sizing:border-box;background:#161618;border:1px solid rgba(237,235,230,0.08);border-radius:8px;display:flex;flex-direction:column;justify-content:center;gap:14px;color:#EDEBE6">
+        <p style="margin:0;font-size:18px;line-height:1.4;letter-spacing:-0.01em">Todavía no hay listas.</p>
+        <p style="margin:0;font-size:13px;line-height:1.5;color:#9A9893">Buscá negocios por rubro y zona en Google Maps, o subí un CSV que ya tengas.</p>
+        <div style="display:flex;gap:8px"><button style="height:32px;padding:0 14px;background:#F2C14E;color:#17150F;border:0;border-radius:5px;font:500 13px 'Host Grotesk',sans-serif">Generar lista</button><button style="height:32px;padding:0 14px;background:transparent;color:#EDEBE6;border:1px solid rgba(237,235,230,0.14);border-radius:5px;font:500 13px 'Host Grotesk',sans-serif">Importar CSV</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="t2" style="display:flex;flex-direction:column;gap:12px">
+    <span style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:0.1em;color:#85837E">04.A · DETALLE DE LISTA · 1440 · 3 SELECCIONADOS</span>
+    <div style="width:1440px;display:flex;background:#161618;border:1px solid rgba(237,235,230,0.08);border-radius:8px;overflow:hidden;color:#EDEBE6">
+      <div style="flex:none;align-self:stretch"><dc-import name="Sidebar" active="listas" hint-size="232px,100%" style="height:100%"></dc-import></div>
+      <main style="flex:1;min-width:0;display:flex;flex-direction:column">
+        <div style="height:56px;display:flex;align-items:center;gap:8px;padding:0 32px;border-bottom:1px solid rgba(237,235,230,0.06);font-size:12px;color:#85837E"><span>Listas</span><span style="color:#65635F">/</span><span style="color:#EDEBE6">Clinicas Estéticas 3</span></div>
+        <div style="padding:24px 32px 32px;display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;align-items:flex-end;gap:24px;flex-wrap:wrap">
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px"><h2 style="margin:0;font-weight:500;font-size:28px;letter-spacing:-0.02em">Clinicas Estéticas 3</h2><span style="font-size:12.5px;color:#9A9893">Google Maps · “Clínicas estéticas depilación” · Buenos Aires · <span style="font-family:'JetBrains Mono',monospace">25/09/26</span></span></div>
+            <div style="display:flex;gap:28px;font-size:12px;color:#85837E">
+              <div style="display:flex;flex-direction:column;gap:4px"><span>Leads</span><span style="font:400 20px/1 'JetBrains Mono',monospace;color:#EDEBE6">30</span></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><span>Contactados</span><span style="font:400 20px/1 'JetBrains Mono',monospace;color:#EDEBE6">9</span></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><span>Sin enriquecer</span><span style="font:400 20px/1 'JetBrains Mono',monospace;color:#F2C14E">14</span></div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <div style="height:30px;width:240px;display:flex;align-items:center;gap:8px;padding:0 10px;background:#1E1E21;border:1px solid rgba(242,193,78,0.5);box-shadow:0 0 0 3px rgba(242,193,78,0.12);border-radius:5px;font-size:12.5px;box-sizing:border-box"><span style="width:13px;height:13px;background:#85837E;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/search.svg) center/13px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/search.svg) center/13px no-repeat"></span>clín<span style="width:1.5px;height:15px;background:#F2C14E"></span></div>
+            <span style="height:30px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px solid rgba(237,235,230,0.14);border-radius:5px;font-size:12.5px">Estado: <span style="color:#F2C14E">Nuevo, Contactado</span> <span style="color:#85837E">×</span></span>
+            <span style="height:30px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px dashed rgba(237,235,230,0.14);border-radius:5px;font-size:12.5px;color:#9A9893">+ Rubro</span>
+            <span style="height:30px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px dashed rgba(237,235,230,0.14);border-radius:5px;font-size:12.5px;color:#9A9893">+ Rating</span>
+            <span style="flex:1"></span><span style="font:400 11.5px 'JetBrains Mono',monospace;color:#85837E">21 de 30</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;height:40px;padding:0 6px 0 12px;background:#26262A;border:1px solid rgba(237,235,230,0.1);border-radius:6px;font-size:12.5px">
+            <span style="font-family:'JetBrains Mono',monospace;color:#F2C14E;margin-right:4px">3</span><span style="margin-right:12px">seleccionados</span>
+            <span style="width:1px;height:18px;background:rgba(237,235,230,0.1)"></span>
+            <button style="height:28px;padding:0 10px;background:transparent;border:0;color:#EDEBE6;font:500 12.5px 'Host Grotesk',sans-serif;border-radius:4px" style-hover="background:rgba(237,235,230,0.06)">Cambiar estado</button>
+            <button style="height:28px;padding:0 10px;background:transparent;border:0;color:#EDEBE6;font:500 12.5px 'Host Grotesk',sans-serif;border-radius:4px" style-hover="background:rgba(237,235,230,0.06)">Enriquecer</button>
+            <button style="height:28px;padding:0 10px;background:transparent;border:0;color:#EDEBE6;font:500 12.5px 'Host Grotesk',sans-serif;border-radius:4px" style-hover="background:rgba(237,235,230,0.06)">Generar aperturas</button>
+            <span style="flex:1"></span><span style="font:400 11px 'JetBrains Mono',monospace;color:#85837E;margin-right:8px">≈ 3 créditos IA</span><button style="height:28px;width:28px;background:transparent;border:0;color:#9A9893">×</button>
+          </div>
+          <div style="display:grid;grid-template-columns:32px minmax(220px,1.8fr) 170px 150px 90px 130px minmax(0,1.2fr);font-size:13px">
+            <div style="display:contents;font:500 10.5px 'Host Grotesk',sans-serif;letter-spacing:0.1em;color:#85837E">
+              <span style="padding:8px 0;border-bottom:1px solid rgba(237,235,230,0.08)"><span style="display:block;width:13px;height:13px;border:1px solid rgba(237,235,230,0.3);border-radius:3px;box-sizing:border-box;background:linear-gradient(#F2C14E,#F2C14E) center/7px 1.5px no-repeat"></span></span>
+              <span style="padding:8px 0;border-bottom:1px solid rgba(237,235,230,0.08)">NOMBRE</span><span style="padding:8px 0;border-bottom:1px solid rgba(237,235,230,0.08)">ESTADO</span><span style="padding:8px 0;border-bottom:1px solid rgba(237,235,230,0.08)">TELÉFONO</span><span style="padding:8px 0;border-bottom:1px solid rgba(237,235,230,0.08)">RATING</span><span style="padding:8px 0;border-bottom:1px solid rgba(237,235,230,0.08);color:#EDEBE6">ÚLT. ACTIVIDAD ↓</span><span style="padding:8px 0;border-bottom:1px solid rgba(237,235,230,0.08)">PRÓXIMA ACCIÓN</span>
+            </div>
+            <sc-for list="{{ leads }}" as="r" hint-placeholder-count="10">
+              <div style="display:contents">
+                <span style="padding:10px 0;border-bottom:1px solid rgba(237,235,230,0.06);background:{{ r.bg }};display:flex;align-items:center"><span style="width:13px;height:13px;border:1px solid {{ r.cbBorder }};background:{{ r.cb }};border-radius:3px;box-sizing:border-box;display:grid;place-items:center;font-size:9px;color:#17150F;line-height:1">{{ r.check }}</span></span>
+                <a href="Lead Detail.dc.html" style="padding:10px 8px 10px 0;border-bottom:1px solid rgba(237,235,230,0.06);background:{{ r.bg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</a>
+                <span style="padding:10px 0;border-bottom:1px solid rgba(237,235,230,0.06);background:{{ r.bg }};display:flex;align-items:center;gap:8px;font-size:12px;color:#9A9893"><span style="display:flex;gap:2px"><sc-for list="{{ r.pips }}" as="p"><span style="width:3px;height:10px;border-radius:1px;background:{{ p }}"></span></sc-for></span>{{ r.stage }}</span>
+                <span style="padding:10px 0;border-bottom:1px solid rgba(237,235,230,0.06);background:{{ r.bg }};font:400 12px 'JetBrains Mono',monospace;color:#9A9893">{{ r.phone }}</span>
+                <span style="padding:10px 0;border-bottom:1px solid rgba(237,235,230,0.06);background:{{ r.bg }};font:400 12px 'JetBrains Mono',monospace">{{ r.rating }}</span>
+                <span style="padding:10px 0;border-bottom:1px solid rgba(237,235,230,0.06);background:{{ r.bg }};font:400 12px 'JetBrains Mono',monospace;color:#9A9893">{{ r.last }}</span>
+                <span style="padding:10px 0;border-bottom:1px solid rgba(237,235,230,0.06);background:{{ r.bg }};font-size:12px;color:{{ r.nextColor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.next }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <span style="font:500 11px 'JetBrains Mono',monospace;letter-spacing:0.1em;color:#85837E">04.B · FILTRO SIN RESULTADOS · CARGANDO FILAS</span>
+    <div style="display:flex;gap:28px;flex-wrap:wrap">
+      <div style="width:560px;padding:20px 24px;background:#161618;border:1px solid rgba(237,235,230,0.08);border-radius:8px;display:flex;align-items:center;gap:12px;font-size:13px;color:#9A9893"><span style="flex:1">Ningún lead coincide con “Estado: Reunión” y “Rating ≥ 4.5”.</span><button style="height:28px;padding:0 10px;background:transparent;border:1px solid rgba(237,235,230,0.14);border-radius:5px;color:#EDEBE6;font:500 12px 'Host Grotesk',sans-serif">Limpiar filtros</button></div>
+      <div style="width:560px;padding:16px 24px;background:#161618;border:1px solid rgba(237,235,230,0.08);border-radius:8px;display:flex;flex-direction:column;gap:14px">
+        <sc-for list="{{ skel }}" as="k" hint-placeholder-count="4"><div style="display:grid;grid-template-columns:1.6fr 1fr 1fr .6fr;gap:16px"><span style="height:10px;border-radius:2px;background:linear-gradient(90deg,#1E1E21 0,#2E2E32 50%,#1E1E21 100%);background-size:800px 100%;animation:smoke 1.6s linear infinite"></span><span style="height:10px;border-radius:2px;background:linear-gradient(90deg,#1E1E21 0,#2E2E32 50%,#1E1E21 100%);background-size:800px 100%;animation:smoke 1.6s linear infinite"></span><span style="height:10px;border-radius:2px;background:linear-gradient(90deg,#1E1E21 0,#2E2E32 50%,#1E1E21 100%);background-size:800px 100%;animation:smoke 1.6s linear infinite"></span><span style="height:10px;border-radius:2px;background:linear-gradient(90deg,#1E1E21 0,#2E2E32 50%,#1E1E21 100%);background-size:800px 100%;animation:smoke 1.6s linear infinite"></span></div></sc-for>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const raw = [
+      ['Peluquerías Palermo','Google Maps','Peluquerías','26/09/26',12,0,'run'],
+      ['Clinicas Estéticas 3','Google Maps','—','25/09/26',30,9,'ok'],
+      ['Clinicas Estéticas 2','Google Maps','Salud y belleza','23/09/26',20,5,'ok'],
+      ['Clinicas en General','Google Maps','—','17/09/26',20,2,'ok'],
+      ['Barberias Palermo','Google Maps','—','14/09/26',20,4,'ok'],
+      ['Clinicas Esteticas','Google Maps','—','12/09/26',1,0,'ok'],
+      ['Agropecuarios','CSV / manual','—','12/09/26',104,6,'ok']
+    ];
+    const lists = raw.map(([name,src,rubro,date,n,c,st],i)=>({name,src,rubro,date,n,pct:n?Math.round(c/n*100):0,
+      rubroColor: rubro==='—'?'#65635F':'#9A9893',
+      status: st==='run'?'Buscando 12/20':'Completa', stColor: st==='run'?'#F2C14E':'#9A9893', stShape: st==='run'?'1px':'50%', stFill: st==='run'?'transparent':'currentColor',
+      hover: i===2?'#1C1C1F':'transparent', dots: i===2?'#EDEBE6':'#65635F'}));
+    const stageIdx = {Nuevo:0,Contactado:1,Respondió:2,Calificado:3,Interesado:3,Reunión:4};
+    const L = [
+      ['ALMA Centro de Estetica','Respondió','+54 11 4806-1867','4.8','hoy 11:42','Responder precio · hoy','#EDEBE6',false],
+      ['Clínica del Parque Centenario','Contactado','+54 11 4982-3310','4.6','18/09','Seguimiento vencido','#D98A76',true],
+      ['Estética Recoleta Láser','Nuevo','+54 11 5263-0098','4.9','—','Generar apertura','#9A9893',true],
+      ['Depilarte Belgrano','Nuevo','+54 11 4781-2254','4.4','—','Generar apertura','#9A9893',true],
+      ['Bella Piel Estudio','Contactado','+54 11 3620-7719','4.7','22/09','Esperar respuesta','#85837E',false],
+      ['Centro Dermo Palermo','Reunión','+54 11 4831-0402','4.9','21/09','Reunión 29/09 16:30','#EDEBE6',false],
+      ['Láser Norte','Contactado','+54 11 4702-1188','4.2','20/09','Esperar respuesta','#85837E',false],
+      ['Espacio Sutil','Nuevo','—','4.5','—','Falta teléfono','#85837E',false],
+      ['Nativa Estética Integral','Nuevo','+54 11 6091-4471','4.8','—','Generar apertura','#9A9893',false],
+      ['Ebenezer centro estética','Respondió','+54 11 4553-2280','4.3','12/09','Retomar · 14 d','#D98A76',false]
+    ];
+    const leads = L.map(([name,stage,phone,rating,last,next,nextColor,sel])=>{
+      const k = stageIdx[stage];
+      return {name,stage,phone,rating,last,next,nextColor,
+        pips:[0,1,2,3,4].map(i=> i<=k && k>0 ? '#B8B6B0' : (i===0 && k===0 ? '#65635F' : 'rgba(237,235,230,0.1)')),
+        bg: sel?'rgba(242,193,78,0.06)':'transparent', cb: sel?'#F2C14E':'transparent', cbBorder: sel?'#F2C14E':'rgba(237,235,230,0.25)', check: sel?'✓':''};
+    });
+    return {
+      frames:[{label:'03.A · LISTAS · 1440 · TABLA (HOVER + MENÚ ⋯)',w:1440,collapsed:false},{label:'03.B · LISTAS · 1024',w:1024,collapsed:true}],
+      lists, gridLists: lists.slice(1), leads, skel:[1,2,3,4]
+    };
+  }
+}
+</script>
+</body>
+</html>

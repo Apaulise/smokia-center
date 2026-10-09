@@ -37,7 +37,7 @@ import {
 import { todayIso, weekDays } from "@/lib/leads/calendar";
 import { requireUser } from "@/lib/supabase/server";
 
-export const metadata = { title: "Marca Personal · Awareness AI" };
+export const metadata = { title: "Marca Personal · SmokIA" };
 // El botón "Sincronizar ahora" corre lib/brand/sync.ts entero (varias
 // llamadas a la API de Instagram) — mismo límite que la ruta de cron (app/api/jobs/sync-marca).
 export const maxDuration = 60;

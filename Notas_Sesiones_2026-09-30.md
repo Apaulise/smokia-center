@@ -23,7 +23,7 @@ Reglas vigentes (ver CLAUDE.md §13 y memoria): los checklists manuales se hacen
 
 ### 3. Mejora de la respuesta sugerida / análisis (~11:38–12:53)
 - Bug: la respuesta sugerida saludaba al lead con el nombre del vendedor ("Gracias por la respuesta, Agustín"), porque el lead mencionaba a Agustín en su mensaje.
-- Fix de prompt en `Awareness_AI_Sistema_de_Prospeccion.md`: §18 (nunca abrir con nombre propio salvo decisor confirmado por el enriquecimiento) y §19 (un nombre en el mensaje del lead casi siempre es el del vendedor). Aplica a los cuatro llamados porque `sales-os.ts` manda el archivo entero como `system`.
+- Fix de prompt en `SmokIA_Sistema_de_Prospeccion.md`: §18 (nunca abrir con nombre propio salvo decisor confirmado por el enriquecimiento) y §19 (un nombre en el mensaje del lead casi siempre es el del vendedor). Aplica a los cuatro llamados porque `sales-os.ts` manda el archivo entero como `system`.
 - El usuario pidió una opción de **volver atrás** si se aprieta "Analizar otra respuesta" sin querer (estado donde le toca registrar su respuesta). Después dijo que ya corrigió a mano y no hizo falta; sin pendiente.
 
 ### 4. §1.22 — Cadena de ejecución (~11:27–12:39)

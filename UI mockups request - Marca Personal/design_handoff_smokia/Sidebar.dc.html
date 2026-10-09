@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"></helmet>
+<sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+<aside style="width:232px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;background:#141416;border-right:1px solid rgba(237,235,230,0.08);font-family:'Host Grotesk',sans-serif;color:#9A9893;font-size:13px">
+  <div style="height:56px;display:flex;align-items:center;gap:10px;padding:0 14px 0 16px;border-bottom:1px solid rgba(237,235,230,0.06)">
+    <img src="assets/logo-dark.png" alt="" style="height:26px;width:auto;display:block">
+    <span style="font-weight:500;font-size:14px;letter-spacing:-0.01em;color:#EDEBE6;flex:1">Smok<span style="color:#9A9893">IA</span></span>
+    <span title="Colapsar" style="width:24px;height:24px;display:grid;place-items:center;border-radius:4px;color:#85837E"><span style="width:15px;height:15px;background:currentColor;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/panel-left-close.svg) center/15px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/panel-left-close.svg) center/15px no-repeat"></span></span>
+  </div>
+  <div style="padding:12px 12px 4px">
+    <div style="height:32px;display:flex;align-items:center;gap:8px;padding:0 8px;border-radius:5px;background:#1E1E21;border:1px solid rgba(237,235,230,0.08);color:#85837E">
+      <span style="width:14px;height:14px;background:currentColor;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/search.svg) center/14px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/search.svg) center/14px no-repeat"></span>
+      <span style="flex:1">Buscar o ejecutar…</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;padding:1px 5px;border:1px solid rgba(237,235,230,0.1);border-radius:3px">⌘K</span>
+    </div>
+  </div>
+  <nav style="flex:1;display:flex;flex-direction:column;padding:8px 12px;gap:1px">
+    <div style="height:30px;display:flex;align-items:center;gap:10px;padding:0 8px;color:#65635F">
+      <span style="width:15px;height:15px;background:currentColor;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/layout-grid.svg) center/15px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/layout-grid.svg) center/15px no-repeat"></span>
+      <span style="flex:1">Panel principal</span><span style="font-size:11px;color:#65635F">pronto</span>
+    </div>
+    <sc-if value="{{ leadsOpen }}" hint-placeholder-val="{{ true }}">
+    <div style="height:30px;display:flex;align-items:center;gap:10px;padding:0 8px;margin-top:6px;color:#EDEBE6;font-weight:500">
+      <span style="width:15px;height:15px;background:currentColor;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/users.svg) center/15px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/users.svg) center/15px no-repeat"></span>
+      <span style="flex:1">Gestor de Leads</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:1px;margin:0 0 6px 15px;border-left:1px solid rgba(237,235,230,0.08)">
+      <sc-for list="{{ leadItems }}" as="it" hint-placeholder-count="5">
+        <sc-if value="{{ it.active }}">
+          <div style="position:relative;height:30px;display:flex;align-items:center;padding:0 12px 0 16px;color:#EDEBE6;font-weight:500">
+            <span style="position:absolute;left:-1px;top:7px;bottom:7px;width:2px;background:#F2C14E;border-radius:1px"></span>{{ it.label }}
+            <span style="flex:1"></span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#85837E">{{ it.meta }}</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ it.inactive }}">
+          <div style="height:30px;display:flex;align-items:center;padding:0 12px 0 16px;border-radius:0 5px 5px 0;cursor:pointer;transition:color 140ms,background 140ms" style-hover="color:#EDEBE6;background:rgba(237,235,230,0.04)">{{ it.label }}<span style="flex:1"></span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#65635F">{{ it.meta }}</span></div>
+        </sc-if>
+      </sc-for>
+    </div>
+    </sc-if>
+    <sc-if value="{{ leadsClosed }}">
+    <div style="height:30px;display:flex;align-items:center;gap:10px;padding:0 8px;margin-top:6px;border-radius:5px;cursor:pointer" style-hover="color:#EDEBE6;background:rgba(237,235,230,0.04)"><span style="width:15px;height:15px;background:currentColor;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/users.svg) center/15px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/users.svg) center/15px no-repeat"></span><span style="flex:1">Gestor de Leads</span></div>
+    </sc-if>
+    <div style="height:30px;display:flex;align-items:center;gap:10px;padding:0 8px;color:#65635F">
+      <span style="width:15px;height:15px;background:currentColor;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/receipt.svg) center/15px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/receipt.svg) center/15px no-repeat"></span>
+      <span style="flex:1;white-space:nowrap">Gestor de Facturación</span><span style="font-size:11px">pronto</span>
+    </div>
+    <sc-if value="{{ marcaClosed }}" hint-placeholder-val="{{ true }}">
+    <div style="height:30px;display:flex;align-items:center;gap:10px;padding:0 8px;border-radius:5px;cursor:pointer" style-hover="color:#EDEBE6;background:rgba(237,235,230,0.04)">
+      <span style="width:15px;height:15px;background:currentColor;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/megaphone.svg) center/15px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/megaphone.svg) center/15px no-repeat"></span>
+      <span>Gestor de Marca Personal</span>
+    </div>
+    </sc-if>
+    <sc-if value="{{ marcaOpen }}">
+    <div style="height:30px;display:flex;align-items:center;gap:10px;padding:0 8px;color:#EDEBE6;font-weight:500"><span style="width:15px;height:15px;background:currentColor;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/megaphone.svg) center/15px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/megaphone.svg) center/15px no-repeat"></span><span style="flex:1">Gestor de Marca Personal</span></div>
+    <div style="display:flex;flex-direction:column;gap:1px;margin:0 0 6px 15px;border-left:1px solid rgba(237,235,230,0.08)">
+      <sc-for list="{{ marcaItems }}" as="it" hint-placeholder-count="6">
+        <sc-if value="{{ it.active }}">
+          <div style="position:relative;height:30px;display:flex;align-items:center;padding:0 12px 0 16px;color:#EDEBE6;font-weight:500"><span style="position:absolute;left:-1px;top:7px;bottom:7px;width:2px;background:#F2C14E;border-radius:1px"></span>{{ it.label }}<span style="flex:1"></span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#85837E">{{ it.meta }}</span></div>
+        </sc-if>
+        <sc-if value="{{ it.inactive }}">
+          <div style="height:30px;display:flex;align-items:center;padding:0 12px 0 16px;border-radius:0 5px 5px 0;cursor:pointer" style-hover="color:#EDEBE6;background:rgba(237,235,230,0.04)">{{ it.label }}<span style="flex:1"></span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#65635F">{{ it.meta }}</span></div>
+        </sc-if>
+      </sc-for>
+    </div>
+    </sc-if>
+  </nav>
+  <div style="padding:8px 12px 12px;border-top:1px solid rgba(237,235,230,0.06);display:flex;flex-direction:column;gap:1px">
+    <sc-if value="{{ settingsActive }}">
+      <div style="position:relative;height:30px;display:flex;align-items:center;gap:10px;padding:0 8px;color:#EDEBE6;font-weight:500"><span style="position:absolute;left:-4px;top:7px;bottom:7px;width:2px;background:#F2C14E"></span><span style="width:15px;height:15px;background:currentColor;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/settings.svg) center/15px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/settings.svg) center/15px no-repeat"></span>Configuración</div>
+    </sc-if>
+    <sc-if value="{{ settingsInactive }}">
+      <div style="height:30px;display:flex;align-items:center;gap:10px;padding:0 8px;border-radius:5px" style-hover="color:#EDEBE6;background:rgba(237,235,230,0.04)"><span style="width:15px;height:15px;background:currentColor;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/settings.svg) center/15px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/settings.svg) center/15px no-repeat"></span>Configuración</div>
+    </sc-if>
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 8px 0;margin-top:6px">
+      <span style="width:24px;height:24px;border-radius:50%;background:#26262A;color:#EDEBE6;display:grid;place-items:center;font-size:11px;font-weight:500">TP</span>
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">paggustintomas@gmail.com</span>
+      <span title="Salir" style="width:15px;height:15px;background:currentColor;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/log-out.svg) center/15px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/log-out.svg) center/15px no-repeat"></span>
+    </div>
+  </div>
+</aside>
+</sc-if>
+<sc-if value="{{ collapsed }}">
+<aside style="width:56px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;background:#141416;border-right:1px solid rgba(237,235,230,0.08);color:#9A9893">
+  <div style="height:56px;display:grid;place-items:center;width:100%;border-bottom:1px solid rgba(237,235,230,0.06)"><img src="assets/logo-dark.png" alt="" style="height:24px;width:auto"></div>
+  <div style="width:32px;height:32px;margin:12px 0 8px;display:grid;place-items:center;border-radius:5px;background:#1E1E21;border:1px solid rgba(237,235,230,0.08);color:#85837E"><span style="width:14px;height:14px;background:currentColor;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/search.svg) center/14px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/search.svg) center/14px no-repeat"></span></div>
+  <div style="display:flex;flex-direction:column;gap:2px;flex:1">
+    <sc-for list="{{ navItems }}" as="it" hint-placeholder-count="5">
+      <div title="{{ it.label }}" style="position:relative;width:32px;height:32px;display:grid;place-items:center;border-radius:5px;color:{{ it.color }}" style-hover="background:rgba(237,235,230,0.05)">
+        <sc-if value="{{ it.active }}"><span style="position:absolute;left:-12px;top:8px;bottom:8px;width:2px;background:#F2C14E"></span></sc-if>
+        <span style="width:16px;height:16px;background:currentColor;mask:{{ it.mask }};-webkit-mask:{{ it.mask }}"></span>
+      </div>
+    </sc-for>
+    <div style="height:1px;background:rgba(237,235,230,0.08);margin:8px 4px"></div>
+    <div title="Gestor de Marca Personal" style="width:32px;height:32px;display:grid;place-items:center"><span style="width:16px;height:16px;background:currentColor;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/megaphone.svg) center/16px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/megaphone.svg) center/16px no-repeat"></span></div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 0">
+    <div style="width:32px;height:32px;display:grid;place-items:center"><span style="width:16px;height:16px;background:currentColor;mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/settings.svg) center/16px no-repeat;-webkit-mask:url(https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/settings.svg) center/16px no-repeat"></span></div>
+    <span style="width:24px;height:24px;border-radius:50%;background:#26262A;color:#EDEBE6;display:grid;place-items:center;font-size:11px;font-family:'Host Grotesk',sans-serif">TP</span>
+  </div>
+</aside>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:232,&quot;height&quot;:800},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dashboard&quot;,&quot;listas&quot;,&quot;generar&quot;,&quot;agenda&quot;,&quot;memoria&quot;,&quot;config&quot;,&quot;marca-resumen&quot;,&quot;marca-biblioteca&quot;,&quot;marca-analisis&quot;,&quot;marca-planificador&quot;,&quot;marca-competencia&quot;,&quot;marca-conocimiento&quot;],&quot;default&quot;:&quot;dashboard&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;collapsed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const a = this.props.active ?? 'dashboard';
+    const c = !!this.props.collapsed;
+    const base = 'https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/';
+    const items = [
+      ['dashboard','Dashboard','layout-dashboard',''],
+      ['listas','Listas','rows-3','6'],
+      ['generar','Generar lista','plus','' ],
+      ['agenda','Agenda','calendar','1'],
+      ['memoria','Memoria de ventas','book-open','']
+    ].map(([k,l,i,m]) => ({ label:l, meta:m, active:k===a, inactive:k!==a, color: k===a ? '#EDEBE6' : '#9A9893',
+      mask:`url(${base}${i}.svg) center/16px no-repeat` }));
+    const marca = a.startsWith('marca');
+    const marcaItems = [
+      ['marca-resumen','Resumen','layout-dashboard',''],
+      ['marca-biblioteca','Biblioteca','clapperboard','15'],
+      ['marca-analisis','Análisis','chart-no-axes-column',''],
+      ['marca-planificador','Planificador','calendar-days','4'],
+      ['marca-competencia','Competencia','radar',''],
+      ['marca-conocimiento','Base de conocimiento','library','13']
+    ].map(([k,l,i,m]) => ({ label:l, meta:m, active:k===a, inactive:k!==a, color: k===a ? '#EDEBE6' : '#9A9893',
+      mask:`url(${base}${i}.svg) center/16px no-repeat` }));
+    return { expanded: !c, collapsed: c, leadItems: items, marcaItems, navItems: marca ? marcaItems : items,
+      leadsOpen: !marca, leadsClosed: marca, marcaOpen: marca, marcaClosed: !marca,
+      settingsActive: a==='config', settingsInactive: a!=='config' };
+  }
+}
+</script>
+</body>
+</html>

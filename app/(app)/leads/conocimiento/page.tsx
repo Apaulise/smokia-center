@@ -6,7 +6,7 @@ import { KnowledgeList } from "@/components/leads/knowledge/knowledge-list";
 import { getKnowledgeCounts, searchKnowledge } from "@/lib/leads/knowledge/queries";
 import { COLLECTION_LABEL, isKnowledgeCollection, KNOWLEDGE_COLLECTIONS } from "@/lib/leads/knowledge/schema";
 
-export const metadata = { title: "Memoria de ventas · Awareness AI" };
+export const metadata = { title: "Memoria de ventas · SmokIA" };
 
 type SearchParams = { c?: string; q?: string };
 

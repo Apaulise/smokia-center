@@ -33,8 +33,8 @@ const hostGrotesk = Host_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Awareness AI",
-  description: "Panel de gestión de Awareness AI",
+  title: "SmokIA",
+  description: "Panel de gestión de SmokIA",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

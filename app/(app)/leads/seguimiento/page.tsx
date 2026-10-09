@@ -4,7 +4,7 @@ import { FollowUpMetricsPanel } from "@/components/leads/follow-up-metrics-panel
 import { getFollowUpMetrics } from "@/lib/leads/follow-up-metrics";
 import { listFollowUpQueue } from "@/lib/leads/queries";
 
-export const metadata = { title: "Seguimiento · Awareness AI" };
+export const metadata = { title: "Seguimiento · SmokIA" };
 
 export default async function SeguimientoPage() {
   const [leads, metrics] = await Promise.all([listFollowUpQueue(), getFollowUpMetrics()]);

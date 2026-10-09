@@ -1,15 +1,15 @@
 ---
 name: agregar-prompt-literal
-description: Receta para sumar o modificar un prompt canónico de Awareness AI que se lee del disco en runtime (como Sistema_de_Contenido y Sistema_de_Prospeccion) — el loader, la declaración en outputFileTracingIncludes de next.config.ts y las trampas de producción. Usar al agregar un tercer prompt-archivo o al editar uno de los existentes.
+description: Receta para sumar o modificar un prompt canónico de SmokIA que se lee del disco en runtime (como Sistema_de_Contenido y Sistema_de_Prospeccion) — el loader, la declaración en outputFileTracingIncludes de next.config.ts y las trampas de producción. Usar al agregar un tercer prompt-archivo o al editar uno de los existentes.
 ---
 
 # Receta: prompt literal leído del disco
 
-Contexto en `CLAUDE.md` §6. Hoy hay dos: `Awareness_AI_Sistema_de_Contenido.md` (marca, `lib/brand/ai/content-os.ts`) y `Awareness_AI_Sistema_de_Prospeccion.md` (leads, `lib/leads/ai/sales-os.ts`). En los dos **el archivo es el prompt**: se manda al modelo tal cual, sin transcribirlo a una constante de TypeScript.
+Contexto en `CLAUDE.md` §6. Hoy hay dos: `SmokIA_Sistema_de_Contenido.md` (marca, `lib/brand/ai/content-os.ts`) y `SmokIA_Sistema_de_Prospeccion.md` (leads, `lib/leads/ai/sales-os.ts`). En los dos **el archivo es el prompt**: se manda al modelo tal cual, sin transcribirlo a una constante de TypeScript.
 
 ## Agregar un prompt nuevo
 
-1. **Archivo `.md` en la raíz del repo**, con nombre `Awareness_AI_<Sistema>.md`, junto a los otros dos. Todo lo que contenga se le manda al modelo en cada mensaje: nada de notas para humanos adentro, ni borradores, ni comentarios de autor.
+1. **Archivo `.md` en la raíz del repo**, con nombre `SmokIA_<Sistema>.md`, junto a los otros dos. Todo lo que contenga se le manda al modelo en cada mensaje: nada de notas para humanos adentro, ni borradores, ni comentarios de autor.
 2. **Loader** en `lib/<modulo>/ai/<nombre>.ts`, copiando el patrón de `content-os.ts` / `sales-os.ts`:
    ```ts
    import { readFileSync } from "node:fs";
@@ -19,7 +19,7 @@ Contexto en `CLAUDE.md` §6. Hoy hay dos: `Awareness_AI_Sistema_de_Contenido.md`
 
    export function getXxxOS(): string {
      if (cached === null) {
-       cached = readFileSync(path.join(process.cwd(), "Awareness_AI_Xxx.md"), "utf-8");
+       cached = readFileSync(path.join(process.cwd(), "SmokIA_Xxx.md"), "utf-8");
      }
      return cached;
    }
@@ -38,5 +38,5 @@ Contexto en `CLAUDE.md` §6. Hoy hay dos: `Awareness_AI_Sistema_de_Contenido.md`
 
 - El contenido va al modelo literal en cada mensaje: cada línea agregada se paga en tokens, en cada llamado. Preferir reemplazar o condensar antes que acumular.
 - El loader cachea por proceso: tras editar el `.md`, **reiniciar `next dev`**, o el cambio no se ve y parece que "no hizo nada".
-- No se mezclan criterios entre prompts: el de Contenido es la voz de la marca personal, el de Prospección es el copiloto comercial, y `Awareness_AI_Manual_de_Marca.md` es identidad visual y no se carga como prompt. No sirve para deducir una voz de escritura.
+- No se mezclan criterios entre prompts: el de Contenido es la voz de la marca personal, el de Prospección es el copiloto comercial, y `SmokIA_Manual_de_Marca.md` es identidad visual y no se carga como prompt. No sirve para deducir una voz de escritura.
 - Un cambio de comportamiento del modelo por editar el prompt se prueba en la app (cuesta una llamada a Groq/Gemini); avisar al usuario antes de pedir esa prueba.

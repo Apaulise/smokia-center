@@ -1571,6 +1571,33 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          alias: string | null
+          avatar_url: string | null
+          created_at: string
+          id: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          alias?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          alias?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sales_goals: {
         Row: {
           avg_ticket: number

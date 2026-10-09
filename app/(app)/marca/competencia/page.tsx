@@ -45,7 +45,7 @@ import {
 } from "@/lib/brand/trends/queries";
 import { cn } from "@/lib/utils";
 
-export const metadata = { title: "Competencia · Awareness AI" };
+export const metadata = { title: "Competencia · SmokIA" };
 
 // Reconciliar pagina un dataset entero dentro de una Server Action de esta página.
 export const maxDuration = 60;

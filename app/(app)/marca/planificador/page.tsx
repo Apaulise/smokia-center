@@ -21,7 +21,7 @@ import {
 } from "@/lib/leads/calendar";
 import { createClient, requireUser } from "@/lib/supabase/server";
 
-export const metadata = { title: "Planificador · Awareness AI" };
+export const metadata = { title: "Planificador · SmokIA" };
 
 // Publicar es una Server Action de esta página, y Instagram procesa el video
 // antes de contestar: el maxDuration de la página es el de la publicación.

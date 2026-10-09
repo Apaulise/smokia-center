@@ -6,6 +6,7 @@ import { countKnowledgeNotes } from "@/lib/brand/knowledge/queries";
 import { countOpenContentItems } from "@/lib/brand/planner/queries";
 import { countBrandPosts } from "@/lib/brand/queries";
 import { countLeadLists, countTodayAppointments } from "@/lib/leads/queries";
+import { displayName, getProfile } from "@/lib/profile/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 
 /**
@@ -19,25 +20,33 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   // Embebido como preview en la pantalla global (ver proxy.ts): sólo el contenido.
   if ((await headers()).get("x-preview") === "1") {
-    return <main className="min-w-0">{children}</main>;
+    // El preview se ve a ~30% de tamaño: animaciones y fondo fijo sólo cuestan CPU.
+    return (
+      <>
+        <style>{`body{background:var(--color-lm-bg)!important}*,*::before,*::after{animation:none!important;transition:none!important}`}</style>
+        <main className="min-w-0">{children}</main>
+      </>
+    );
   }
 
   // Badges de conteo del sidebar (Design System, ítems "Listas"/"Agenda" de Leads y
   // "Biblioteca"/"Planificador"/"Base de conocimiento" de Marca) — counts livianos
   // (head: true, sin traer filas), no vale la pena condicionarlos a estar dentro
   // de un módulo: el sidebar es infra compartida y se ve en todas las pantallas.
-  const [listsCount, todayAppointmentsCount, postsCount, openItemsCount, notesCount] = await Promise.all([
+  const [listsCount, todayAppointmentsCount, postsCount, openItemsCount, notesCount, profile] = await Promise.all([
     countLeadLists(),
     countTodayAppointments(),
     countBrandPosts(),
     countOpenContentItems(),
     countKnowledgeNotes(),
+    getProfile(),
   ]);
 
   return (
     <div className="flex min-h-dvh flex-col lg:flex-row">
       <Sidebar
-        email={user.email}
+        name={displayName(profile, user.email)}
+        avatarUrl={profile.avatarUrl}
         badges={{
           "/leads/lista": listsCount,
           "/leads/agenda": todayAppointmentsCount,

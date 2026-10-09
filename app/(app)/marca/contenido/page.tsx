@@ -7,7 +7,7 @@ import { classifyPosts, computeCurrentBaselines } from "@/lib/brand/insights/bas
 import { getBrandContentLibrary, getBrandPostsForAnalysis, type ContentSortField } from "@/lib/brand/queries";
 import type { Database } from "@/lib/supabase/database.types";
 
-export const metadata = { title: "Biblioteca de contenido · Awareness AI" };
+export const metadata = { title: "Biblioteca de contenido · SmokIA" };
 
 const PLATFORM = "INSTAGRAM" as const;
 const SORT_FIELDS: ContentSortField[] = [

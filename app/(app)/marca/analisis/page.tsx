@@ -20,7 +20,7 @@ import {
 } from "@/lib/brand/queries";
 import type { Database } from "@/lib/supabase/database.types";
 
-export const metadata = { title: "Análisis · Awareness AI" };
+export const metadata = { title: "Análisis · SmokIA" };
 // El botón "Generar análisis" corre Claude Opus 5 con effort alto — puede
 // tardar bastante más que un request típico (mismo límite que sync-marca).
 export const maxDuration = 60;

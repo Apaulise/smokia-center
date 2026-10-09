@@ -14,7 +14,7 @@ import { SPREADSHEET_DEFAULTS, type Chain } from "@/lib/leads/execution/chain";
 import { getExecutionSummary } from "@/lib/leads/execution/summary";
 import { cn } from "@/lib/utils";
 
-export const metadata = { title: "Objetivo · Gestor de Leads · Awareness AI" };
+export const metadata = { title: "Objetivo · Gestor de Leads · SmokIA" };
 
 const PERIODS = { "7d": 7, "30d": 30, "90d": 90 } as const;
 type Period = keyof typeof PERIODS;

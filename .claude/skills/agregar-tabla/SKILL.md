@@ -1,6 +1,6 @@
 ---
 name: agregar-tabla
-description: Receta para agregar una tabla a Awareness AI — migración con owner_id, RLS, las cuatro políticas con (select auth.uid()) y WITH CHECK, índices, trigger de updated_at y db:types. Usar al crear cualquier tabla nueva o al exponer una vista/función SQL sobre datos del usuario.
+description: Receta para agregar una tabla a SmokIA — migración con owner_id, RLS, las cuatro políticas con (select auth.uid()) y WITH CHECK, índices, trigger de updated_at y db:types. Usar al crear cualquier tabla nueva o al exponer una vista/función SQL sobre datos del usuario.
 ---
 
 # Receta: agregar una tabla

@@ -1,10 +1,10 @@
-# Awareness AI — Panel de negocio
+# SmokIA — Panel de negocio
 
 ## Context
 
-Hoy el directorio del proyecto sólo contiene `Awareness_AI_Manual_de_Marca.md`. No hay código.
+Hoy el directorio del proyecto sólo contiene `SmokIA_Manual_de_Marca.md`. No hay código.
 
-El objetivo es construir el panel central de Awareness AI con la estructura del diagrama: un **Panel principal** que da acceso a las tres patas del negocio — **Gestor de Leads**, **Gestor de Facturación** y **Gestor de Marca Personal**.
+El objetivo es construir el panel central de SmokIA con la estructura del diagrama: un **Panel principal** que da acceso a las tres patas del negocio — **Gestor de Leads**, **Gestor de Facturación** y **Gestor de Marca Personal**.
 
 La regla de trabajo definida es **un gestor por vez, y cuando uno termina queda usable aunque los demás no existan**. Por eso se construye primero una base compartida mínima (auth, base de datos, sistema de diseño, layout) y encima de ella el **Gestor de Leads** completo y en producción. Facturación, Marca Personal y el Panel principal quedan como fases posteriores, con el shell ya preparado para recibirlos.
 
@@ -46,7 +46,7 @@ Base mínima para que cualquier gestor se monte encima. No es un gestor: es el a
 
 Se escribe en la raíz del workspace **como primera tarea**, para que todo lo que venga después se escriba contra reglas ya fijadas. Secciones:
 
-1. **Qué es Awareness AI** — el negocio y las tres patas del diagrama
+1. **Qué es SmokIA** — el negocio y las tres patas del diagrama
 2. **Regla de fases** — un gestor por vez; no se arranca el siguiente hasta que el anterior esté desplegado y en uso real
 3. **Arquitectura** — mapa de carpetas, qué vive en cada una, y el flujo de una generación de leads de punta a punta
 4. **Reglas de datos (las no negociables):**
@@ -57,7 +57,7 @@ Se escribe en la raíz del workspace **como primera tarea**, para que todo lo qu
    - La **service role key** sólo se usa en el webhook de Apify y en rutas de cron. Nunca en un Server Component, nunca cerca del cliente. Como saltea RLS, esas rutas filtran por `owner_id` explícitamente y eso se revisa a mano
    - En código de servidor se usa `getClaims()`, **nunca `getSession()`** — `getSession()` no garantiza revalidar el token
 5. **Convenciones de código** — snake_case en la base y camelCase en TS; server actions para mutaciones; Zod en el borde; tipos generados, nunca escritos a mano
-6. **Marca** — tabla de tokens, tipografías, y la convención *cyan = acción/resultado, violeta = proceso/innovación*; referencia a `Awareness_AI_Manual_de_Marca.md`
+6. **Marca** — tabla de tokens, tipografías, y la convención *cyan = acción/resultado, violeta = proceso/innovación*; referencia a `SmokIA_Manual_de_Marca.md`
 7. **Idioma** — toda la UI en español, con el vocabulario del negocio (rubro, zona, facturación)
 8. **Comandos** — `dev`, `build`, `db:migrate`, `db:types`, `db:reset`, `supabase start`
 9. **Receta: agregar una fuente de leads nueva** (§1.2), paso a paso
@@ -271,7 +271,7 @@ Es el mismo criterio que `Plans/03 §3.14` ya fijó para la marca: Gemini clasif
 
 > **Estado (2026-09-25): implementado, verificación manual PENDIENTE.** `npm run typecheck` y `npm run lint` limpios (los dos errores de lint que quedan son de `components/shell/sidebar.tsx`, previos a este paso).
 
-`Awareness_AI_Sistema_de_Prospeccion.md`, en la raíz del repo, al lado del manual de marca y del Sistema de Contenido.
+`SmokIA_Sistema_de_Prospeccion.md`, en la raíz del repo, al lado del manual de marca y del Sistema de Contenido.
 
 **El archivo es el prompt, no un documento sobre el prompt.** Todo lo que se escriba ahí se le manda al modelo en cada llamada. Sin notas al margen, sin TODOs, sin comentarios de implementación. El `SPA §28` es su esqueleto, pero se escribe completo: el rol, qué cuenta como dolor real, la separación hecho / inferencia / hipótesis, una pregunta por mensaje (`SPA §14`), cuándo presentarse (`SPA §15`), cuándo pedir la reunión (`SPA §16`), y qué nunca decir.
 
@@ -305,7 +305,7 @@ Entonces: una fila en `settings` (`sales_profile`, **sin cifrar** — no es un s
 3. En el editor de Supabase, tabla `settings`, fila `key = 'sales_profile'`: `value_encrypted` tiene que estar **ilegible**, no el texto que escribiste.
 4. Vaciar el campo y guardar → "Perfil vacío. El copiloto no va a afirmar experiencia.", y la fila desaparece de `settings`.
 5. Pegar más de 4000 caracteres y guardar → error "El perfil no puede pasar de 4000 caracteres.", y no se guarda nada.
-6. Leer `Awareness_AI_Sistema_de_Prospeccion.md` de punta a punta: ninguna sección quedó cortada, y no hay adentro ningún TODO, nota al margen ni comentario de implementación. **El archivo es el prompt**, así que todo lo que esté ahí se le manda al modelo.
+6. Leer `SmokIA_Sistema_de_Prospeccion.md` de punta a punta: ninguna sección quedó cortada, y no hay adentro ningún TODO, nota al margen ni comentario de implementación. **El archivo es el prompt**, así que todo lo que esté ahí se le manda al modelo.
 7. ⚠ **Diferido a §1.11.** Que `getSalesOS()` no tire `ENOENT` en producción sólo se puede comprobar cuando exista una pantalla que lo llame. Hasta entonces `outputFileTracingIncludes` queda declarado pero sin probar, y este ítem se arrastra al checklist de §1.11.
 
 ### 1.8 El pipeline de 17 estados
@@ -678,7 +678,7 @@ lib/providers/{types,registry,google-maps,csv,instagram,linkedin}.ts
 lib/leads/{actions,queries,dedupe,goals}.ts
 components/ui/*
 
-Awareness_AI_Sistema_de_Prospeccion.md   ← el system prompt literal (§1.7)
+SmokIA_Sistema_de_Prospeccion.md   ← el system prompt literal (§1.7)
 next.config.ts                           ← outputFileTracingIncludes (§1.7)
 app/(app)/leads/conocimiento/page.tsx    ← memoria global de ventas (§1.18)
 lib/leads/status.ts                      ← 17 estados + STAGE_GROUP (§1.8)

@@ -31,7 +31,7 @@ import { LEAD_STATUSES } from "@/lib/leads/status";
 export async function generateMetadata({ params }: PageProps<"/leads/[id]">) {
   const { id } = await params;
   const lead = await getLead(id);
-  return { title: lead ? `${lead.name} · Awareness AI` : "Lead · Awareness AI" };
+  return { title: lead ? `${lead.name} · SmokIA` : "Lead · SmokIA" };
 }
 
 /**

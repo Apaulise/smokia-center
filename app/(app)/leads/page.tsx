@@ -28,7 +28,7 @@ import { getStyleStats } from "@/lib/leads/ai/style/queries";
 import { getExecutionSummary } from "@/lib/leads/execution/summary";
 import { buildProspectingStages, totalResponseRate } from "@/lib/leads/prospecting-rates";
 
-export const metadata = { title: "Gestor de Leads · Awareness AI" };
+export const metadata = { title: "Gestor de Leads · SmokIA" };
 
 const STALE_DAYS = 7;
 const PERIODS = { "7d": 7, "30d": 30, "90d": 90 } as const;

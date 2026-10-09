@@ -25,7 +25,7 @@ import {
   listUpcomingAppointmentsList,
 } from "@/lib/leads/queries";
 
-export const metadata = { title: "Agenda · Awareness AI" };
+export const metadata = { title: "Agenda · SmokIA" };
 
 type View = CalendarView;
 
