@@ -25,14 +25,31 @@ export async function listStyleExamples(params: { leadId: string; kind: string }
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("lead_messages")
-    .select("lead_id, kind, content, generated_content, edit_distance, occurred_at")
+    .select(STYLE_EXAMPLE_COLUMNS)
     .eq("sender", "VENDEDOR")
     .not("generated_content", "is", null)
     .order("occurred_at", { ascending: false })
     .limit(CANDIDATE_WINDOW);
   if (error) throw error;
+  return selectStyleExamples(data ?? [], params);
+}
 
-  const edits = (data ?? [])
+/** Columnas de `lead_messages` que necesita `selectStyleExamples`. */
+export const STYLE_EXAMPLE_COLUMNS = "lead_id, kind, content, generated_content, edit_distance, occurred_at";
+
+/** Tope de candidatos que se leen de la base antes de filtrar (lo usa también la API de automatización). */
+export const STYLE_CANDIDATE_WINDOW = CANDIDATE_WINDOW;
+
+/**
+ * La selección en sí, sin tocar la base: la comparten `listStyleExamples`
+ * (cliente con RLS) y la API de automatización (service role, ya filtrada por
+ * owner_id), para que las dos elijan exactamente los mismos ejemplos.
+ */
+export function selectStyleExamples(
+  rows: { lead_id: string; kind: string | null; content: string; generated_content: string | null; edit_distance: number | null }[],
+  params: { leadId: string; kind: string },
+): StyleExample[] {
+  const edits = rows
     .filter((row) => row.generated_content && isRealEdit(row.edit_distance ?? 0, row.content.length))
     .map((row) => ({ proposed: row.generated_content as string, sent: row.content, leadId: row.lead_id, kind: row.kind }));
 

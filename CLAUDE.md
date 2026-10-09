@@ -59,13 +59,15 @@ Estas reglas son lo que hace que sumar una segunda persona al sistema no requier
 - **Índice sobre toda columna que aparezca en una política.** Sin él, cada consulta hace scan secuencial de la tabla entera
 - **Todo `INSERT`/`UPDATE` lleva `WITH CHECK`**, para que nadie pueda reasignar `owner_id` a otro usuario
 - **`getClaims()` en código de servidor, nunca `getSession()`.** `getSession()` no garantiza revalidar el token y no sirve para autorizar
-- **La service role key sólo se usa en `app/api/apify/webhook` y en rutas de cron.** Nunca en un Server Component, nunca cerca del cliente
+- **La service role key sólo se usa en `app/api/apify/webhook`, en rutas de cron y en la API de automatización (`app/api/automation/*`, con `lib/automation/*`).** Nunca en un Server Component, nunca cerca del cliente
 
 ### La única excepción, y por qué
 
 Un webhook no tiene sesión de usuario, así que esa ruta usa la service role key y **saltea RLS**. Por eso resuelve el `owner_id` desde la fila de `scrape_jobs` y lo escribe explícitamente en cada lead que inserta.
 
 Es el único lugar del código donde el aislamiento depende del código y no de la base. Está aislado en un solo archivo a propósito. **Cualquier cambio ahí se revisa a mano.**
+
+La API de automatización (`app/api/automation/*`) es el mismo caso: la llama un tercero sin sesión, autenticado con `Authorization: Bearer $AUTOMATION_API_SECRET` (`lib/automation/auth.ts`, comparación de tiempo constante, falla cerrado). Queda atada a un solo owner (`AUTOMATION_OWNER_ID`) y **cada query de `lib/automation/*` filtra por ese `owner_id` explícitamente**. Lo que también hace la UI (registrar contacto, cambiar estado) vive en `lib/leads/contact.ts`, que recibe el cliente y el `ownerId` y lo comparten las Server Actions y la API.
 
 ---
 

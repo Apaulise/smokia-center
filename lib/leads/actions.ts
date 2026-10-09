@@ -9,6 +9,13 @@ import { reconcileScrapeJob } from "@/lib/apify/reconcile";
 import { startApifyRun } from "@/lib/apify/client";
 import { decrypt } from "@/lib/crypto";
 import type { AppointmentStatus } from "@/lib/leads/appointments";
+import {
+  applyLeadStatusChange,
+  leadIdsWithAppointment,
+  MEETING_STATUS_GATE,
+  meetingGateMessage,
+  recordLeadContact,
+} from "@/lib/leads/contact";
 import { computeDedupeKey } from "@/lib/leads/dedupe";
 import { buildIcsCalendar } from "@/lib/leads/ics";
 import { type CommandPaletteResults, listAppointmentsForIcs, searchCommandPalette } from "@/lib/leads/queries";
@@ -561,34 +568,6 @@ export async function deleteLeadList(_prevState: ActionState, formData: FormData
 // ── Lista de leads y seguimiento (Plan §1.3) ────────────────────────────────
 
 /**
- * REUNION_AGENDADA y REUNION_REALIZADA sólo los pone la agenda
- * (stage-engine.ts, Plan §1.5): un cambio manual a uno de estos dos sin un
- * turno real cargado en `appointments` dejaría el pipeline (y el dashboard)
- * contando reuniones que no existen.
- */
-const MEETING_STATUS_GATE: Partial<Record<LeadStatus, AppointmentStatus[]>> = {
-  REUNION_AGENDADA: ["AGENDADA", "CONFIRMADA", "REALIZADA"],
-  REUNION_REALIZADA: ["REALIZADA"],
-};
-
-function meetingGateMessage(status: LeadStatus): string {
-  return status === "REUNION_REALIZADA"
-    ? "No se puede marcar como reunión realizada: este lead no tiene ningún turno marcado como Realizada en la agenda. Andá a Agenda → Lista, marcá el turno como Realizada y el lead avanza solo."
-    : "No se puede pasar a reunión agendada: este lead no tiene ningún turno cargado en la agenda. Agendalo primero desde la ficha del lead.";
-}
-
-/** IDs de `leadIds` con al menos un turno en `appointments` cuyo estado está en `statuses`. */
-async function leadIdsWithAppointment(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  leadIds: string[],
-  statuses: AppointmentStatus[],
-): Promise<Set<string>> {
-  if (leadIds.length === 0) return new Set();
-  const { data } = await supabase.from("appointments").select("lead_id").in("lead_id", leadIds).in("status", statuses);
-  return new Set((data ?? []).map((row) => row.lead_id).filter((id): id is string => id !== null));
-}
-
-/**
  * Cambio de estado inline (tabla y kanban). Cada cambio queda registrado en
  * `lead_activities` solo, sin que quien lo hace se acuerde de anotarlo
  * (CLAUDE.md §1.3 / Plan §1.1). Bloquea el paso a reunión agendada/realizada
@@ -598,28 +577,9 @@ export async function updateLeadStatus(leadId: string, status: LeadStatus): Prom
   const user = await requireUser();
   const supabase = await createClient();
 
-  const { data: current } = await supabase.from("leads").select("status").eq("id", leadId).maybeSingle();
-  if (!current) return { ok: false, message: "No se encontró el lead." };
-  if (current.status === status) return { ok: true, message: "" };
-
-  const requiredStatuses = MEETING_STATUS_GATE[status];
-  if (requiredStatuses) {
-    const withAppointment = await leadIdsWithAppointment(supabase, [leadId], requiredStatuses);
-    if (!withAppointment.has(leadId)) {
-      return { ok: false, message: meetingGateMessage(status) };
-    }
-  }
-
-  const { error } = await supabase.from("leads").update({ status }).eq("id", leadId);
-  if (error) return { ok: false, message: "No se pudo cambiar el estado." };
-
-  await supabase.from("lead_activities").insert({
-    owner_id: user.id,
-    lead_id: leadId,
-    type: "CAMBIO_ESTADO",
-    from_status: current.status,
-    to_status: status,
-  });
+  const result = await applyLeadStatusChange(supabase, user.id, leadId, status);
+  if (!result.ok) return { ok: false, message: result.message };
+  if (!result.changed) return { ok: true, message: "" };
 
   revalidatePath("/leads/lista");
   revalidatePath(`/leads/${leadId}`);
@@ -789,28 +749,15 @@ export async function logContactActivity(
     .maybeSingle();
   if (!lead) return { ok: false, message: "Lead no encontrado." };
 
-  const newStatus =
-    parsed.data.newStatus && parsed.data.newStatus !== lead.status
-      ? (parsed.data.newStatus as LeadStatus)
-      : null;
-
-  const { error: activityError } = await supabase.from("lead_activities").insert({
-    owner_id: user.id,
-    lead_id: parsed.data.leadId,
+  const result = await recordLeadContact(supabase, user.id, {
+    leadId: parsed.data.leadId,
+    currentStatus: lead.status,
     type: parsed.data.type,
-    content: parsed.data.content || null,
-    from_status: newStatus ? lead.status : null,
-    to_status: newStatus,
+    content: parsed.data.content,
+    newStatus: (parsed.data.newStatus as LeadStatus | undefined) ?? null,
+    nextActionAt: parsed.data.nextActionAt,
   });
-  if (activityError) return { ok: false, message: "No se pudo registrar la actividad." };
-
-  const update: Database["public"]["Tables"]["leads"]["Update"] = {
-    last_contacted_at: new Date().toISOString(),
-  };
-  if (newStatus) update.status = newStatus;
-  if (parsed.data.nextActionAt) update.next_action_at = new Date(parsed.data.nextActionAt).toISOString();
-
-  await supabase.from("leads").update(update).eq("id", parsed.data.leadId);
+  if (!result.ok) return { ok: false, message: result.message };
 
   revalidatePath(`/leads/${parsed.data.leadId}`);
   revalidatePath("/leads/lista");

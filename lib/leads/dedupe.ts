@@ -22,7 +22,7 @@ export function computeDedupeKey(lead: NormalizedLead): string {
  * Heurística, no libphonenumber: alcanza con ser consistente para deduplicar,
  * no con ser E.164 estricto. Asume Argentina si no viene código de país.
  */
-function normalizePhone(raw: string | null | undefined): string | null {
+export function normalizePhone(raw: string | null | undefined): string | null {
   if (!raw?.trim()) return null;
 
   const hasPlus = raw.trim().startsWith("+");
