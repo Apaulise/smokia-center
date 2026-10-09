@@ -3,7 +3,7 @@
 import { CheckCircle2, Loader2, RefreshCw, XCircle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 
-import { Button } from "@/components/leads/ui/button";
+import { Button, ButtonLink } from "@/components/leads/ui/button";
 import { Panel } from "@/components/leads/ui/section";
 import { StatusBadge } from "@/components/leads/ui/status-badge";
 import type { StatusTemperatureGroup } from "@/lib/leads/status";
@@ -79,6 +79,17 @@ export function JobStatusPanel({ jobId }: { jobId: string }) {
     };
   }, [jobId, refetch]);
 
+  // Red de seguridad: si el webhook o el evento de Realtime no llegan, mientras la
+  // corrida no termine se reconcilia sola cada pocos segundos (idempotente).
+  const terminal = job?.status === "COMPLETADO" || job?.status === "FALLIDO";
+  useEffect(() => {
+    if (!job || terminal) return;
+    const timer = setInterval(() => {
+      void reconcileJob(jobId).then(() => refetch());
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [job, terminal, jobId, refetch]);
+
   if (!job) return null;
 
   const isTerminal = job.status === "COMPLETADO" || job.status === "FALLIDO";
@@ -130,6 +141,11 @@ export function JobStatusPanel({ jobId }: { jobId: string }) {
             {refreshPending ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" strokeWidth={1.5} />}
             Actualizar ahora
           </Button>
+        ) : null}
+        {job.status === "COMPLETADO" ? (
+          <ButtonLink href={`/leads/lista/${job.lead_list_id}`} size="sm">
+            Ir a la lista
+          </ButtonLink>
         ) : null}
       </div>
     </Panel>
