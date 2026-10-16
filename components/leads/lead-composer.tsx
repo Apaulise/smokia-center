@@ -2,7 +2,7 @@
 
 import { Check, Copy, Loader2, MessageCircle, MessageSquareText, RefreshCw, Send, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 import { RewriteButtons } from "@/components/leads/rewrite-buttons";
 import { SuggestedReplyConfirm } from "@/components/leads/suggested-reply-confirm";
@@ -49,6 +49,14 @@ function useAiDraft(initial = "") {
 
   return {
     text,
+    baseline,
+    editedByHuman,
+    /** Recupera un borrador guardado tal cual estaba, sin perder qué parte escribió la persona. */
+    restore(saved: { text: string; baseline: string; editedByHuman: boolean }) {
+      setText(saved.text);
+      setBaseline(saved.baseline);
+      setEditedByHuman(saved.editedByHuman);
+    },
     /** Generar, regenerar o reescribir por tono: sigue siendo texto de la IA. */
     fromAi(next: string) {
       setText(next);
@@ -150,6 +158,35 @@ function findPendingReply(messages: LeadMessageRow[], nextActionReason: string |
   return { ok: true, analysis, nextActionReason: nextActionReason ?? "" };
 }
 
+/**
+ * Un borrador de apertura sin confirmar sobrevive a salir de la ficha. Vive en
+ * el navegador (no en la base): no es un dato del negocio hasta que se confirma
+ * el envío, y así no hace falta migración.
+ */
+type SavedOpening = { draft: Draft; text: string; baseline: string; editedByHuman: boolean; channel: Channel };
+
+const openingDraftKey = (leadId: string) => `lead-opening-draft:${leadId}`;
+
+function readSavedOpening(leadId: string): SavedOpening | null {
+  try {
+    const raw = localStorage.getItem(openingDraftKey(leadId));
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as SavedOpening;
+    return saved?.draft && typeof saved.text === "string" ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeSavedOpening(leadId: string, saved: SavedOpening | null) {
+  try {
+    if (saved) localStorage.setItem(openingDraftKey(leadId), JSON.stringify(saved));
+    else localStorage.removeItem(openingDraftKey(leadId));
+  } catch {
+    // Sin almacenamiento (ventana privada, cuota): el borrador simplemente no persiste.
+  }
+}
+
 function AperturaComposer({ leadId, phone, hasInstagram }: { leadId: string; phone: string | null; hasInstagram: boolean }) {
   const hasPhone = Boolean(phone);
   const router = useRouter();
@@ -161,6 +198,22 @@ function AperturaComposer({ leadId, phone, hasInstagram }: { leadId: string; pho
   const [copied, setCopied] = useState(false);
   const [savedAsExample, setSavedAsExample] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Se lee después de montar (no en el estado inicial) para no desfasar la hidratación.
+  useEffect(() => {
+    const saved = readSavedOpening(leadId);
+    if (!saved) return;
+    setDraft(saved.draft);
+    body.restore(saved);
+    setChannel(saved.channel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sólo al entrar a la ficha
+  }, [leadId]);
+
+  const { text: bodyText, baseline: bodyBaseline, editedByHuman: bodyEdited } = body;
+  useEffect(() => {
+    if (!draft) return;
+    writeSavedOpening(leadId, { draft, text: bodyText, baseline: bodyBaseline, editedByHuman: bodyEdited, channel });
+  }, [leadId, draft, bodyText, bodyBaseline, bodyEdited, channel]);
 
   function handleGenerate() {
     setError(null);
@@ -200,6 +253,7 @@ function AperturaComposer({ leadId, phone, hasInstagram }: { leadId: string; pho
         setError(result?.message ?? "No se pudo confirmar el envío.");
         return;
       }
+      writeSavedOpening(leadId, null);
       setDraft(null);
       setConfirming(false);
       setSavedAsExample(edited);

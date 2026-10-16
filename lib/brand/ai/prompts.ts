@@ -377,13 +377,15 @@ ${goalBlock}${hypothesesBlock}`;
  * cometer.
  */
 export function buildOutlierIdeaPrompt(params: {
-  username: string;
+  username: string | null;
   displayName: string | null;
   kind: string;
   multiple: number;
   value: number;
   median: number;
   signalLabel: string;
+  /** Contra qué se mide el múltiplo. Por defecto, la mediana de su propia cuenta (cuentas seguidas). */
+  medianLabel?: string;
   publishedAt: string | null;
   caption: string | null;
   permalink: string | null;
@@ -393,9 +395,9 @@ export function buildOutlierIdeaPrompt(params: {
   return `Una cuenta que seguimos publicó algo que rindió muy por encima de lo normal de su propia cuenta. Quiero convertirlo en una pieza nuestra.
 
 ## La publicación ajena
-- Cuenta: @${params.username}${params.displayName ? ` (${params.displayName})` : ""}
+- Cuenta: ${params.username ? `@${params.username}${params.displayName ? ` (${params.displayName})` : ""}` : "(no disponible)"}
 - Formato: ${params.kind}
-- Rendimiento: ${formatCount(params.value)} ${params.signalLabel}, ${formatMultiple(params.multiple)} la mediana de su propia cuenta (${formatCount(params.median)})
+- Rendimiento: ${formatCount(params.value)} ${params.signalLabel}, ${formatMultiple(params.multiple)} ${params.medianLabel ?? "la mediana de su propia cuenta"} (${formatCount(params.median)})
 - Fecha: ${params.publishedAt ? params.publishedAt.slice(0, 10) : "sin fecha"}
 - Link: ${params.permalink ?? "(sin link)"}
 - Texto de la publicación:

@@ -132,6 +132,24 @@ npm run dev
 | POST | `/api/automation/leads/:id/contact` | Registra el mensaje enviado (`lead_messages`) + el contacto (timeline, `last_contacted_at`, estado, próxima acción) |
 | POST | `/api/automation/leads/:id/status` | Cambio de estado, con el mismo gate de reuniones que la UI |
 
+## Equipo (objetivo y dashboard compartidos, Plan §1.23)
+
+La migración `20261014120000_leads_team.sql` crea las tablas, pero **la membresía se siembra a mano, una sola vez**: la app no puede escribir en `teams` ni en `team_members` (no tienen políticas de escritura) y los mails no se versionan en una migración. En el **SQL Editor** de Supabase, con los dos mails reales:
+
+```sql
+with t as (
+  insert into public.teams (owner_id, name)
+  select id, 'SmokIA' from auth.users where email = 'paggustintomas@gmail.com'
+  returning id
+)
+insert into public.team_members (owner_id, team_id)
+select u.id, t.id
+from auth.users u, t
+where u.email in ('paggustintomas@gmail.com', 'matiassanblas@gmail.com');
+```
+
+Verificar con `select * from public.team_members;` (dos filas, el mismo `team_id`). Para sacar a alguien del equipo basta borrar su fila de `team_members`: sus datos no se pierden, sólo dejan de contar en el global. Sin esta siembra la app sigue funcionando como antes (cada uno con su meta y su dashboard).
+
 ---
 
 ## Notas

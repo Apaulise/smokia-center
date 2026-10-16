@@ -118,6 +118,7 @@ export async function graphGet(
   credentials: MetaCredentials,
   path: string,
   params: Record<string, string | number | undefined> = {},
+  timeoutMs = REQUEST_TIMEOUT_MS,
 ): Promise<unknown> {
   const query = new URLSearchParams({ access_token: credentials.accessToken });
   for (const [key, value] of Object.entries(params)) {
@@ -127,10 +128,17 @@ export async function graphGet(
   let response: Response;
   try {
     response = await fetch(`${graphBase(credentials.accessToken)}/${GRAPH_VERSION}/${path}?${query}`, {
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
-  } catch {
-    throw new MetaApiError(`No se pudo contactar a Instagram (${path.split("/").pop()}).`, false);
+  } catch (error) {
+    // Un timeout y un corte de red no se arreglan igual: se dice cuál fue.
+    const timedOut = error instanceof Error && error.name === "TimeoutError";
+    throw new MetaApiError(
+      timedOut
+        ? `Instagram tardó más de ${Math.round(timeoutMs / 1000)} s en responder (${path.split("/").pop()}).`
+        : `No se pudo contactar a Instagram (${path.split("/").pop()}).`,
+      false,
+    );
   }
 
   const body = await parseJson(response);

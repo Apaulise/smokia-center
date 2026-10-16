@@ -36,6 +36,21 @@ export function buildProspectingStages(funnel: ProspectingFunnel): ProspectingSt
   ];
 }
 
+/**
+ * Los escalones como los dibuja `<Pipeline>`: etiquetas cortas y, desde las
+ * respuestas humanas en adelante (README "Estados del pipeline"), en caliente.
+ * Lo usan el dashboard personal y el de equipo (Plan §1.23).
+ */
+export function toPipelineStages(stages: ProspectingStage[]) {
+  const hotFrom = 2;
+  return stages.map((stage, index) => ({
+    label: stage.label.replace(" (humano)", "").replace("Leads totales", "Leads").replace("Cerrados ganados", "Ganados"),
+    value: stage.count,
+    conversion: stage.rateFromPrevious === null ? null : Math.round(stage.rateFromPrevious * 100),
+    hot: index >= hotFrom,
+  }));
+}
+
 /** Tasa de respuesta total (SPA §20): mezcla autorespuestas, se muestra aparte y marcada como no evaluativa. */
 export function totalResponseRate(funnel: ProspectingFunnel): number | null {
   return rate(funnel.total_responses, funnel.contacts_sent);

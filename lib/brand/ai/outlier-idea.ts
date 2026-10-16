@@ -49,13 +49,16 @@ export type GeneratedOutlierIdea = z.infer<typeof OutlierIdeaSchema>;
 
 export interface OutlierIdeaInput {
   apiKey: string;
-  username: string;
+  /** null en lo descubierto por la API de Meta, que no devuelve el autor. */
+  username: string | null;
   displayName: string | null;
   kind: string;
   multiple: number;
   value: number;
   median: number;
   signalLabel: string;
+  /** Contra qué se mide el múltiplo. Por defecto, la mediana de su propia cuenta (cuentas seguidas). */
+  medianLabel?: string;
   publishedAt: string | null;
   caption: string | null;
   permalink: string | null;

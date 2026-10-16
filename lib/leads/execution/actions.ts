@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { getMyTeamId } from "@/lib/leads/team/queries";
 import { createClient, requireUser } from "@/lib/supabase/server";
 
 export type ActionState = { ok: boolean; message: string } | null;
@@ -25,10 +26,14 @@ const goalSchema = z.object({
 });
 
 /**
- * Define (o redefine) el objetivo de la cadena de ejecución (Plan §1.22).
- * `sales_define_goal` archiva el activo e inserta el nuevo en una sola
- * transacción: con dos llamadas separadas, un fallo entre ellas dejaría al
- * usuario sin objetivo.
+ * Define (o redefine) el objetivo de la cadena de ejecución (Plan §1.22, §1.23).
+ *
+ * Si el usuario pertenece a un equipo, la meta es la del EQUIPO
+ * (`team_define_goal`: la puede cambiar cualquiera de los dos y la anterior
+ * queda archivada); si no, la personal de siempre (`sales_define_goal`). En los
+ * dos casos la RPC archiva la activa e inserta la nueva en una sola
+ * transacción: con dos llamadas separadas, un fallo entre ellas dejaría sin
+ * objetivo.
  */
 export async function defineSalesGoal(_prevState: ActionState, formData: FormData): Promise<ActionState> {
   await requireUser();
@@ -37,8 +42,7 @@ export async function defineSalesGoal(_prevState: ActionState, formData: FormDat
     return { ok: false, message: parsed.error.issues[0]?.message ?? "Datos inválidos." };
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("sales_define_goal", {
+  const params = {
     p_revenue: parsed.data.monthlyRevenueTarget,
     p_ticket: parsed.data.avgTicket,
     p_booking_rate: parsed.data.bookingRate,
@@ -46,10 +50,17 @@ export async function defineSalesGoal(_prevState: ActionState, formData: FormDat
     p_close_rate: parsed.data.closeRate,
     p_days_per_month: parsed.data.workingDaysPerMonth,
     p_days_per_week: parsed.data.workingDaysPerWeek,
-  });
+  };
+
+  const supabase = await createClient();
+  const teamId = await getMyTeamId();
+  const { error } = teamId
+    ? await supabase.rpc("team_define_goal", params)
+    : await supabase.rpc("sales_define_goal", params);
   if (error) return { ok: false, message: "No se pudo guardar el objetivo." };
 
   revalidatePath("/leads/objetivo");
+  revalidatePath("/leads/equipo");
   revalidatePath("/leads");
   return { ok: true, message: "Objetivo guardado." };
 }

@@ -28,7 +28,10 @@ export interface OutlierCardData {
   postId: string;
   /** De una cuenta seguida (§3.8) o descubierto por hashtag, sin haberla seguido (§3.15). */
   source: "competitor" | "trend";
-  username: string;
+  /** De dónde salió un descubierto (§3.17): Meta no da el autor; Apify, sí. null en cuentas seguidas. */
+  trendSource: "APIFY" | "META" | null;
+  /** null en lo descubierto por la API de Meta. */
+  username: string | null;
   kind: ContentKind;
   caption: string | null;
   thumbnailUrl: string | null;
@@ -65,64 +68,68 @@ function OutlierCard({
   return (
     <article
       className={cn(
-        "flex flex-col rounded-lm-lg border border-lm-line bg-lm-surface/50",
+        "flex flex-col overflow-hidden rounded-lm-lg border border-lm-line bg-lm-surface/50",
         outlier.dismissed && "opacity-50",
       )}
     >
-      <div className="flex flex-1 gap-3.5 p-3.5">
-        <PostThumb url={outlier.thumbnailUrl} className="aspect-auto h-[164px] w-[92px] rounded-lm-md" />
-        <div className="flex min-w-0 flex-1 flex-col gap-[7px]">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {/* El múltiplo va en texto: el color nunca es la única codificación. */}
-            <span className="font-mono text-[15px] font-medium tracking-[-0.01em] tabular-nums">{formatMultiple(outlier.multiple)}</span>
-            <span className="text-[11.5px] text-lm-ink-3">su mediana</span>
-            <span className="flex-1" />
-            {outlier.permalink ? (
-              <a
-                href={outlier.permalink}
-                target="_blank"
-                rel="noreferrer noopener"
-                aria-label="Abrir en Instagram (otra pestaña)"
-                title="Abrir en Instagram"
-                className="grid size-6 place-items-center rounded-lm-sm text-lm-ink-3 transition-colors hover:bg-lm-ink/5 hover:text-lm-ink"
-              >
-                <ExternalLink className="size-[13px]" />
-              </a>
-            ) : null}
-            <button
-              type="button"
-              onClick={outlier.dismissed ? onRestore : onDismiss}
-              disabled={busy}
-              aria-label={outlier.dismissed ? "Volver a mostrar esta publicación" : "Descartar esta publicación"}
-              title={outlier.dismissed ? "Volver a mostrarla" : "Descartarla"}
-              className="grid size-6 cursor-pointer place-items-center rounded-lm-sm text-lm-ink-3 transition-colors hover:bg-lm-ink/5 hover:text-lm-ink focus-visible:lm-focus disabled:opacity-45"
+      <div className="relative">
+        <PostThumb url={outlier.thumbnailUrl} bare className="aspect-4/5 w-full rounded-t-lm-lg" />
+        <span className="absolute top-2 left-2 rounded-lm-sm bg-lm-bg/70 px-1.5 py-0.5 text-[10.5px] text-lm-smoke-5">
+          {KIND_LABEL[outlier.kind]}
+        </span>
+        {outlier.publishedAt ? (
+          <span className="absolute top-2 right-2 rounded-lm-sm bg-lm-bg/70 px-1.5 py-0.5 font-mono text-[10.5px] text-lm-ink-2">
+            {dateFormat.format(new Date(outlier.publishedAt))}
+          </span>
+        ) : null}
+      </div>
+      <div className="flex flex-1 flex-col gap-[7px] p-3.5">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {/* El múltiplo va en texto: el color nunca es la única codificación. */}
+          <span className="font-mono text-[15px] font-medium tracking-[-0.01em] tabular-nums">{formatMultiple(outlier.multiple)}</span>
+          <span className="text-[11.5px] text-lm-ink-3">su mediana</span>
+          <span className="flex-1" />
+          {outlier.permalink ? (
+            <a
+              href={outlier.permalink}
+              target="_blank"
+              rel="noreferrer noopener"
+              aria-label="Abrir en Instagram (otra pestaña)"
+              title="Abrir en Instagram"
+              className="grid size-6 place-items-center rounded-lm-sm text-lm-ink-3 transition-colors hover:bg-lm-ink/5 hover:text-lm-ink"
             >
-              {outlier.dismissed ? <Undo2 className="size-[13px]" /> : <X className="size-[13px]" />}
-            </button>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
-            {outlier.relevanceScore !== null ? (
-              <Tag>
-                Relevancia <span className="ml-1 font-mono">{outlier.relevanceScore}</span>
-              </Tag>
-            ) : null}
-            {outlier.source === "trend" ? <Tag tone="solid">Descubierto</Tag> : null}
-            <span className="text-xs text-lm-ink-2">@{outlier.username}</span>
-          </div>
-
-          <span className="font-mono text-xs text-lm-ink tabular-nums">
-            {formatCount(outlier.value)} {outlier.signalLabel} <span className="text-lm-ink-3">· lo habitual {formatCount(outlier.median)}</span>
-          </span>
-          {outlier.caption ? <span className="line-clamp-2 text-[12.5px] leading-[1.45] text-lm-smoke-5">{outlier.caption}</span> : null}
-          <span className="text-[11.5px] text-lm-ink-3">
-            {KIND_LABEL[outlier.kind]}
-            {outlier.publishedAt ? ` · ${dateFormat.format(new Date(outlier.publishedAt))}` : ""}
-          </span>
-          {outlier.relevanceReason ? (
-            <span className="border-l border-lm-line-strong pl-2.5 text-[12.5px] leading-normal text-lm-ink">{outlier.relevanceReason}</span>
+              <ExternalLink className="size-[13px]" />
+            </a>
           ) : null}
+          <button
+            type="button"
+            onClick={outlier.dismissed ? onRestore : onDismiss}
+            disabled={busy}
+            aria-label={outlier.dismissed ? "Volver a mostrar esta publicación" : "Descartar esta publicación"}
+            title={outlier.dismissed ? "Volver a mostrarla" : "Descartarla"}
+            className="grid size-6 cursor-pointer place-items-center rounded-lm-sm text-lm-ink-3 transition-colors hover:bg-lm-ink/5 hover:text-lm-ink focus-visible:lm-focus disabled:opacity-45"
+          >
+            {outlier.dismissed ? <Undo2 className="size-[13px]" /> : <X className="size-[13px]" />}
+          </button>
         </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          {outlier.relevanceScore !== null ? (
+            <Tag>
+              Relevancia <span className="ml-1 font-mono">{outlier.relevanceScore}</span>
+            </Tag>
+          ) : null}
+          {outlier.source === "trend" ? <Tag tone="solid">{outlier.trendSource === "META" ? "Descubierto · Meta" : "Descubierto"}</Tag> : null}
+          {outlier.username ? <span className="text-xs text-lm-ink-2">@{outlier.username}</span> : null}
+        </div>
+
+        <span className="font-mono text-xs text-lm-ink tabular-nums">
+          {formatCount(outlier.value)} {outlier.signalLabel} <span className="text-lm-ink-3">· lo habitual {formatCount(outlier.median)}</span>
+        </span>
+        {outlier.caption ? <span className="line-clamp-2 text-[12.5px] leading-[1.45] text-lm-smoke-5">{outlier.caption}</span> : null}
+        {outlier.relevanceReason ? (
+          <span className="border-l border-lm-line-strong pl-2.5 text-[12.5px] leading-normal text-lm-ink">{outlier.relevanceReason}</span>
+        ) : null}
       </div>
 
       {outlier.ideaId ? (
@@ -273,7 +280,7 @@ export function OutlierBoard({
             : `No hay ninguna publicación marcada en los últimos ${OUTLIER_MAX_AGE_DAYS} días. Puede ser que nada se haya separado de lo habitual, o que lo que explotó sea más viejo: probá con “incluir anteriores”.`}
         </p>
       ) : (
-        <div className="grid gap-3.5 md:grid-cols-2 2xl:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-3 2xl:grid-cols-4">
           {visible.slice(0, shown).map((outlier) => (
             <OutlierCard
               key={outlier.postId}

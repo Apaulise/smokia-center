@@ -83,6 +83,7 @@ Es el mismo bloque que usan `20260911120000_init_leads.sql` y `20260930120000_sa
 
 - **Vistas**: `with (security_invoker = true)`, si no, saltean el RLS de las tablas de abajo. Después `grant select ... to authenticated`.
 - **Funciones SQL** sobre datos del usuario: `set search_path = ''`, nombres calificados (`public.x`), `SECURITY INVOKER` (default) para que RLS filtre igual. Si escriben, usar `(select auth.uid())` para el owner, y `revoke all ... from public, anon` + `grant execute ... to authenticated`.
+- **Datos compartidos entre los dos socios** (Plan §1.23, `CLAUDE.md` §4): no se afloja la política de una tabla de usuario para que el otro la lea. Lo compartido va en una tabla con RLS por equipo (`team_goals`) o en una función `SECURITY DEFINER` que devuelva sólo agregados y empiece con `team_can_see(p_owner)`. Es una excepción documentada: no sumar otra sin discutirlo.
 - **Enums**: `create type public.<nombre> as enum (...)`. Agregar un valor a uno existente va en su propia migración.
 - **Unicidad por usuario**: índice único que incluya `owner_id` (`unique (owner_id, slug)`), nunca global. Para "una sola activa por usuario", índice único parcial `(owner_id) where status = 'ACTIVA'`.
 - **Realtime** (solo si la UI se suscribe): agregar la tabla a la publicación `supabase_realtime` con el bloque idempotente de `20260912100000_realtime_scrape_jobs.sql`. Sin eso `postgres_changes` no emite aunque RLS lo permita.

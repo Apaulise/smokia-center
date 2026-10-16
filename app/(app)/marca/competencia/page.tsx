@@ -26,6 +26,8 @@ import {
   OUTLIER_THRESHOLD,
   MIN_BASELINE_SAMPLE,
   RELEVANCE_MIN,
+  TREND_META_MAX_AGE_DAYS,
+  TREND_MIN_LIKES,
   TREND_MIN_VIEWS,
 } from "@/lib/brand/competitors/insights";
 import {
@@ -40,6 +42,7 @@ import { getBrandPostsForAnalysis } from "@/lib/brand/queries";
 import {
   getIdeasFromTrendPosts,
   getLastTrendSearch,
+  getMetaDiscoveryStatus,
   getPendingTrendSearchIds,
   getTrendPostsWithInsights,
 } from "@/lib/brand/trends/queries";
@@ -53,6 +56,7 @@ export const maxDuration = 60;
 const PLATFORM = "INSTAGRAM" as const;
 const OUTLIERS_SHOWN = 12;
 
+const numberFormat = new Intl.NumberFormat("es-AR");
 const usd = new Intl.NumberFormat("es-AR", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 3 });
 const dateFormat = new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
 const shortDate = new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit" });
@@ -83,7 +87,7 @@ function StatusCell({ competitor }: { competitor: CompetitorWithInsights["compet
 
 /** /marca/competencia (Plans/03 §3.8, ampliado en §3.15): cuentas ajenas, siempre contra su propio rendimiento habitual, más lo que se descubre por hashtag sin haber seguido a nadie. */
 export default async function CompetenciaPage() {
-  const [competitors, apifyKey, geminiKey, ideas, ownPosts, trend, trendIdeas, lastTrendSearch, pendingTrendSearchIds] = await Promise.all([
+  const [competitors, apifyKey, geminiKey, ideas, ownPosts, trend, trendIdeas, lastTrendSearch, pendingTrendSearchIds, metaStatus] = await Promise.all([
     getCompetitorsWithInsights(PLATFORM),
     hasApifyKey(),
     hasGeminiKey(),
@@ -93,6 +97,7 @@ export default async function CompetenciaPage() {
     getIdeasFromTrendPosts(),
     getLastTrendSearch(),
     getPendingTrendSearchIds(),
+    getMetaDiscoveryStatus(),
   ]);
 
   const usernameById = new Map(competitors.map(({ competitor }) => [competitor.id, competitor.username]));
@@ -118,6 +123,7 @@ export default async function CompetenciaPage() {
     return {
       postId: outlier.post.id,
       source: "competitor" as const,
+      trendSource: null,
       username: usernameById.get(outlier.post.competitorId) ?? "cuenta",
       kind: outlier.post.kind,
       caption: outlier.post.caption,
@@ -142,6 +148,7 @@ export default async function CompetenciaPage() {
     return {
       postId: outlier.post.id,
       source: "trend" as const,
+      trendSource: outlier.post.source,
       username: outlier.post.username,
       kind: outlier.post.kind,
       caption: outlier.post.caption,
@@ -188,7 +195,7 @@ export default async function CompetenciaPage() {
                 {competitors.length > 0 ? (
                   <RefreshAllButton competitorCount={competitors.length} totalResultsLimit={totalResultsLimit} />
                 ) : null}
-                <TrendSearchButton lastQuery={lastTrendSearch?.query ?? null} />
+                <TrendSearchButton lastQuery={lastTrendSearch?.query ?? null} metaStatus={metaStatus} />
                 <AddCompetitorButton />
               </div>
             ) : undefined
@@ -209,9 +216,12 @@ export default async function CompetenciaPage() {
 
         {apifyKey && lastTrendSearch?.status === "COMPLETADO" ? (
           <p className="-mt-3 text-xs text-lm-ink-2">
-            Última búsqueda (&ldquo;{lastTrendSearch.query}&rdquo;): {lastTrendSearch.imported} reels revisados,{" "}
+            Última búsqueda (&ldquo;{lastTrendSearch.query}&rdquo;, {lastTrendSearch.source === "META" ? "API de Meta" : "Apify"}):{" "}
+            {lastTrendSearch.imported} {lastTrendSearch.source === "META" ? "publicaciones revisadas" : "reels revisados"},{" "}
             {lastTrendSearch.viral === 0
-              ? "ninguno llegó al piso de virales (más de 150.000 views en los últimos 30 días). Probá con otros hashtags."
+              ? lastTrendSearch.source === "META"
+                ? `ninguno llegó al piso de virales (más de ${numberFormat.format(TREND_MIN_LIKES)} likes en los últimos ${TREND_META_MAX_AGE_DAYS} días). Probá con otros hashtags.`
+                : "ninguno llegó al piso de virales (más de 150.000 views en los últimos 30 días). Probá con otros hashtags."
               : `${lastTrendSearch.viral} ${lastTrendSearch.viral === 1 ? "viral encontrado" : "virales encontrados"}.`}
           </p>
         ) : null}
