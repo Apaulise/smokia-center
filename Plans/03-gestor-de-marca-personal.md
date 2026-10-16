@@ -310,6 +310,13 @@ Cobra por resultado, igual que en Leads: al probar, `maxResults` chico.
 
 > **La foto de perfil no se pudo traer, y es un límite del actor.** Se probó con `addParentData: true` y se miró el payload crudo de corridas reales: con `resultsType: "posts"`, `apify/instagram-scraper` devuelve `ownerId`, `ownerUsername` y `ownerFullName`, y **ninguna clave con la foto**. Así que el flag volvió a `false` y el avatar muestra la inicial. Queda la columna `profile_pic_url`, el lector defensivo (`pickProfilePicUrl`) y el componente con fallback: el día que se sume una corrida `resultsType: "details"` por cuenta —1 resultado extra, centavos— la foto aparece sin tocar nada más. No se hizo ahora porque es una corrida más que mantener por algo decorativo.
 
+**6. Portadas guardadas (2026-10-11).** Las URLs de imagen del CDN de Instagram que devuelven Apify y Meta caducan a los pocos días (el `oe=` de la URL es el vencimiento) y después dan 403: las tarjetas de "Lo que explotó" quedaban con el rayado. Ahora `lib/brand/thumbnails.ts` (`mirrorThumbnails`) copia cada portada JPEG al bucket `brand-media`, en `<owner_id>/thumbs/<competitors|trends>/<sha1(external_id)>.jpg`, y la base guarda la URL de la copia. Se llama al importar competencia (`reconcileCompetitor`) y descubiertos (Apify `reconcileTrendSearch` y Meta). Si la copia falla (red, tamaño >3 MB, no es JPEG), queda la URL original: nunca tira la importación. Además `PostThumb` usa `referrerPolicy="no-referrer"`, y "Lo que explotó" se muestra con la card vertical de Biblioteca (portada 4:5 con chips de formato y fecha).
+
+- **Rescate de lo ya guardado:** un script único (2026-10-11) copió 139 portadas todavía vivas; 334 ya estaban vencidas y se recuperan sincronizando de nuevo cada cuenta (cuesta Apify). Las fotos de perfil (`profile_pic_url`) siguen sin copiarse
+- **Los reels de la API de Meta** vienen sin portada (`media_url` es el video), así que siguen con el rayado
+
+**Checklist manual (pendiente):** (a) recargar `/marca/competencia`: las portadas rescatadas se ven; (b) sincronizar una cuenta de competencia: sus tarjetas nuevas muestran portada y la URL en la base apunta a `…/storage/v1/object/public/brand-media/…`; (c) una búsqueda de virales por Apify muestra portadas; (d) la portada sigue cargando días después, cuando la URL original ya habría vencido.
+
 **Lo que este paso no hace:** los filtros son de la vista, así que "descartada" y el puntaje no achican la consulta; con muchas más cuentas habría que mover el corte a SQL. El puntaje tampoco se recalcula al cambiar el SOC — una pieza clasificada queda con el veredicto del día en que se clasificó.
 
 ### 3.15 Descubrir virales
@@ -670,3 +677,59 @@ La lectura de métricas y la publicación de Instagram dejaron de pasar por Wind
 5. "Analizar ahora" → un reel se abre con transcripción en el guion, hook, idea, ángulo y un título razonable.
 6. Re-sincronizar → no se duplica nada.
 7. Un reel con el título editado a mano antes del análisis → el análisis no lo pisa.
+
+### 3.17 Descubrir virales con la API oficial de Meta (`top_media`)
+
+> **Estado (2026-10-10): implementado de punta a punta (migración aplicada; `typecheck`, `lint` y `build:verify` en verde), checklist manual PENDIENTE.** La viabilidad se probó a mano contra la cuenta real (ver "Verificado"). Archivos: `supabase/migrations/20261010120000_trend_source_meta.sql`, `lib/brand/trends/meta.ts` (nuevo), `schema.ts`, `insights.ts`, `queries.ts`, `actions.ts` (`searchTrendsMeta`), y el diálogo y el tablero de `/marca/competencia`.
+
+**Problema.** §3.15 usa `apify/instagram-hashtag-scraper`, que trae el feed **reciente** del hashtag. Un reel recién subido no tuvo tiempo de viralizarse: en las pruebas reales nunca pasó de ~306k views y el piso hubo que bajarlo de 1M a 150k (§3.15 punto 2.1). El actor que sí trae lo popular (`instagram-search-scraper`, `searchType: "popular"`) lo bloquea Instagram. Es un problema de la fuente, no del criterio.
+
+**Qué se agrega.** Una **segunda fuente** de descubrimiento, la API oficial: `ig_hashtag_search?user_id={ig}&q={tag}` devuelve el id del hashtag y `/{hashtag-id}/top_media` lo más popular que Instagram muestra para él. **Apify se mantiene** (decisión del 2026-10-10): aporta views, que Meta no da, y sirve para lo reciente. Las dos fuentes se mezclan en el mismo tablero "Lo que explotó", con badge de origen.
+
+**Verificado a mano (2026-10-10, Graph API Explorer, token `EAA…` de Facebook Login):**
+
+- `/me/accounts` vuelve **vacío** aunque el usuario tiene control total de la página: la página `Agustin paulise` pertenece a un portfolio de negocio. No hace falta arreglarlo: se consulta la página por id (`/{page-id}?fields=instagram_business_account`) y el id de Instagram es el mismo que ya usa la sincronización.
+- `ig_hashtag_search` resolvió `#claudeai` y `top_media` devolvió piezas reales con `like_count`, `comments_count`, `timestamp`, `permalink`, `media_type` y `caption`.
+- Los resultados eran de ~1.100–1.400 likes, de hace ~2 meses, mayormente carruseles, algunos en otros idiomas, **sin views ni `@usuario`**. La respuesta tardó ~10 s.
+- La funcionalidad corre con **acceso estándar** de "Instagram Public Content Access": alcanza para quien tenga rol en la app (administrador, desarrollador o tester). Un segundo usuario necesita ese rol y su propio token de Facebook Login.
+
+**Decisiones de diseño.**
+
+1. **Token `EAA…` obligatorio.** El `IGAA…` (Instagram Login) no puede buscar hashtags. Si las credenciales del usuario empiezan con `IG`, la búsqueda por Meta no corre y la pantalla dice por qué y qué hacer (mismo patrón que el error 190 de `lib/meta/client.ts`). El token de 60 días se canjea con `fb_exchange_token` (script fuera del repo; el app secret nunca entra al código ni a `.env`).
+2. **Sin Apify, sin polling, sin costo.** La búsqueda por Meta es una llamada síncrona dentro de una Server Action: reusa `graphGet` y `getMetaCredentials`. Los hashtags se piden en paralelo; la página ya tiene `maxDuration = 60`, que cubre los ~10 s por hashtag.
+3. **El criterio no puede ser views.** No existen para piezas ajenas. Se usa **likes** y se reusa el grupo `IMAGEN` de `computeCompetitorInsights` (`GROUP_SIGNAL_LABEL` ya dice "likes"), así que la tarjeta y el prompt de "Usar" no cambian. Piso editorial `TREND_MIN_LIKES` (constante con nombre al lado de `TREND_MIN_VIEWS`, valor inicial a calibrar contra lo que devuelven los hashtags reales) y ventana propia `TREND_META_MAX_AGE_DAYS = 90`: `top_media` no ordena por fecha y exigir 30 días lo dejaría vacío. Como en §3.15, por debajo del piso se muestran cero tarjetas, no se completa un cupo.
+4. **Se importan todos los formatos, no sólo reels.** Para un hashtag, `top_media` mezcla carruseles, imágenes y reels, y un carrusel viral también enseña un mecanismo transferible (SOC §7). El `kind` se mapea desde `media_type` y `media_product_type`. Si el campo no viene en este edge, queda `POST`/`CARRUSEL`/`VIDEO`.
+5. **Sin `@usuario`.** `username` pasa a **nullable** en `brand_trend_posts`; la tarjeta muestra "Descubierto (Meta)" y el link. `generateIdeaFromOutlier` y el clasificador de relevancia aceptan autor ausente.
+6. **Tope de Meta: 30 hashtags únicos por cuenta en 7 días móviles.** Se cuenta sobre `brand_trend_searches` (fuente `META`, hashtags distintos de los últimos 7 días) y se **muestra en el formulario** ("quedan N de 30"). Repetir un hashtag ya buscado esa semana no gasta cupo. Superar el tope devuelve un error legible, no un 400 crudo de Meta.
+7. **Reuso, no reescritura.** Mismo `classifyRelevance` (el filtro de idioma y de nicho hace falta: llegan resultados en hindi y marathi), mismo descarte/restauración, mismo "Usar" con `source_trend_post_id`. Misma regla de §3.15 punto 3: el cálculo corre sobre todo lo reciente, descartado incluido.
+
+**Modelo de datos** (migración nueva, `snake_case`):
+
+- `brand_trend_searches.source` y `brand_trend_posts.source`: `'APIFY' | 'META'`, default `'APIFY'` (lo existente no cambia).
+- `brand_trend_posts.username` y `display_name` → nullable.
+- La clave única `(owner_id, external_id)` ya evita duplicar: un post que aparece por las dos fuentes se pisa, y se conserva el dato más completo (el de Apify trae views y autor, así que **Apify gana en el conflicto**).
+- RLS y políticas: la tabla ya las tiene, no se tocan.
+
+**Archivos previstos:** `lib/brand/trends/meta.ts` (búsqueda y mapeo, con Zod en el borde: Meta también cambia sin avisar), ajustes en `lib/brand/trends/actions.ts` (`searchTrendsMeta`), `insights.ts` (criterio por likes para `META`), `schema.ts` (constantes) y el formulario/tablero de `/marca/competencia`.
+
+**Lo que este paso no hace.** No agrega la lista curada de hashtags que rota dentro del cupo, ni el botón "Guardar en biblioteca" hacia RADAR (§3.12), ni Business Discovery para competidores profesionales. Son pasos aparte, en ese orden de valor.
+
+**Qué quedó distinto de lo planeado:**
+
+- `queries.ts` ahora tiene `loadTrendPosts(supabase)`, un único cargador que usan la pantalla y las acciones (antes el mapeo estaba escrito dos veces). Ahí se deduplica entre fuentes por el código corto del permalink: los ids de Apify y de la Graph API no coinciden, así que no alcanzaba con la clave única.
+- Una búsqueda por Meta se registra recién al terminar (`COMPLETADO` o `FALLIDO`), nunca `EN_CURSO`: no hay sondeo que la reconcilie. `TrendPoller` sólo mira las de Apify.
+- Un hashtag que Meta rechaza no tira los demás: la búsqueda entra con lo que sí llegó y el motivo queda en `last_error`.
+- En el prompt de "Usar", el múltiplo de un descubierto se mide contra "lo típico de esa búsqueda por hashtag", no contra "la mediana de su propia cuenta" (que sólo es cierto para cuentas seguidas).
+- Las miniaturas de videos quedan en placeholder: en un video `media_url` es el mp4.
+
+**Checklist manual** (uno por uno, `CLAUDE.md` §13). Probar con `npm run dev` o con el deploy una vez commiteado.
+
+1. `/marca/competencia` → "Buscar virales": el diálogo muestra las dos fuentes; la de la API de Instagram habilitada, con "Quedan N de 30 hashtags nuevos".
+2. Buscar `claudeai` sólo por la API de Instagram → termina sin error y aparece "Última búsqueda (…, API de Meta): N publicaciones revisadas, K virales".
+3. Si K > 0: las tarjetas dicen "Descubierto · Meta", no muestran `@usuario`, y marcan "N likes · lo habitual M"; el link abre la publicación.
+4. Si K = 0: el mensaje cita el piso (1.000 likes, 90 días). **Es el dato para calibrar `TREND_MIN_LIKES`**: anotar cuántos likes tienen los mejores resultados.
+5. Repetir la misma búsqueda → el cupo "Quedan" no baja y no se duplican tarjetas.
+6. Buscar por las dos fuentes a la vez → entran las dos; si una publicación llegó por ambas, aparece una sola vez (la de Apify).
+7. "Usar" sobre una tarjeta de Meta → crea la pieza en el planificador, sin autor inventado, con el link a la original.
+8. Descartar y restaurar una tarjeta de Meta desde "Ver descartadas".
+9. Las tarjetas de cuentas seguidas y las descubiertas por Apify siguen igual que antes (no se rompió nada de §3.8, §3.14 y §3.15).

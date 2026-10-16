@@ -60,6 +60,22 @@ export const TREND_MAX_AGE_DAYS = 30;
  */
 export const TREND_MIN_VIEWS = 150_000;
 
+/**
+ * Lo mismo para lo que trae la API oficial de Meta (Plans/03 §3.17): `top_media`
+ * no da views de piezas ajenas, así que el piso es de likes. Valor INICIAL, a
+ * calibrar con lo que devuelvan los hashtags reales del nicho: en la única
+ * prueba (#claudeai, 2026-10-10) lo más popular rondaba los 1.100–1.400 likes.
+ * Misma regla que arriba: por debajo no entra, aunque queden cero tarjetas.
+ */
+export const TREND_MIN_LIKES = 1_000;
+
+/**
+ * Ventana de recencia de lo que sale de `top_media`. Más ancha que
+ * TREND_MAX_AGE_DAYS: ese endpoint no ordena por fecha, y lo "más popular" de
+ * un hashtag casi nunca es de esta semana (lo de la prueba tenía ~2 meses).
+ */
+export const TREND_META_MAX_AGE_DAYS = 90;
+
 const DAY_MS = 86_400_000;
 
 /** Los videos se comparan por views; las imágenes no tienen views, así que por likes. Nunca se mezclan en una misma mediana. */

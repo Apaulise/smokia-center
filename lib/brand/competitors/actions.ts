@@ -8,6 +8,7 @@ import { generateIdeaFromOutlier } from "@/lib/brand/ai/outlier-idea";
 import { buildOwnContext } from "@/lib/brand/ai/script-context";
 import { computeCompetitorInsights, GROUP_SIGNAL_LABEL } from "@/lib/brand/competitors/insights";
 import { KIND_LABEL, normalizeHashtags } from "@/lib/brand/planner/schema";
+import { mirrorThumbnails } from "@/lib/brand/thumbnails";
 import { decrypt } from "@/lib/crypto";
 import { APIFY_KEY_SETTING, GEMINI_KEY_SETTING } from "@/lib/settings/constants";
 import { createClient, requireUser } from "@/lib/supabase/server";
@@ -276,6 +277,8 @@ export async function reconcileCompetitor(id: string): Promise<ReconcileCompetit
     return fail("Apify no devolvió publicaciones. Revisá que el usuario esté bien escrito y que la cuenta sea pública.", run.costUsd);
   }
 
+  const thumbnails = await mirrorThumbnails(supabase, user.id, "competitors", [...posts.values()]);
+
   const { error } = await supabase.from("brand_competitor_posts").upsert(
     [...posts.values()].map((post) => ({
       owner_id: user.id,
@@ -284,7 +287,7 @@ export async function reconcileCompetitor(id: string): Promise<ReconcileCompetit
       kind: post.kind,
       permalink: post.permalink,
       caption: post.caption,
-      thumbnail_url: post.thumbnailUrl,
+      thumbnail_url: thumbnails.get(post.externalId) ?? null,
       published_at: post.publishedAt,
       likes: post.likes,
       comments: post.comments,

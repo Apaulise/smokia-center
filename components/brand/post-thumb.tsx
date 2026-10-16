@@ -29,7 +29,7 @@ export function PostThumb({ url, className, bare }: { url: string | null; classN
     >
       {showImage ? (
         // eslint-disable-next-line @next/next/no-img-element -- URL externa de Instagram, sin loader de next/image configurado para ese host
-        <img src={url} alt="" loading="lazy" decoding="async" className="size-full object-cover" onError={() => setFailedUrl(url)} />
+        <img src={url} alt="" referrerPolicy="no-referrer" loading="lazy" decoding="async" className="size-full object-cover" onError={() => setFailedUrl(url)} />
       ) : null}
     </div>
   );

@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { DailyContactsChart } from "@/components/leads/execution/daily-contacts-chart";
 import { EditGoalButton } from "@/components/leads/execution/goal-form-dialog";
+import { MemberContribution } from "@/components/leads/team/member-contribution";
 import { EmptyState } from "@/components/leads/ui/feedback";
 import { Kpi, KpiRow } from "@/components/leads/ui/kpi-row";
 import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
@@ -11,7 +12,9 @@ import { Table, Td, Th, Tr, TdSub, MiniBar } from "@/components/leads/ui/table";
 import { Segmented, SegmentedLink } from "@/components/leads/ui/tabs";
 import { BOOKING_LAG_DAYS, type BlendedRate } from "@/lib/leads/execution/blend";
 import { SPREADSHEET_DEFAULTS, type Chain } from "@/lib/leads/execution/chain";
+import { getActiveSalesGoal } from "@/lib/leads/execution/queries";
 import { getExecutionSummary } from "@/lib/leads/execution/summary";
+import { getTeamSummary } from "@/lib/leads/team/summary";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Objetivo · Gestor de Leads · SmokIA" };
@@ -46,20 +49,29 @@ export default async function ObjetivoPage({ searchParams }: { searchParams: Pro
   const { period: periodParam } = await searchParams;
   const period: Period = periodParam === "7d" || periodParam === "90d" ? periodParam : "30d";
 
-  const summary = await getExecutionSummary(PERIODS[period]);
+  // Con equipo manda la meta compartida y las tasas se ajustan con los datos de
+  // los dos (Plan §1.23); sin equipo, la versión personal de siempre (§1.22).
+  const team = await getTeamSummary(PERIODS[period]);
+  const summary = team ? team.execution : await getExecutionSummary(PERIODS[period]);
 
   if (!summary) {
+    // La primera vez que el equipo define la meta, se precarga con la meta personal anterior, si había.
+    const initial = (team ? await getActiveSalesGoal() : null) ?? SPREADSHEET_DEFAULTS;
     return (
       <>
         <HeaderBar breadcrumb="Gestor de Leads / Objetivo" />
         <div className="px-6 py-8 lg:px-8">
-          <PageHeading eyebrow="CADENA DE EJECUCIÓN" title="Objetivo" />
+          <PageHeading eyebrow={team ? "OBJETIVO DE EQUIPO" : "CADENA DE EJECUCIÓN"} title="Objetivo" />
           <div className="mt-8">
             <EmptyState
               icon={<Target className="size-5" strokeWidth={1.5} />}
-              title="Todavía no definiste un objetivo"
-              description="Cargá cuánto querés facturar por mes y tus tasas estimadas: la app calcula cuántos contactos por día necesitás y las corrige con tus resultados reales."
-              action={<EditGoalButton initial={SPREADSHEET_DEFAULTS} label="Definir objetivo" variant="primary" />}
+              title={team ? "Todavía no definieron el objetivo del equipo" : "Todavía no definiste un objetivo"}
+              description={
+                team
+                  ? "Cargá cuánto quieren facturar por mes entre los dos y las tasas estimadas: la app calcula cuántos contactos por día necesita el equipo y las corrige con los resultados reales de ambos. Cualquiera de los dos puede definirlo y cambiarlo."
+                  : "Cargá cuánto querés facturar por mes y tus tasas estimadas: la app calcula cuántos contactos por día necesitás y las corrige con tus resultados reales."
+              }
+              action={<EditGoalButton initial={initial} label="Definir objetivo" variant="primary" />}
             />
           </div>
         </div>
@@ -68,6 +80,7 @@ export default async function ObjetivoPage({ searchParams }: { searchParams: Pro
   }
 
   const { goal, rates, assumedChain, adjustedChain, today, week, month, metrics } = summary;
+  const definedBy = team?.members.find((m) => m.member.ownerId === team.goal?.definedBy)?.member.name;
   const dailyTarget = adjustedChain.contactsPerDay;
   const remainingToday = Math.max(0, dailyTarget - today.contacts);
   const monthPace = month.contacts - month.plannedToDate;
@@ -92,9 +105,11 @@ export default async function ObjetivoPage({ searchParams }: { searchParams: Pro
 
       <div className="flex flex-col gap-9 px-6 py-8 lg:px-8">
         <PageHeading
-          eyebrow="CADENA DE EJECUCIÓN"
+          eyebrow={team ? "OBJETIVO DE EQUIPO" : "CADENA DE EJECUCIÓN"}
           title="Objetivo"
-          description={`${money(goal.monthlyRevenueTarget, goal.currency)} por mes con un ticket de ${money(goal.avgTicket, goal.currency)}.`}
+          description={`${money(goal.monthlyRevenueTarget, goal.currency)} por mes con un ticket de ${money(goal.avgTicket, goal.currency)}.${
+            definedBy ? ` Definido por ${definedBy}.` : ""
+          }`}
           action={
             <div className="flex items-center gap-3">
               <Segmented>
@@ -137,10 +152,24 @@ export default async function ObjetivoPage({ searchParams }: { searchParams: Pro
           />
         </KpiRow>
 
+        {team ? (
+          <Section
+            eyebrow="EQUIPO"
+            title="Aporte de cada uno"
+            description="Cada uno contra su parte: el objetivo del equipo en partes iguales. El detalle de los leads de cada uno es privado."
+          >
+            <MemberContribution members={team.members} />
+          </Section>
+        ) : null}
+
         <Section
-          eyebrow="TU CADENA"
+          eyebrow={team ? "CADENA DEL EQUIPO" : "TU CADENA"}
           title="Qué hace falta para llegar"
-          description="La columna ajustada es la que manda: usa tus tasas corregidas con los resultados reales."
+          description={
+            team
+              ? "La columna ajustada es la que manda: usa las tasas del equipo corregidas con los resultados reales de los dos."
+              : "La columna ajustada es la que manda: usa tus tasas corregidas con los resultados reales."
+          }
         >
           <Table>
             <thead>

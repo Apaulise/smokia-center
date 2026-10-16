@@ -31,7 +31,8 @@ const CAPTION_MAX_CHARS = 600;
 
 export interface RelevanceCandidate {
   id: string;
-  username: string;
+  /** null en lo descubierto por la API de Meta, que no devuelve el autor. */
+  username: string | null;
   kind: keyof typeof KIND_LABEL;
   caption: string | null;
   publishedAt: string | null;
@@ -92,7 +93,7 @@ function formatCandidate(candidate: RelevanceCandidate): string {
   const caption = (candidate.caption ?? "").replace(/\s+/g, " ").trim().slice(0, CAPTION_MAX_CHARS);
   return [
     `id: ${candidate.id}`,
-    `cuenta: @${candidate.username}`,
+    `cuenta: ${candidate.username ? `@${candidate.username}` : "(no disponible)"}`,
     `formato: ${KIND_LABEL[candidate.kind]}`,
     `múltiplo de su mediana: ${candidate.multiple.toFixed(1)}×`,
     candidate.publishedAt ? `fecha: ${candidate.publishedAt.slice(0, 10)}` : null,

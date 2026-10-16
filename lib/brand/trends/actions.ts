@@ -8,16 +8,25 @@ import { generateIdeaFromOutlier } from "@/lib/brand/ai/outlier-idea";
 import { buildOwnContext } from "@/lib/brand/ai/script-context";
 import { classifyRelevance, RELEVANCE_BATCH_MAX, type RelevanceCandidate } from "@/lib/brand/competitors/relevance";
 import { GROUP_SIGNAL_LABEL } from "@/lib/brand/competitors/insights";
-import { computeTrendOutliers } from "@/lib/brand/trends/insights";
 import { KIND_LABEL, normalizeHashtags } from "@/lib/brand/planner/schema";
+import { mirrorThumbnails } from "@/lib/brand/thumbnails";
 import { decrypt } from "@/lib/crypto";
+import { getMetaCredentials } from "@/lib/meta/client";
 import { APIFY_KEY_SETTING, GEMINI_KEY_SETTING } from "@/lib/settings/constants";
 import { createClient, requireUser } from "@/lib/supabase/server";
 import type { Database, Json } from "@/lib/supabase/database.types";
 
 import { mapTrendPost, type NormalizedTrendPost } from "./mapper";
-import type { TrendPostRow } from "./queries";
-import { SearchTrendsInput, TREND_ACTOR_ID, TREND_RUN_TIMEOUT_MINUTES } from "./schema";
+import { fetchMetaTrends } from "./meta";
+import { getMetaUsedHashtags, loadTrendPosts } from "./queries";
+import {
+  META_HASHTAGS_PER_WEEK,
+  META_RESULTS_PER_HASHTAG,
+  SearchMetaTrendsInput,
+  SearchTrendsInput,
+  TREND_ACTOR_ID,
+  TREND_RUN_TIMEOUT_MINUTES,
+} from "./schema";
 
 // Sin service role ni webhook, a propósito: cada búsqueda la dispara una
 // persona y se reconcilia con SU sesión (RLS), mismo criterio que
@@ -94,7 +103,105 @@ export async function searchTrends(input: SearchTrendsInput): Promise<TrendResul
   return { ok: true, id: row.id };
 }
 
-export type ReconcileTrendSearchResult = { status: JobStatus | "NOT_FOUND"; imported: number };
+export type MetaSearchSummary = {
+  /** Piezas distintas que trajo `top_media`. */
+  imported: number;
+  /** Hashtags que Meta rechazó, con el motivo; el resto de la búsqueda sí entró. */
+  failures: { tag: string; message: string }[];
+};
+
+/**
+ * "Buscar virales" por la API oficial de Meta (Plans/03 §3.17): lo más popular
+ * de cada hashtag, sin Apify. Es síncrona —una Server Action, sin sondeo—, así
+ * que la búsqueda se registra recién al terminar: una fila EN_CURSO que nadie
+ * reconcilia quedaría colgada para siempre.
+ */
+export async function searchTrendsMeta(input: SearchMetaTrendsInput): Promise<TrendResult<MetaSearchSummary>> {
+  const user = await requireUser();
+  const supabase = await createClient();
+
+  const parsed = SearchMetaTrendsInput.safeParse(input);
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Los datos no son válidos." };
+  const tags = parsed.data.hashtags;
+
+  const credentials = await getMetaCredentials(supabase, user.id);
+  if (!credentials) return { ok: false, message: "Conectá tu cuenta de Instagram en Configuración antes de buscar por la API de Meta." };
+  if (credentials.accessToken.startsWith("IG")) {
+    return {
+      ok: false,
+      message:
+        "El token cargado es de Instagram Login (empieza con IG…) y esa API no puede buscar hashtags. Cargá uno de Facebook Login (empieza con EAA…) en Configuración.",
+    };
+  }
+
+  // Meta cuenta hashtags únicos por semana: uno ya consultado no gasta cupo.
+  const used = await getMetaUsedHashtags(supabase);
+  const fresh = tags.filter((tag) => !used.has(tag));
+  if (used.size + fresh.length > META_HASHTAGS_PER_WEEK) {
+    const remaining = Math.max(META_HASHTAGS_PER_WEEK - used.size, 0);
+    return {
+      ok: false,
+      message: `Meta deja consultar ${META_HASHTAGS_PER_WEEK} hashtags distintos por semana y ya usaste ${used.size}: te ${remaining === 1 ? "queda 1" : `quedan ${remaining}`}. Repetir uno ya buscado no gasta cupo.`,
+    };
+  }
+
+  const { posts, failures } = await fetchMetaTrends(credentials, tags);
+  const failureNote = failures.length > 0 ? failures.map((failure) => `#${failure.tag}: ${failure.message}`).join(" · ") : null;
+
+  const { data: search, error: searchError } = await supabase
+    .from("brand_trend_searches")
+    .insert({
+      owner_id: user.id,
+      source: "META",
+      query: tags.join(", "),
+      results_limit: META_RESULTS_PER_HASHTAG,
+      status: posts.length > 0 ? "COMPLETADO" : "FALLIDO",
+      last_error: failureNote ?? (posts.length === 0 ? "Instagram no devolvió publicaciones para esos hashtags." : null),
+      last_synced_at: posts.length > 0 ? new Date().toISOString() : null,
+    })
+    .select("id")
+    .single();
+  if (searchError || !search) return { ok: false, message: "No se pudo guardar la búsqueda." };
+
+  if (posts.length === 0) {
+    revalidatePath(COMPETITORS_PATH);
+    return { ok: false, message: failureNote ?? "Instagram no devolvió publicaciones para esos hashtags. Probá con otros." };
+  }
+
+  const thumbnails = await mirrorThumbnails(supabase, user.id, "trends", posts);
+
+  const { error } = await supabase.from("brand_trend_posts").upsert(
+    posts.map((post) => ({
+      owner_id: user.id,
+      search_id: search.id,
+      source: "META" as const,
+      external_id: post.externalId,
+      username: null,
+      kind: post.kind,
+      permalink: post.permalink,
+      caption: post.caption,
+      thumbnail_url: thumbnails.get(post.externalId) ?? null,
+      published_at: post.publishedAt,
+      likes: post.likes,
+      comments: post.comments,
+      views: null,
+      raw: post.raw as Json,
+    })),
+    { onConflict: "owner_id,external_id" },
+  );
+  if (error) {
+    await supabase.from("brand_trend_searches").update({ status: "FALLIDO", last_error: `No se pudo importar: ${error.message}` }).eq("id", search.id);
+    revalidatePath(COMPETITORS_PATH);
+    return { ok: false, message: `No se pudo importar: ${error.message}` };
+  }
+
+  await classifyPendingTrends(supabase);
+
+  revalidatePath(COMPETITORS_PATH);
+  return { ok: true, imported: posts.length, failures };
+}
+
+export type ReconcileTrendSearchResult ={ status: JobStatus | "NOT_FOUND"; imported: number };
 
 /**
  * Reconcilia una búsqueda: pregunta a Apify, y si terminó, pagina el dataset
@@ -158,6 +265,8 @@ export async function reconcileTrendSearch(id: string): Promise<ReconcileTrendSe
     return fail("Apify no devolvió reels para esos hashtags. Probá con otros.", run.costUsd);
   }
 
+  const thumbnails = await mirrorThumbnails(supabase, user.id, "trends", [...posts.values()]);
+
   const { error } = await supabase.from("brand_trend_posts").upsert(
     [...posts.values()].map((post) => ({
       owner_id: user.id,
@@ -169,7 +278,7 @@ export async function reconcileTrendSearch(id: string): Promise<ReconcileTrendSe
       kind: "REEL" as const,
       permalink: post.permalink,
       caption: post.caption,
-      thumbnail_url: post.thumbnailUrl,
+      thumbnail_url: thumbnails.get(post.externalId) ?? null,
       published_at: post.publishedAt,
       likes: post.likes,
       comments: post.comments,
@@ -196,7 +305,7 @@ export async function reconcileTrendSearch(id: string): Promise<ReconcileTrendSe
 
 /** Los candidatos a clasificar: todo lo que hoy se muestra como outlier descubierto y todavía no pasó por el clasificador. */
 async function collectTrendRelevanceCandidates(supabase: Supabase): Promise<RelevanceCandidate[]> {
-  const { posts, outliers } = await getTrendPostsWithInsightsFor(supabase);
+  const { posts, outliers } = await loadTrendPosts(supabase);
   const byId = new Map(posts.map((post) => [post.id, post]));
 
   const candidates: RelevanceCandidate[] = [];
@@ -213,40 +322,6 @@ async function collectTrendRelevanceCandidates(supabase: Supabase): Promise<Rele
     });
   }
   return candidates;
-}
-
-/** getTrendPostsWithInsights toma la sesión del contexto de Server Component; acá se necesita con el mismo supabase ya autenticado del caller. */
-async function getTrendPostsWithInsightsFor(supabase: Supabase) {
-  const { data: rows, error } = await supabase
-    .from("brand_trend_posts")
-    .select(
-      "id, username, display_name, profile_pic_url, kind, permalink, caption, thumbnail_url, published_at, likes, comments, views, dismissed_at, relevance_score, relevance_reason, relevance_checked_at",
-    )
-    .order("published_at", { ascending: false, nullsFirst: false })
-    .limit(5000);
-  if (error) throw error;
-
-  const posts: TrendPostRow[] = (rows ?? []).map((row) => ({
-    id: row.id,
-    kind: row.kind,
-    publishedAt: row.published_at,
-    likes: row.likes,
-    comments: row.comments,
-    views: row.views,
-    username: row.username,
-    displayName: row.display_name,
-    profilePicUrl: row.profile_pic_url,
-    permalink: row.permalink,
-    caption: row.caption,
-    thumbnailUrl: row.thumbnail_url,
-    dismissedAt: row.dismissed_at,
-    relevanceScore: row.relevance_score,
-    relevanceReason: row.relevance_reason,
-    relevanceCheckedAt: row.relevance_checked_at,
-  }));
-
-  const outliers = computeTrendOutliers(posts);
-  return { posts, outliers };
 }
 
 async function writeTrendVerdicts(supabase: Supabase, verdicts: { id: string; score: number; reason: string }[]): Promise<void> {
@@ -337,7 +412,7 @@ export async function createIdeaFromTrendPost(postId: string): Promise<CreateTre
   if (!keyResult.ok) return { ok: false, message: keyResult.message };
 
   // El multiplicador se recalcula sobre el batch actual: citar un número que no salió del código sería inventarlo.
-  const { outliers } = await getTrendPostsWithInsightsFor(supabase);
+  const { outliers } = await loadTrendPosts(supabase);
   const outlier = outliers.find((candidate) => candidate.post.id === postId);
   if (!outlier) {
     return { ok: false, message: "Ese reel ya no está entre los descubiertos vigentes." };
@@ -354,6 +429,7 @@ export async function createIdeaFromTrendPost(postId: string): Promise<CreateTre
       value: outlier.value,
       median: outlier.median,
       signalLabel: GROUP_SIGNAL_LABEL[outlier.group],
+      medianLabel: "lo típico de esa búsqueda por hashtag",
       publishedAt: post.published_at,
       caption: post.caption,
       permalink: post.permalink,

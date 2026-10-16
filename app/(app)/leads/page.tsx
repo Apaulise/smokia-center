@@ -25,8 +25,8 @@ import {
   listUpcomingAppointments,
 } from "@/lib/leads/queries";
 import { getStyleStats } from "@/lib/leads/ai/style/queries";
-import { getExecutionSummary } from "@/lib/leads/execution/summary";
-import { buildProspectingStages, totalResponseRate } from "@/lib/leads/prospecting-rates";
+import { buildProspectingStages, toPipelineStages, totalResponseRate } from "@/lib/leads/prospecting-rates";
+import { getTodayTile } from "@/lib/leads/team/summary";
 
 export const metadata = { title: "Gestor de Leads · SmokIA" };
 
@@ -54,8 +54,8 @@ export default async function LeadsDashboardPage({
       listUpcomingAppointments(),
       listStaleLeads(STALE_DAYS),
       getStyleStats(),
-      // Misma ventana por defecto que /leads/objetivo, para que el "Hoy" coincida (Plan §1.22).
-      getExecutionSummary(30),
+      // Misma ventana por defecto que /leads/objetivo, para que el "Hoy" coincida (Plan §1.22, §1.23).
+      getTodayTile(),
     ]);
 
   const now = new Date();
@@ -98,14 +98,7 @@ export default async function LeadsDashboardPage({
     );
   }
 
-  const stages = buildProspectingStages(funnel);
-  const hotFrom = 2; // human_responses en adelante se pinta caliente (README "Estados del pipeline")
-  const pipelineStages = stages.map((stage, index) => ({
-    label: stage.label.replace(" (humano)", "").replace("Leads totales", "Leads").replace("Cerrados ganados", "Ganados"),
-    value: stage.count,
-    conversion: stage.rateFromPrevious === null ? null : Math.round(stage.rateFromPrevious * 100),
-    hot: index >= hotFrom,
-  }));
+  const pipelineStages = toPipelineStages(buildProspectingStages(funnel));
 
   const exitsByStatus = Object.fromEntries(exitsFunnel.map((s) => [s.status, s.lead_count]));
   const exits = [
@@ -145,11 +138,19 @@ export default async function LeadsDashboardPage({
               label="Hoy"
               value={
                 <Link href="/leads/objetivo" className="hover:text-lm-signal-text">
-                  {execution.today.contacts} / {execution.adjustedChain.contactsPerDay}
+                  {execution.contacts} / {execution.target}
                 </Link>
               }
-              delta="contactos · ver cadena"
-              trend={execution.today.contacts >= execution.adjustedChain.contactsPerDay ? "up" : "neutral"}
+              delta={
+                execution.team ? (
+                  <Link href="/leads/equipo" className="hover:text-lm-ink">
+                    tu parte · equipo {execution.team.contacts}/{execution.team.target}
+                  </Link>
+                ) : (
+                  "contactos · ver cadena"
+                )
+              }
+              trend={execution.contacts >= execution.target ? "up" : "neutral"}
             />
           ) : (
             <Kpi

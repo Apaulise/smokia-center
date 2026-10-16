@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   graphql_public: {
     Tables: {
@@ -1009,9 +1009,10 @@ export type Database = {
           relevance_reason: string | null
           relevance_score: number | null
           search_id: string | null
+          source: Database["public"]["Enums"]["trend_source"]
           thumbnail_url: string | null
           updated_at: string
-          username: string
+          username: string | null
           views: number | null
         }
         Insert: {
@@ -1033,9 +1034,10 @@ export type Database = {
           relevance_reason?: string | null
           relevance_score?: number | null
           search_id?: string | null
+          source?: Database["public"]["Enums"]["trend_source"]
           thumbnail_url?: string | null
           updated_at?: string
-          username: string
+          username?: string | null
           views?: number | null
         }
         Update: {
@@ -1057,9 +1059,10 @@ export type Database = {
           relevance_reason?: string | null
           relevance_score?: number | null
           search_id?: string | null
+          source?: Database["public"]["Enums"]["trend_source"]
           thumbnail_url?: string | null
           updated_at?: string
-          username?: string
+          username?: string | null
           views?: number | null
         }
         Relationships: [
@@ -1084,6 +1087,7 @@ export type Database = {
           owner_id: string
           query: string
           results_limit: number
+          source: Database["public"]["Enums"]["trend_source"]
           status: Database["public"]["Enums"]["job_status"]
           updated_at: string
         }
@@ -1098,6 +1102,7 @@ export type Database = {
           owner_id: string
           query: string
           results_limit: number
+          source?: Database["public"]["Enums"]["trend_source"]
           status?: Database["public"]["Enums"]["job_status"]
           updated_at?: string
         }
@@ -1112,6 +1117,7 @@ export type Database = {
           owner_id?: string
           query?: string
           results_limit?: number
+          source?: Database["public"]["Enums"]["trend_source"]
           status?: Database["public"]["Enums"]["job_status"]
           updated_at?: string
         }
@@ -1794,6 +1800,118 @@ export type Database = {
         }
         Relationships: []
       }
+      team_goals: {
+        Row: {
+          avg_ticket: number
+          booking_rate: number
+          close_rate: number
+          created_at: string
+          currency: string
+          id: string
+          monthly_revenue_target: number
+          owner_id: string
+          show_rate: number
+          status: Database["public"]["Enums"]["sales_goal_status"]
+          team_id: string
+          updated_at: string
+          working_days_per_month: number
+          working_days_per_week: number
+        }
+        Insert: {
+          avg_ticket: number
+          booking_rate: number
+          close_rate: number
+          created_at?: string
+          currency?: string
+          id?: string
+          monthly_revenue_target: number
+          owner_id: string
+          show_rate: number
+          status?: Database["public"]["Enums"]["sales_goal_status"]
+          team_id: string
+          updated_at?: string
+          working_days_per_month: number
+          working_days_per_week: number
+        }
+        Update: {
+          avg_ticket?: number
+          booking_rate?: number
+          close_rate?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          monthly_revenue_target?: number
+          owner_id?: string
+          show_rate?: number
+          status?: Database["public"]["Enums"]["sales_goal_status"]
+          team_id?: string
+          updated_at?: string
+          working_days_per_month?: number
+          working_days_per_week?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_goals_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_members: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          team_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          team_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       lead_first_contacts: {
@@ -1991,6 +2109,67 @@ export type Database = {
         }
         Returns: string
       }
+      team_can_see: { Args: { p_owner: string }; Returns: boolean }
+      team_daily_contacts: {
+        Args: { p_from: string; p_owner: string; p_to: string; p_tz?: string }
+        Returns: {
+          day: string
+          first_contacts: number
+          followups: number
+        }[]
+      }
+      team_define_goal: {
+        Args: {
+          p_booking_rate: number
+          p_close_rate: number
+          p_days_per_month: number
+          p_days_per_week: number
+          p_revenue: number
+          p_show_rate: number
+          p_ticket: number
+        }
+        Returns: string
+      }
+      team_directory: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          name: string
+          owner_id: string
+        }[]
+      }
+      team_execution_metrics: {
+        Args: {
+          p_booking_lag_days?: number
+          p_from: string
+          p_owner: string
+          p_to: string
+        }
+        Returns: {
+          booked: number
+          booking_cohort: number
+          contacts: number
+          held_leads: number
+          human_responses: number
+          meetings_held: number
+          meetings_no_show: number
+          won_from_held: number
+          won_in_window: number
+        }[]
+      }
+      team_prospecting_funnel: {
+        Args: { p_owner: string }
+        Returns: {
+          contacts_sent: number
+          human_responses: number
+          interested: number
+          meetings: number
+          qualified: number
+          total_leads: number
+          total_responses: number
+          won: number
+        }[]
+      }
     }
     Enums: {
       appointment_status:
@@ -2093,6 +2272,7 @@ export type Database = {
         | "DESCARTADO"
       message_channel: "WHATSAPP" | "EMAIL" | "INSTAGRAM"
       sales_goal_status: "ACTIVA" | "ARCHIVADA"
+      trend_source: "APIFY" | "META"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2332,6 +2512,7 @@ export const Constants = {
       ],
       message_channel: ["WHATSAPP", "EMAIL", "INSTAGRAM"],
       sales_goal_status: ["ACTIVA", "ARCHIVADA"],
+      trend_source: ["APIFY", "META"],
     },
   },
 } as const

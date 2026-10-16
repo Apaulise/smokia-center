@@ -641,6 +641,38 @@ Lleva a la app la planilla "Mi cadena de ejecución": de un objetivo de facturac
 9. El gráfico "Contactos por día" muestra los días del mes con la línea de objetivo; los días que llegaron al objetivo en amarillo, tooltip por barra.
 10. El sidebar muestra "Objetivo" debajo de "Dashboard", y el tile "Hoy X / Y" del dashboard lleva a `/leads/objetivo` con los mismos números.
 
+### 1.23 Objetivo y dashboard de equipo
+
+> **Estado (2026-10-15): código escrito, migración SIN APLICAR, verificación manual PENDIENTE.** Migración `20261014120000_leads_team.sql` (hay que correr `npm run db:push` y `npm run db:types`; después sembrar el equipo, ver `SETUP.md`), `lib/leads/team/{queries,aggregate,summary}.ts`, `lib/leads/execution/derive.ts` (la aritmética de §1.22 extraída), `components/leads/team/member-contribution.tsx` y `app/(app)/leads/equipo/page.tsx`, agregada al sidebar entre "Dashboard" y "Objetivo".
+
+Los dos socios operan como un solo negocio: **una meta en común**, un dashboard global y la posibilidad de ver cómo le va a cada uno. Cada uno conserva sus leads aislados por RLS; lo que se comparte son **agregados** (conteos, tasas, serie diaria), nunca filas de leads, mensajes ni notas.
+
+**Meta de equipo.** `team_goals` (mismas columnas que `sales_goals` + `team_id`; `owner_id` = quién la definió). Una sola activa por equipo, la pueden cambiar los dos, y `team_define_goal` archiva la anterior en una transacción. `defineSalesGoal` elige solo: con equipo escribe la meta del equipo, sin equipo la personal de §1.22. La primera vez, el formulario se precarga con la meta personal anterior.
+
+**Tasas pooleadas.** Los conteos de cada miembro se suman y **recién después** se calculan las tasas del equipo con `blendRate`: una tasa agrupada pesa a cada uno por su volumen, no promedia dos porcentajes. El aporte individual es contra la parte que le toca (`⌈contactos por día del equipo / nº de miembros⌉`; partes iguales, sin campo para repartir distinto).
+
+**Pantallas.** `/leads/equipo`: selector Equipo | cada miembro (`?vista=<id>`), KPIs, tabla de aporte por persona (sólo en la vista de equipo), embudo y contactos por día contra el objetivo del alcance elegido. `/leads/objetivo`: con equipo muestra la meta compartida, la cadena con las tasas del pool y el aporte de cada uno. El tile "Hoy" de `/leads` pasa a "lo mío contra mi parte" con el total del equipo debajo. Los widgets que mostrarían contenido de leads (ángulos, rubros, listas, "Atención") no tienen versión de equipo. El gráfico de contactos por día es el mismo de §1.22 sobre la serie sumada (no apilado por persona; el desglose está en la tabla).
+
+**Cómo se cruza el aislamiento** (excepción documentada en `CLAUDE.md` §4): `team_members` sólo deja leer la propia fila y no tiene políticas de escritura (la membresía se siembra a mano). La lectura cruzada pasa por funciones `SECURITY DEFINER` (`team_directory`, `team_execution_metrics`, `team_daily_contacts`, `team_prospecting_funnel`), con `search_path = ''`, que devuelven sólo conteos y cuya primera condición es `team_can_see(p_owner)` (el que llama y el miembro comparten equipo). Son una copia de las funciones personales con filtro explícito por `owner_id`: **si se cambia una de §1.17 / §1.22, hay que cambiar también su par de equipo** — por eso el paso 2 de la verificación compara las dos versiones.
+
+**Sin equipo sembrado** todo sigue como en §1.22: `/leads/equipo` muestra un estado vacío y `/leads/objetivo` usa la meta personal.
+
+**Fuera de alcance:** la API de automatización sigue atada a un solo owner (`AUTOMATION_OWNER_ID`); los contactos que registra cuentan igual, como datos de ese owner. La zona horaria sigue fija en Argentina.
+
+**Verificación manual** (`CLAUDE.md` §13, ítem por ítem, con las dos cuentas):
+
+1. Con la migración aplicada y el equipo sembrado, `/leads/equipo` carga con el selector "Equipo | Tu nombre (vos) | Socio" y sin errores; el sidebar muestra "Equipo".
+2. **Equivalencia** (SQL Editor, con tu sesión): `team_execution_metrics(<tu id>, …)`, `team_daily_contacts(<tu id>, …)` y `team_prospecting_funnel(<tu id>)` dan los mismos números que `leads_execution_metrics`, `leads_daily_contacts` y `leads_prospecting_funnel`.
+3. Definir la meta del equipo desde una cuenta → la otra la ve igual en `/leads/objetivo`, con "Definido por …".
+4. Editarla desde la otra cuenta → queda una sola fila `ACTIVA` y la anterior `ARCHIVADA`.
+5. Vista "Equipo": leads, contactados, reuniones y ganados son la suma de las vistas de cada uno.
+6. Vista "Yo" de `/leads/equipo` coincide con el dashboard personal `/leads` (KPIs y embudo).
+7. Vista del socio: ves sus números y ningún lead, mensaje o nota suyos; en `/leads/lista` no aparece nada de él.
+8. Tabla "Aporte de cada uno": hoy/semana/mes contra la parte de cada uno; el % del equipo suma ~100.
+9. Registrar un contacto nuevo → "Hoy" sube en 1 para vos, para el equipo y en la tabla; el socio lo ve reflejado.
+10. Cuenta sin equipo (o sin sembrar): `/leads/equipo` muestra el estado vacío y `/leads/objetivo` sigue con la meta personal.
+11. Un `select` directo desde el cliente a `leads` o `lead_messages` del socio sigue devolviendo 0 filas, y `team_execution_metrics` con un id ajeno al equipo devuelve vacío.
+
 ---
 
 ## Fases siguientes (fuera de alcance ahora)
