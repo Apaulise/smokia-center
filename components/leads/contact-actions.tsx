@@ -4,12 +4,13 @@ import { CheckCircle2, Globe, Loader2, Mail, MapPin, Phone, PhoneCall, XCircle }
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 
-import { Button } from "@/components/leads/ui/button";
+import { Button, ButtonExternalLink } from "@/components/leads/ui/button";
 import { Dialog } from "@/components/leads/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/leads/ui/field";
 import { logContactActivity } from "@/lib/leads/actions";
 import type { LeadWithRelations } from "@/lib/leads/queries";
 import { LEAD_STATUSES, STATUS_LABEL, type LeadActivityType, type LeadStatus } from "@/lib/leads/status";
+import { externalWebUrl } from "@/lib/leads/external-url";
 import { buildMailtoLink, buildWhatsappLink } from "@/lib/leads/templates";
 
 const CONTACT_LABEL: Record<"WHATSAPP" | "EMAIL" | "LLAMADA", string> = {
@@ -48,6 +49,7 @@ export function ContactActions({ lead }: { lead: LeadWithRelations }) {
     : lead.latitude && lead.longitude
       ? `https://www.google.com/maps/search/?api=1&query=${lead.latitude},${lead.longitude}`
       : null;
+  const websiteUrl = externalWebUrl(lead.website);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -63,11 +65,11 @@ export function ContactActions({ lead }: { lead: LeadWithRelations }) {
         <PhoneCall className="size-3.5" strokeWidth={1.5} />
         Llamada
       </Button>
-      {lead.website ? (
-        <Button type="button" variant="ghost" onClick={() => window.open(lead.website!, "_blank")}>
+      {websiteUrl ? (
+        <ButtonExternalLink href={websiteUrl} variant="ghost" aria-label={`Abrir sitio web de ${lead.name} en otra pestaña`}>
           <Globe className="size-3.5" strokeWidth={1.5} />
           Sitio web
-        </Button>
+        </ButtonExternalLink>
       ) : null}
       {mapsUrl ? (
         <Button type="button" variant="ghost" onClick={() => window.open(mapsUrl, "_blank")}>

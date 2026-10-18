@@ -30,6 +30,7 @@ import {
   type LeadSignalRow,
 } from "@/lib/leads/queries";
 import { hasConfirmedPain, planSignalWrites, type SignalPatch } from "@/lib/leads/signals";
+import { openingHoursFromRaw } from "@/lib/leads/opening-hours";
 import { nextStage } from "@/lib/leads/stage-engine";
 import { getSalesProfile } from "@/lib/settings/queries";
 import { createClient, requireUser } from "@/lib/supabase/server";
@@ -53,6 +54,7 @@ interface EnrichCandidate {
   website: string | null;
   instagram_url: string | null;
   source_url: string | null;
+  raw: Json | null;
   industries: { name: string } | null;
 }
 
@@ -65,6 +67,7 @@ function toLeadInput(lead: EnrichCandidate): EnrichmentInput {
     website: lead.website,
     instagramUrl: lead.instagram_url,
     sourceUrl: lead.source_url,
+    openingHours: openingHoursFromRaw(lead.raw),
   };
 }
 
@@ -110,7 +113,7 @@ async function persistEnrichment(ownerId: string, leadId: string, currentStatus:
 async function fetchEnrichCandidates(supabase: Awaited<ReturnType<typeof createClient>>, leadIds: string[]) {
   const { data } = await supabase
     .from("leads")
-    .select("id, name, status, city, address, website, instagram_url, source_url, industries(name)")
+    .select("id, name, status, city, address, website, instagram_url, source_url, raw, industries(name)")
     .in("id", leadIds);
   return (data ?? []) as EnrichCandidate[];
 }

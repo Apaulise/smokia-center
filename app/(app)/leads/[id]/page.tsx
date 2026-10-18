@@ -26,6 +26,8 @@ import {
   listUpcomingAppointmentsForLead,
 } from "@/lib/leads/queries";
 import { formatAddress } from "@/lib/leads/address";
+import { externalWebUrl } from "@/lib/leads/external-url";
+import { openingHoursFromRaw } from "@/lib/leads/opening-hours";
 import { LEAD_STATUSES } from "@/lib/leads/status";
 
 export async function generateMetadata({ params }: PageProps<"/leads/[id]">) {
@@ -58,6 +60,8 @@ export default async function LeadFichaPage({ params, searchParams }: PageProps<
   const enrichment = (intel?.enrichment as EnrichmentResult | null) ?? null;
   const memory = (intel?.memory as LeadMemory | null) ?? null;
   const stageIndex = LEAD_STATUSES.indexOf(lead.status) + 1;
+  const websiteUrl = externalWebUrl(lead.website);
+  const openingHours = openingHoursFromRaw(lead.raw);
 
   return (
     <>
@@ -120,7 +124,13 @@ export default async function LeadFichaPage({ params, searchParams }: PageProps<
                   }
                 />
               ) : null}
-              {lead.website ? <InfoRow label="Sitio web" value={lead.website} /> : null}
+              {lead.website ? (
+                <InfoRow label="Sitio web" value={websiteUrl ? (
+                  <a href={websiteUrl} target="_blank" rel="noopener noreferrer" className="break-all text-lm-ink hover:text-lm-signal-text hover:underline focus-visible:lm-focus">
+                    {lead.website}
+                  </a>
+                ) : lead.website} />
+              ) : null}
               {lead.rating != null ? (
                 <InfoRow
                   label="Rating"
@@ -196,7 +206,7 @@ export default async function LeadFichaPage({ params, searchParams }: PageProps<
           </InfoSection>
 
           <InfoSection eyebrow="Enriquecimiento" divider>
-            <EnrichPanel leadId={lead.id} enrichment={enrichment} />
+            <EnrichPanel leadId={lead.id} enrichment={enrichment} website={lead.website} rawOpeningHours={openingHours} />
           </InfoSection>
 
           <InfoSection eyebrow="Dolores, objeciones y señales" divider>

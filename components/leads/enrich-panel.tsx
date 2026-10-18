@@ -9,6 +9,8 @@ import { CopilotChip, CopilotLabel, SmokeLines } from "@/components/leads/ui/cop
 import { ANGLE_LABEL, type SalesAngle } from "@/lib/leads/ai/angles";
 import { enrichOneLead } from "@/lib/leads/ai/actions";
 import type { EnrichmentResult, WebPresenceStatus } from "@/lib/leads/ai/enrich";
+import { externalWebUrl } from "@/lib/leads/external-url";
+import type { OpeningHoursEntry } from "@/lib/leads/opening-hours";
 
 const CONFIDENCE_LABEL: Record<EnrichmentResult["confidence"], string> = {
   BAJA: "Confianza baja",
@@ -45,7 +47,17 @@ function List({ title, items }: { title: string; items: string[] }) {
  * Enriquecimiento del lead (Plan §1.10, Design System Copilot §ENRIQUECIMIENTO):
  * el análisis comercial de Gemini (SPA §4) antes del primer contacto.
  */
-export function EnrichPanel({ leadId, enrichment }: { leadId: string; enrichment: EnrichmentResult | null }) {
+export function EnrichPanel({
+  leadId,
+  enrichment,
+  website,
+  rawOpeningHours,
+}: {
+  leadId: string;
+  enrichment: EnrichmentResult | null;
+  website: string | null;
+  rawOpeningHours: OpeningHoursEntry[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +85,12 @@ export function EnrichPanel({ leadId, enrichment }: { leadId: string; enrichment
 
   // Fallback para análisis guardados antes de sumarse este campo (blob opaco, sin migración de datos viejos).
   const webPresenceStatus: WebPresenceStatus = enrichment?.webPresence?.status ?? "SIN_VERIFICAR";
+  const websiteUrl = externalWebUrl(website);
+  const webPresenceUrl = webPresenceStatus === "DOMINIO_PROPIO" || webPresenceStatus === "DOMINIO_GRATUITO_O_CONSTRUCTOR"
+    ? websiteUrl : null;
+  const detail = enrichment?.webPresence?.detail;
+  const detailIsWebsite = Boolean(detail && websiteUrl && externalWebUrl(detail) === websiteUrl);
+  const openingHours = rawOpeningHours.length > 0 ? rawOpeningHours : enrichment?.openingHours ?? [];
 
   return (
     <div className="flex flex-col gap-3">
@@ -98,14 +116,25 @@ export function EnrichPanel({ leadId, enrichment }: { leadId: string; enrichment
             <div>
               <CopilotLabel>Presencia web</CopilotLabel>
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                <CopilotChip variant={WEB_PRESENCE_OPPORTUNITY.has(webPresenceStatus) ? "signal" : "pain"}>
-                  {WEB_PRESENCE_LABEL[webPresenceStatus]}
-                </CopilotChip>
+                {webPresenceUrl ? (
+                  <a href={webPresenceUrl} target="_blank" rel="noopener noreferrer" aria-label={`Abrir sitio web de este lead en otra pestaña`} className="rounded-lm-sm focus-visible:lm-focus">
+                    <CopilotChip variant="pain">{WEB_PRESENCE_LABEL[webPresenceStatus]}</CopilotChip>
+                  </a>
+                ) : (
+                  <CopilotChip variant={WEB_PRESENCE_OPPORTUNITY.has(webPresenceStatus) ? "signal" : "pain"}>
+                    {WEB_PRESENCE_LABEL[webPresenceStatus]}
+                  </CopilotChip>
+                )}
                 {WEB_PRESENCE_OPPORTUNITY.has(webPresenceStatus) ? (
                   <span className="text-[13px] text-lm-signal-text">Oportunidad: sitio de cortesía</span>
                 ) : null}
               </div>
-              {enrichment.webPresence?.detail ? <p className="mt-1 text-[13px] text-lm-ink-2">{enrichment.webPresence.detail}</p> : null}
+              {webPresenceUrl ? (
+                <a href={webPresenceUrl} target="_blank" rel="noopener noreferrer" className="mt-1 block break-all text-[13px] text-lm-ink-2 hover:text-lm-signal-text hover:underline focus-visible:lm-focus">
+                  {detailIsWebsite ? detail : website}
+                </a>
+              ) : null}
+              {detail && !detailIsWebsite ? <p className="mt-1 text-[13px] text-lm-ink-2">{detail}</p> : null}
             </div>
           ) : null}
           {enrichment.possiblePains.length > 0 ? (
@@ -122,6 +151,27 @@ export function EnrichPanel({ leadId, enrichment }: { leadId: string; enrichment
       ) : (
         <p className="text-[13px] text-lm-ink-2">Sin análisis todavía. Enriquecé el lead para empezar.</p>
       )}
+
+      {openingHours.length > 0 || enrichment ? (
+        <div>
+          <CopilotLabel>Días y horarios de atención</CopilotLabel>
+          {openingHours.length > 0 ? (
+            <>
+              <dl className="mt-1.5 space-y-1 text-[13px] text-lm-ink">
+                {openingHours.map(({ day, hours }) => (
+                  <div key={day} className="grid grid-cols-[5.5rem_1fr] gap-2">
+                    <dt className="capitalize text-lm-ink-2">{day}</dt>
+                    <dd>{hours}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-1.5 text-xs text-lm-ink-3">Según {rawOpeningHours.length > 0 ? "la ficha de origen" : "una fuente consultada"}; pueden cambiar.</p>
+            </>
+          ) : (
+            <p className="mt-1 text-[13px] text-lm-ink-2">No se encontraron horarios publicados.</p>
+          )}
+        </div>
+      ) : null}
 
       {error ? <p className="text-[13px] text-lm-danger">{error}</p> : null}
 

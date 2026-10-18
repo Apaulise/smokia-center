@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ButtonHTMLAttributes, ComponentProps } from "react";
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ComponentProps } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -53,6 +53,16 @@ export function ButtonLink({
   ...props
 }: ComponentProps<typeof Link> & { variant?: Variant; size?: Size }) {
   return <Link className={cn(BASE, VARIANTS[variant], SIZES[size], className)} {...props} />;
+}
+
+/** Enlaces externos: un ancla real abre otra pestaña y permite copiar el destino. */
+export function ButtonExternalLink({
+  variant = "secondary",
+  size = "md",
+  className,
+  ...props
+}: AnchorHTMLAttributes<HTMLAnchorElement> & { href: string; variant?: Variant; size?: Size }) {
+  return <a className={cn(BASE, VARIANTS[variant], SIZES[size], className)} {...props} target="_blank" rel="noopener noreferrer" />;
 }
 
 /** Botón cuadrado sólo-ícono, 32×32. Siempre con aria-label. */

@@ -4,6 +4,8 @@ import { isSalesAngle, SALES_ANGLES, type SalesAngle } from "@/lib/leads/ai/angl
 import { getSalesOS } from "@/lib/leads/ai/sales-os";
 import { formatAddress } from "@/lib/leads/address";
 import { generateGeminiJson, generateGeminiUrlJson, type GeminiSchema } from "@/lib/gemini/client";
+import { externalWebUrl } from "@/lib/leads/external-url";
+import { normalizeOpeningHours, type OpeningHoursEntry } from "@/lib/leads/opening-hours";
 
 /**
  * Enriquecimiento de un lead scrapeado (Plan §1.10): convierte los datos
@@ -43,6 +45,7 @@ const EnrichmentOutputSchema = z.object({
   operation_signals: z.array(z.string().trim().max(300)).max(10).default([]),
   technology_signals: z.array(z.string().trim().max(300)).max(10).default([]),
   web_presence: WebPresenceSchema,
+  opening_hours: z.array(z.object({ day: z.string(), hours: z.string() })).max(7).default([]),
   // Hipótesis, nunca hechos (SPA §4): cada una nace en lead_signals con status=HIPOTESIS.
   possible_pains: z.array(PossiblePainSchema).max(8).default([]),
   recommended_sales_angle: z.string(),
@@ -64,6 +67,14 @@ const GEMINI_SCHEMA: GeminiSchema = {
         detail: { type: "string", nullable: true },
       },
       required: ["status"],
+    },
+    opening_hours: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { day: { type: "string" }, hours: { type: "string" } },
+        required: ["day", "hours"],
+      },
     },
     possible_pains: {
       type: "array",
@@ -90,6 +101,7 @@ export interface EnrichmentInput {
   website: string | null;
   instagramUrl: string | null;
   sourceUrl: string | null;
+  openingHours: OpeningHoursEntry[];
 }
 
 export interface EnrichmentResult {
@@ -99,21 +111,13 @@ export interface EnrichmentResult {
   operationSignals: string[];
   technologySignals: string[];
   webPresence: { status: WebPresenceStatus; detail: string | null };
+  /** Horario publicado en Google Maps o en una URL realmente leída. */
+  openingHours: OpeningHoursEntry[];
   possiblePains: { description: string; businessImpact: string | null }[];
   recommendedSalesAngle: SalesAngle | null;
   confidence: "BAJA" | "MEDIA" | "ALTA";
   /** Si URL Context leyó una fuente real. Si es `false`, los campos de hechos verificados vienen vacíos/SIN_VERIFICAR. */
   grounded: boolean;
-}
-
-function referenceUrl(value: string | null): string | null {
-  if (!value?.trim()) return null;
-  try {
-    const url = new URL(value.includes("://") ? value : `https://${value}`);
-    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
-  } catch {
-    return null;
-  }
 }
 
 function buildEnrichmentPrompt(lead: EnrichmentInput, references: string[]): string {
@@ -133,6 +137,7 @@ Reglas:
 - detected_services, operation_signals y technology_signals: sólo hechos visibles en una URL leída y atribuible a este negocio. Dejalos vacíos si no hay evidencia.
 - possible_decision_maker: sólo si una fuente lo identifica; si no, null.
 - web_presence.status: DOMINIO_PROPIO o DOMINIO_GRATUITO_O_CONSTRUCTOR sólo si leíste el sitio y confirmaste que corresponde a este negocio. SOLO_REDES_SOCIALES sólo si la fuente confirma que ésa es su única presencia. Como no hay búsqueda exhaustiva, nunca deduzcas SIN_PRESENCIA_DIGITAL por ausencia de enlaces. Ante la duda, SIN_VERIFICAR y detail null.
+- opening_hours: incluí días y horarios sólo si están publicados explícitamente en una URL que pudiste leer. Usá los nombres de los días en español y copiá el horario de cada día sin inventar ni completar días faltantes. Si no hay horarios visibles, array vacío.
 - possible_pains: sólo hipótesis plausibles; nunca las presentes como dolores confirmados. Array vacío si no hay base suficiente.
 - recommended_sales_angle: hipótesis inicial, no conclusión. confidence: BAJA si no pudiste leer fuentes útiles.
 - Si no hay URLs o ninguna se puede leer, completá el JSON con los datos básicos del lead y todos los campos de hechos verificados vacíos.`;
@@ -146,7 +151,7 @@ Reglas:
 export async function enrichLead(params: { apiKey: string; lead: EnrichmentInput }): Promise<EnrichmentResult> {
   const system = getSalesOS();
   const references = [params.lead.website, params.lead.instagramUrl, params.lead.sourceUrl]
-    .map(referenceUrl)
+    .map(externalWebUrl)
     .filter((url): url is string => url !== null);
   const request = {
     apiKey: params.apiKey,
@@ -171,6 +176,9 @@ export async function enrichLead(params: { apiKey: string; lead: EnrichmentInput
     webPresence: grounded
       ? { status: parsed.web_presence.status, detail: parsed.web_presence.detail }
       : { status: "SIN_VERIFICAR", detail: null },
+    openingHours: params.lead.openingHours.length > 0
+      ? params.lead.openingHours
+      : grounded ? normalizeOpeningHours(parsed.opening_hours) : [],
     possiblePains: parsed.possible_pains.map((pain) => ({
       description: pain.description,
       businessImpact: pain.business_impact,
