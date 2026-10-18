@@ -49,6 +49,8 @@ openssl rand -hex 32       # CRON_SECRET
 
 > **`APP_ENCRYPTION_KEY` no se rota a la ligera.** Cifra el token de Apify guardado en la base; si se pierde o cambia, ese token queda ilegible y hay que volver a cargarlo desde `/configuracion`.
 
+> **Para probar contra el CRM existente en localhost:** copiá `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `APP_ENCRYPTION_KEY` y `ALLOWED_EMAILS` del despliegue. La misma clave de cifrado permite leer la API key de Gemini que ya está guardada en `settings`. No subas `.env.local` al repositorio ni compartas estas variables en un chat.
+
 > **`SUPABASE_SERVICE_ROLE_KEY` saltea RLS.** Nunca prefijarla con `NEXT_PUBLIC_`, nunca importarla desde un componente.
 
 ## 4. Aplicar el esquema
@@ -102,6 +104,8 @@ El SMTP por defecto de Supabase sólo le manda a miembros de la organización y 
 ```bash
 npm run dev
 ```
+
+Antes de probar con una clave real, `npm run test:gemini` verifica localmente que el enriquecimiento pide URL Context sin Google Search y sólo marca como verificada una URL recuperada. `npm run build:verify` compila la app en una carpeta separada del servidor de desarrollo.
 
 ---
 

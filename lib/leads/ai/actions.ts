@@ -37,8 +37,9 @@ import type { Database, Json } from "@/lib/supabase/database.types";
 
 export type ActionState = { ok: boolean; message: string } | null;
 
-/** Los límites del free tier de Gemini son reales (§1.10): ~15 RPM, y el grounding tiene su propia cuota, más chica. */
-const ENRICH_BATCH_MAX = 25;
+/** Cinco leads por lote dejan margen para URL Context y la ejecución de 60 s de la página. */
+const ENRICH_BATCH_MAX = 5;
+/** Una llamada a Gemini por lead: 4,5 s entre llamadas respeta el límite mostrado de 15 RPM. */
 const ENRICH_THROTTLE_MS = 4500;
 /** Margen sobre ENRICH_BATCH_MAX para descartar los que ya estén enriquecidos sin traer la lista entera. */
 const ENRICH_CANDIDATE_POOL = 500;
@@ -142,7 +143,7 @@ export async function enrichOneLead(leadId: string): Promise<ActionState> {
 /** Lote en segundo plano con el throttle del free tier de Gemini — común a "Enriquecer lista" y "Enriquecer selección". */
 function enrichCandidatesInBackground(ownerId: string, apiKey: string, candidates: EnrichCandidate[]) {
   after(async () => {
-    for (const lead of candidates) {
+    for (const [index, lead] of candidates.entries()) {
       try {
         const result = await enrichLead({ apiKey, lead: toLeadInput(lead) });
         await persistEnrichment(ownerId, lead.id, lead.status, result);
@@ -150,7 +151,9 @@ function enrichCandidatesInBackground(ownerId: string, apiKey: string, candidate
         // Un fallo puntual no frena el lote: el lead queda sin enriquecer y se puede reintentar.
         console.error(`No se pudo enriquecer el lead ${lead.id}:`, error instanceof Error ? error.message : error);
       }
-      await new Promise((resolve) => setTimeout(resolve, ENRICH_THROTTLE_MS));
+      if (index < candidates.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, ENRICH_THROTTLE_MS));
+      }
     }
   });
 }
@@ -205,8 +208,7 @@ export async function enrichLeadListBatch(leadListId: string): Promise<ActionSta
  * barra de acciones masivas): mismo motor y mismo throttle que "Enriquecer
  * lista", pero acotado a los ids que la persona marcó en la tabla en vez de
  * resolver toda una lista. Tope de ENRICH_BATCH_MAX por la misma razón que
- * ahí — no hace falta un límite más chico, elegir 26+ filas a mano ya es una
- * señal de que se quiere el lote completo (usar "Enriquecer lista").
+ * ahí — si hay más filas seleccionadas, se procesan las primeras cinco.
  */
 export async function enrichSelectedLeads(leadIds: string[]): Promise<ActionState> {
   const user = await requireUser();

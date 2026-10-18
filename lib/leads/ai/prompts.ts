@@ -58,17 +58,17 @@ const WEB_PRESENCE_LABEL: Record<WebPresenceStatus, string> = {
 function formatEnrichment(enrichment: EnrichmentResult | null): string {
   if (!enrichment) return "Sin enriquecer todavía: no hay análisis previo del negocio.";
   if (!enrichment.grounded) {
-    return `SIN VERIFICAR: la búsqueda web de este negocio no encontró nada real (falló el grounding). No hay ningún servicio, señal de operación ni señal de tecnología confirmados.\nResumen (genérico, no verificado — no lo cites como si lo hubieras visto): ${enrichment.businessSummary}\nConfianza del análisis: BAJA`;
+    return `SIN VERIFICAR: no se pudo leer ninguna URL de este negocio. No hay ningún servicio, señal de operación ni señal de tecnología confirmados.\nResumen (no verificado — no lo cites como si lo hubieras visto): ${enrichment.businessSummary}\nConfianza del análisis: BAJA`;
   }
   const lines = [
     `Resumen: ${enrichment.businessSummary}`,
-    enrichment.detectedServices.length > 0 ? `Servicios detectados (HECHO, verificado en la búsqueda): ${enrichment.detectedServices.join(", ")}` : null,
+    enrichment.detectedServices.length > 0 ? `Servicios detectados (HECHO, verificado en una URL): ${enrichment.detectedServices.join(", ")}` : null,
     enrichment.possibleDecisionMaker ? `Posible decisor: ${enrichment.possibleDecisionMaker}` : null,
-    enrichment.operationSignals.length > 0 ? `Señales de operación (HECHO, verificado en la búsqueda): ${enrichment.operationSignals.join("; ")}` : null,
-    enrichment.technologySignals.length > 0 ? `Señales de tecnología (HECHO, verificado en la búsqueda): ${enrichment.technologySignals.join("; ")}` : null,
+    enrichment.operationSignals.length > 0 ? `Señales de operación (HECHO, verificado en una URL): ${enrichment.operationSignals.join("; ")}` : null,
+    enrichment.technologySignals.length > 0 ? `Señales de tecnología (HECHO, verificado en una URL): ${enrichment.technologySignals.join("; ")}` : null,
     // `enrichment.webPresence` puede faltar en análisis guardados antes de sumarse este campo (blob opaco, sin migración de datos viejos).
     enrichment.webPresence && enrichment.webPresence.status !== "SIN_VERIFICAR"
-      ? `Presencia web (HECHO, verificado en la búsqueda): ${WEB_PRESENCE_LABEL[enrichment.webPresence.status]}${enrichment.webPresence.detail ? ` — ${enrichment.webPresence.detail}` : ""}`
+      ? `Presencia web (HECHO, verificado en una URL): ${WEB_PRESENCE_LABEL[enrichment.webPresence.status]}${enrichment.webPresence.detail ? ` — ${enrichment.webPresence.detail}` : ""}`
       : null,
     `Confianza del análisis: ${enrichment.confidence}`,
   ].filter(Boolean);

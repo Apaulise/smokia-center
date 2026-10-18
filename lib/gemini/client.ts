@@ -106,6 +106,42 @@ export async function generateGeminiJson(params: GeminiJsonParams): Promise<stri
   return text;
 }
 
+/** Enriquecimiento con URLs conocidas, sin Google Search (no disponible en el free tier de Gemini 3.5 Flash-Lite). */
+export async function generateGeminiUrlJson(params: GeminiJsonParams): Promise<{ text: string; grounded: boolean }> {
+  const model = params.model ?? GEMINI_MODEL;
+  const response = await fetch(`${GEMINI_BASE}/models/${encodeURIComponent(model)}:generateContent`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-goog-api-key": params.apiKey },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: params.system }] },
+      contents: [{ role: "user", parts: [{ text: params.prompt }] }],
+      tools: [{ url_context: {} }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: params.schema,
+        maxOutputTokens: params.maxOutputTokens ?? 8192,
+        temperature: 0,
+      },
+    }),
+  });
+
+  if (!response.ok) throw new Error(`Gemini rechazó la consulta (${await geminiErrorMessage(response)})`);
+
+  const body = (await response.json()) as {
+    candidates?: {
+      content?: { parts?: { text?: string }[] };
+      urlContextMetadata?: { urlMetadata?: { urlRetrievalStatus?: string }[] };
+    }[];
+  };
+  const candidate = body.candidates?.[0];
+  const text = candidate?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
+  if (!text.trim()) throw new Error("Gemini devolvió una respuesta vacía.");
+  const grounded = candidate?.urlContextMetadata?.urlMetadata?.some(
+    (entry) => entry.urlRetrievalStatus === "URL_RETRIEVAL_STATUS_SUCCESS",
+  ) ?? false;
+  return { text, grounded };
+}
+
 /** Hasta acá el video viaja inline en el pedido (el tope de Google es 20 MB por pedido, base64 incluido). */
 const INLINE_VIDEO_MAX_BYTES = 12 * 1024 * 1024;
 const FILE_POLL_INTERVAL_MS = 2_000;

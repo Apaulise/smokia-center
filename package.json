@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "test:gemini": "node --experimental-strip-types --test tests/gemini-url-json.test.mjs",
     "db:push": "supabase db push",
     "db:types": "supabase gen types typescript --linked > lib/supabase/database.types.ts",
     "db:link": "supabase link",

@@ -20,8 +20,8 @@ async function getDecryptedKey(settingKey: string, providerLabel: string): Promi
 }
 
 /**
- * La key de Google AI Studio (Gemini): sólo el enriquecimiento (§1.10), que
- * necesita el grounding (`google_search`) que Groq no tiene. Las reescrituras
+ * La key de Google AI Studio (Gemini): el enriquecimiento (§1.10) usa URL
+ * Context para leer enlaces conocidos en el nivel gratuito. Las reescrituras
  * de tono se movieron a Groq el 2026-09-28 — ver `getGroqApiKey()`.
  */
 export async function getGeminiApiKey(): Promise<ApiKeyResult> {

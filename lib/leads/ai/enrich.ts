@@ -3,12 +3,12 @@ import { z } from "zod";
 import { isSalesAngle, SALES_ANGLES, type SalesAngle } from "@/lib/leads/ai/angles";
 import { getSalesOS } from "@/lib/leads/ai/sales-os";
 import { formatAddress } from "@/lib/leads/address";
-import { generateGeminiGrounded, generateGeminiJson, type GeminiSchema } from "@/lib/gemini/client";
+import { generateGeminiJson, generateGeminiUrlJson, type GeminiSchema } from "@/lib/gemini/client";
 
 /**
  * Enriquecimiento de un lead scrapeado (Plan §1.10): convierte los datos
- * crudos del scraper en el análisis comercial del SPA §4. Dos pases contra
- * Gemini — ver generateGeminiGrounded() para por qué no es uno solo.
+ * crudos del scraper en el análisis comercial del SPA §4. Una llamada a
+ * Gemini con URL Context cuando hay URLs; Google Search requiere un plan pago.
  */
 
 const PossiblePainSchema = z.object({
@@ -102,82 +102,61 @@ export interface EnrichmentResult {
   possiblePains: { description: string; businessImpact: string | null }[];
   recommendedSalesAngle: SalesAngle | null;
   confidence: "BAJA" | "MEDIA" | "ALTA";
-  /** Si el pase A (google_search/url_context) encontró algo real. Si es `false`, los campos de hechos verificados de arriba (servicios, señales, presencia web) ya vienen vacíos/SIN_VERIFICAR, forzado — ver enrichLead(). */
+  /** Si URL Context leyó una fuente real. Si es `false`, los campos de hechos verificados vienen vacíos/SIN_VERIFICAR. */
   grounded: boolean;
 }
 
-function buildEvidencePrompt(lead: EnrichmentInput): string {
-  const references = [
-    lead.website ? `Sitio web: ${lead.website}` : null,
-    lead.instagramUrl ? `Instagram: ${lead.instagramUrl}` : null,
-    lead.sourceUrl ? `Ficha de origen: ${lead.sourceUrl}` : null,
-  ].filter(Boolean);
+function referenceUrl(value: string | null): string | null {
+  if (!value?.trim()) return null;
+  try {
+    const url = new URL(value.includes("://") ? value : `https://${value}`);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+  } catch {
+    return null;
+  }
+}
 
-  return `Estás analizando un negocio ANTES del primer contacto, para preparar la prospección (SPA §3, orden de descubrimiento: primero entender cómo trabaja hoy).
+function buildEnrichmentPrompt(lead: EnrichmentInput, references: string[]): string {
+  return `Analizá este negocio ANTES del primer contacto y devolvé el objeto JSON pedido.
 
 Negocio: ${lead.name}
 ${lead.industryName ? `Rubro: ${lead.industryName}` : ""}
 ${lead.city || lead.address ? `Ubicación: ${formatAddress(lead)}` : ""}
 
-Fuentes disponibles:
-${references.length > 0 ? references.join("\n") : "(ninguna — buscá por nombre y ubicación)"}
-
-Investigá en serio, no te quedes con la primera fuente. Antes de escribir la respuesta:
-- Si hay un sitio web listado, entrá y leelo. Si la carga falla, tira error, redirige a un dominio en venta/parking, o el contenido no coincide con este negocio (nombre distinto, otro rubro, otra ciudad), NO lo trates como el sitio del negocio — tratalo como "sin sitio web confirmado" y decilo explícitamente, no lo cites como si hubiera cargado bien.
-- Si no hay sitio listado, buscá igual por nombre + ciudad + rubro: puede tener uno que el scraper de origen no capturó.
-- Revisá Instagram y/o Facebook si están disponibles: bio, link en la bio (a veces es un Linktree/Beacons con el sitio real adentro, a veces es directamente el único canal del negocio), posts recientes, cómo dicen que se reserva o consulta.
-- Buscá también la ficha de Google Maps/Business del negocio si no es ya la fuente de origen, y reseñas públicas en cualquier plataforma que aparezca.
-
-Respondé en prosa, sin formato JSON, cubriendo:
-- Qué hace el negocio y qué servicios ofrece, concretamente.
-- Cómo parece reservarse un turno o hacerse una consulta hoy (web, WhatsApp, Instagram, teléfono).
-- Qué se ve de su operación: cuántas sucursales, si atiende una sola persona o hay equipo, horarios, volumen aparente.
-- Qué herramientas o sistemas parece usar (reservas online, algún software visible, o nada más que WhatsApp/redes).
-- Reseñas o comentarios públicos que mencionen algo relevante (tiempos de espera, falta de respuesta, elogios a la atención).
-- Presencia web, con este detalle específico porque de acá sale una posible oportunidad de negocio (un sitio simple de cortesía): ¿el negocio tiene una página propia en un dominio propio (terminación .com, .com.ar, etc. con su nombre), o lo que existe es un dominio gratuito/de un constructor (Wix, Google Sites, ".business.site", Linktree/Beacons, una landing gratuita), o no tiene sitio y sólo usa Instagram/Facebook como presencia online, o no se encontró ninguna presencia digital? Decilo en una frase y aclará en qué te basás (viste el dominio en la URL, lo dijo una reseña, no apareció nada en la búsqueda, etc.).
-
-Regla del SPA §4: separá HECHO (lo viste con esas palabras) de INFERENCIA (se deduce, podría estar mal) de HIPÓTESIS (plausible para el rubro, nada más). Si no encontraste nada de algún punto, decilo — no lo completes.`;
-}
-
-function buildStructurePrompt(evidence: string, grounded: boolean): string {
-  return `Tenés el análisis en prosa de un negocio, hecho por vos mismo en un paso anterior. Convertilo al objeto pedido.
-
-Análisis:
-"""
-${evidence}
-"""
+URLs conocidas del negocio (leé sólo estas; no tenés búsqueda web):
+${references.length ? references.join("\n") : "Ninguna. Usá sólo los datos del lead anteriores."}
 
 Reglas:
-- "business_summary": dos o tres oraciones, qué hace el negocio y cómo opera hoy. Sólo hechos e inferencias razonables, nunca invención.
-- "detected_services", "operation_signals", "technology_signals": van acá ÚNICAMENTE las cosas que el análisis marcó como HECHO (algo que se vio directamente en una página, una reseña o una ficha). Si el análisis lo etiquetó como INFERENCIA o HIPÓTESIS, o si es un patrón típico del rubro que el análisis menciona sin haberlo visto en este negocio puntual, NO va en estos tres campos — un mensaje de prospección va a citar estos campos como "vi que…", y eso sólo es honesto si es un hecho verificado.
-- "web_presence.status": elegí según lo que el análisis confirmó como HECHO sobre la presencia web del negocio — "DOMINIO_PROPIO" si vio un sitio funcionando en un dominio a nombre del negocio; "DOMINIO_GRATUITO_O_CONSTRUCTOR" si el sitio existe pero es un subdominio gratuito o de un constructor (Wix, Google Sites, ".business.site", Linktree/Beacons y similares); "SOLO_REDES_SOCIALES" si no hay sitio propio y el negocio sólo aparece en Instagram/Facebook; "SIN_PRESENCIA_DIGITAL" si la búsqueda no encontró nada online de este negocio; "SIN_VERIFICAR" si el análisis no llegó a revisar esto con confianza suficiente para afirmar cualquiera de las anteriores (por ejemplo, un link que no cargó y no se pudo confirmar qué era). "web_presence.detail": una frase corta con en qué te basás — no la inventes si el análisis no la da.
-- "possible_pains": SIEMPRE son hipótesis (SPA §5) — el enriquecimiento nunca confirma un dolor, sólo una cita textual del lead lo hace. Acá sí entra lo que el análisis marcó como INFERENCIA o HIPÓTESIS (incluidas suposiciones de tecnología/operación que no se pudieron verificar), siempre que sea plausible. Si el análisis no sugiere ningún dolor plausible para este tipo de negocio, dejá el array vacío: no fabriques uno para completar el campo.
-- "recommended_sales_angle": el más plausible de la lista dada, según lo que se ve del negocio. Si nada calza, elegí el más cercano — el campo es obligatorio, pero es una hipótesis de partida, no una conclusión.
-- "confidence": ALTA si hay evidencia concreta (sitio propio, reseñas, reservas online visibles); BAJA si el análisis de arriba dice que no encontró casi nada.
-- No inventes ningún dato que el análisis no sostenga. "No sé" en el texto de arriba significa dejar ese campo vacío o corto, no imaginar un valor.
-${grounded ? "" : `\nADVERTENCIA DEL SISTEMA: la búsqueda web de este análisis no devolvió resultados reales (cuota de grounding agotada u otro fallo silencioso) — todo lo que dice arriba puede ser conocimiento genérico del modelo sobre este tipo de negocio, no algo visto en este negocio puntual. Tratá TODO el análisis como si estuviera etiquetado HIPÓTESIS, sin importar cómo esté redactado: dejá "detected_services", "operation_signals" y "technology_signals" vacíos, "web_presence.status" en "SIN_VERIFICAR", y "confidence" en BAJA.`}`;
+- Leé las URLs con URL Context. Si una no carga, redirige a parking o corresponde a otro negocio, no la uses como evidencia.
+- No inventes búsquedas, reseñas, publicaciones, sistemas, servicios ni detalles de operación. URL Context no descubre páginas nuevas ni sigue enlaces internos.
+- business_summary: dos o tres oraciones con datos del lead y hechos realmente visibles; lo demás debe quedar expresamente sin verificar.
+- detected_services, operation_signals y technology_signals: sólo hechos visibles en una URL leída y atribuible a este negocio. Dejalos vacíos si no hay evidencia.
+- possible_decision_maker: sólo si una fuente lo identifica; si no, null.
+- web_presence.status: DOMINIO_PROPIO o DOMINIO_GRATUITO_O_CONSTRUCTOR sólo si leíste el sitio y confirmaste que corresponde a este negocio. SOLO_REDES_SOCIALES sólo si la fuente confirma que ésa es su única presencia. Como no hay búsqueda exhaustiva, nunca deduzcas SIN_PRESENCIA_DIGITAL por ausencia de enlaces. Ante la duda, SIN_VERIFICAR y detail null.
+- possible_pains: sólo hipótesis plausibles; nunca las presentes como dolores confirmados. Array vacío si no hay base suficiente.
+- recommended_sales_angle: hipótesis inicial, no conclusión. confidence: BAJA si no pudiste leer fuentes útiles.
+- Si no hay URLs o ninguna se puede leer, completá el JSON con los datos básicos del lead y todos los campos de hechos verificados vacíos.`;
 }
 
 /**
- * Corre los dos pases y devuelve el resultado validado. No escribe nada en la
+ * Corre una llamada y devuelve el resultado validado. No escribe nada en la
  * base — eso lo hace el llamador (lib/leads/ai/actions.ts), que también sabe
  * el owner_id y el lead_id.
  */
 export async function enrichLead(params: { apiKey: string; lead: EnrichmentInput }): Promise<EnrichmentResult> {
   const system = getSalesOS();
-
-  const { text: evidence, grounded } = await generateGeminiGrounded({
+  const references = [params.lead.website, params.lead.instagramUrl, params.lead.sourceUrl]
+    .map(referenceUrl)
+    .filter((url): url is string => url !== null);
+  const request = {
     apiKey: params.apiKey,
     system,
-    prompt: buildEvidencePrompt(params.lead),
-  });
-
-  const raw = await generateGeminiJson({
-    apiKey: params.apiKey,
-    system,
-    prompt: buildStructurePrompt(evidence, grounded),
+    prompt: buildEnrichmentPrompt(params.lead, references),
     schema: GEMINI_SCHEMA,
-  });
+  };
+  const { text: raw, grounded } = references.length > 0
+    ? await generateGeminiUrlJson(request)
+    : { text: await generateGeminiJson(request), grounded: false };
 
   const parsed = EnrichmentOutputSchema.parse(JSON.parse(raw));
 
@@ -186,7 +165,7 @@ export async function enrichLead(params: { apiKey: string; lead: EnrichmentInput
     // Sin grounding real, no hay hecho verificado que citar (SPA §4) — se
     // fuerza acá en vez de confiar en que el modelo respetó la advertencia.
     detectedServices: grounded ? parsed.detected_services : [],
-    possibleDecisionMaker: parsed.possible_decision_maker,
+    possibleDecisionMaker: grounded ? parsed.possible_decision_maker : null,
     operationSignals: grounded ? parsed.operation_signals : [],
     technologySignals: grounded ? parsed.technology_signals : [],
     webPresence: grounded
