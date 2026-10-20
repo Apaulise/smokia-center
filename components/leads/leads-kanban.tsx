@@ -1,12 +1,13 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useRef, useState, useTransition, type DragEvent } from "react";
 
 import { Toast } from "@/components/leads/ui/feedback";
 import { Chip } from "@/components/leads/ui/status-badge";
+import { leadHref, navQueryString } from "@/lib/leads/nav-params";
 import { updateLeadStatus } from "@/lib/leads/actions";
 import type { LeadWithRelations } from "@/lib/leads/queries";
 import { STAGE_GROUP, STAGE_GROUPS, STATUS_LABEL, stageGroupOf, type StageGroup } from "@/lib/leads/status";
@@ -23,6 +24,7 @@ const SCROLL_STEP = 320;
  */
 export function LeadsKanban({ leads }: { leads: LeadWithRelations[] }) {
   const router = useRouter();
+  const navQuery = navQueryString(useSearchParams());
   const [items, setItems] = useState(leads);
   const [dragOverGroup, setDragOverGroup] = useState<StageGroup | null>(null);
   const [, startTransition] = useTransition();
@@ -111,7 +113,7 @@ export function LeadsKanban({ leads }: { leads: LeadWithRelations[] }) {
                 {column.map((lead) => (
                   <Link
                     key={lead.id}
-                    href={`/leads/${lead.id}`}
+                    href={leadHref(lead.id, navQuery)}
                     draggable
                     onDragStart={(event) => event.dataTransfer.setData("text/plain", lead.id)}
                     className="block cursor-grab rounded-lm-md border border-lm-line-strong bg-lm-raised p-3 text-[13px] transition-colors hover:bg-lm-overlay active:cursor-grabbing"

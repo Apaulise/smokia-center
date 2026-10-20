@@ -18,6 +18,7 @@ import {
   updateLeadStatus,
 } from "@/lib/leads/actions";
 import { enrichSelectedLeads } from "@/lib/leads/ai/actions";
+import { leadHref, navQueryString } from "@/lib/leads/nav-params";
 import { describeNextAction } from "@/lib/leads/next-action-label";
 import type { LeadWithRelations } from "@/lib/leads/queries";
 import { LEAD_STATUSES, STATUS_LABEL, type LeadStatus } from "@/lib/leads/status";
@@ -322,6 +323,7 @@ function LeadRowView({
   onToggle: () => void;
   onStatusChange: (status: LeadStatus) => void;
 }) {
+  const navQuery = navQueryString(useSearchParams());
   return (
     <Tr selected={selected}>
       <Td>
@@ -334,7 +336,7 @@ function LeadRowView({
         />
       </Td>
       <Td>
-        <Link href={`/leads/${lead.id}`} className="font-medium text-lm-ink hover:text-lm-signal-text">
+        <Link href={leadHref(lead.id, navQuery)} className="font-medium text-lm-ink hover:text-lm-signal-text">
           {lead.name}
         </Link>
       </Td>

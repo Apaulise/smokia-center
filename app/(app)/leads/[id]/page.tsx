@@ -28,7 +28,16 @@ import {
 import { formatAddress } from "@/lib/leads/address";
 import { externalWebUrl } from "@/lib/leads/external-url";
 import { openingHoursFromRaw } from "@/lib/leads/opening-hours";
-import { LEAD_STATUSES } from "@/lib/leads/status";
+import { navQueryString } from "@/lib/leads/nav-params";
+import type { LeadsSortField } from "@/lib/leads/queries";
+import { LEAD_STATUSES, type LeadStatus } from "@/lib/leads/status";
+
+const NAV_SORT_FIELDS: LeadsSortField[] = ["created_at", "name", "status", "last_contacted_at", "next_action_at"];
+
+/** Vuelve a la lista con los mismos filtros con los que se abrió la ficha. */
+function listBackHref(listId: string, navQuery: string) {
+  return navQuery ? `/leads/lista/${listId}?${navQuery}` : `/leads/lista/${listId}`;
+}
 
 export async function generateMetadata({ params }: PageProps<"/leads/[id]">) {
   const { id } = await params;
@@ -45,9 +54,22 @@ export async function generateMetadata({ params }: PageProps<"/leads/[id]">) {
  */
 export default async function LeadFichaPage({ params, searchParams }: PageProps<"/leads/[id]">) {
   const { id } = await params;
-  const { modo } = await searchParams;
+  const query = await searchParams;
+  const { modo } = query;
   const lead = await getLead(id);
   if (!lead) notFound();
+
+  const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) || undefined;
+  const navFilters = {
+    leadListId: lead.lead_lists?.id,
+    industryId: first(query.industryId),
+    status: first(query.status) as LeadStatus | undefined,
+    city: first(query.city),
+    q: first(query.q),
+  };
+  const sortParam = first(query.sort);
+  const navSort = NAV_SORT_FIELDS.includes(sortParam as LeadsSortField) ? (sortParam as LeadsSortField) : "created_at";
+  const navQuery = navQueryString({ get: (key) => first(query[key]) ?? null });
 
   const [activities, messages, signals, appointments, intel, navIds] = await Promise.all([
     listLeadActivities(id),
@@ -55,8 +77,16 @@ export default async function LeadFichaPage({ params, searchParams }: PageProps<
     listLeadSignals(id),
     listUpcomingAppointmentsForLead(id),
     getLeadIntel(id),
-    lead.lead_lists ? listLeadIdsForNav(lead.lead_lists.id) : Promise.resolve([id]),
+    lead.lead_lists ? listLeadIdsForNav(navFilters, navSort, first(query.dir) === "asc") : Promise.resolve([id]),
   ]);
+  // Al contactar, el lead cambia de estado y sale del filtro con el que se abrió (ej. "Listo para contactar"):
+  // se lo reinserta en su lugar según el orden de la tabla para que el siguiente sea el que venía después.
+  let leadIds = navIds;
+  if (lead.lead_lists && navFilters.status && !navIds.includes(id)) {
+    const withoutStatus = await listLeadIdsForNav({ ...navFilters, status: undefined }, navSort, first(query.dir) === "asc");
+    const kept = new Set(navIds);
+    leadIds = withoutStatus.filter((leadId) => leadId === id || kept.has(leadId));
+  }
   const enrichment = (intel?.enrichment as EnrichmentResult | null) ?? null;
   const memory = (intel?.memory as LeadMemory | null) ?? null;
   const stageIndex = LEAD_STATUSES.indexOf(lead.status) + 1;
@@ -74,7 +104,7 @@ export default async function LeadFichaPage({ params, searchParams }: PageProps<
             {lead.lead_lists ? (
               <>
                 <span className="text-lm-ink-3">/</span>
-                <Link href={`/leads/lista/${lead.lead_lists.id}`} className="text-lm-ink-2 hover:text-lm-ink">
+                <Link href={listBackHref(lead.lead_lists.id, navQuery)} className="text-lm-ink-2 hover:text-lm-ink">
                   {lead.lead_lists.name}
                 </Link>
               </>
@@ -83,7 +113,7 @@ export default async function LeadFichaPage({ params, searchParams }: PageProps<
             <span className="truncate text-lm-ink">{lead.name}</span>
           </span>
         }
-        meta={<LeadNav ids={navIds} currentId={lead.id} />}
+        meta={<LeadNav ids={leadIds} currentId={lead.id} navQuery={navQuery} />}
       />
 
       <div className="flex flex-col gap-4 border-b border-lm-line px-6 py-6 lg:px-8">
@@ -160,7 +190,7 @@ export default async function LeadFichaPage({ params, searchParams }: PageProps<
               <div>
                 <p className="mb-1 text-xs text-lm-ink-3">Lista de origen</p>
                 {lead.lead_lists ? (
-                  <Link href={`/leads/lista/${lead.lead_lists.id}`} className="text-lm-signal-text hover:underline">
+                  <Link href={listBackHref(lead.lead_lists.id, navQuery)} className="text-lm-signal-text hover:underline">
                     {lead.lead_lists.name}
                   </Link>
                 ) : (

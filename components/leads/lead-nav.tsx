@@ -1,32 +1,36 @@
 "use client";
 
+import { ChevronLeft, ChevronRight, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { leadHref } from "@/lib/leads/nav-params";
 import { cn } from "@/lib/utils";
 
 /**
- * "12 / 30" + K/J (Design System §07): anterior/siguiente lead dentro de la
- * lista, por click o por teclado. `ids` viene de `listLeadIdsForNav`, en el
- * mismo orden que la tabla/kanban de la lista.
+ * "12 / 30" + flechas (y K/J por teclado): anterior/siguiente lead dentro de la
+ * selección con la que se abrió la ficha. `ids` viene de `listLeadIdsForNav`
+ * con los mismos filtros y orden que la tabla; `navQuery` los conserva al saltar.
  */
-export function LeadNav({ ids, currentId }: { ids: string[]; currentId: string }) {
+export function LeadNav({ ids, currentId, navQuery }: { ids: string[]; currentId: string; navQuery: string }) {
   const router = useRouter();
   const index = ids.indexOf(currentId);
   const prevId = index > 0 ? ids[index - 1] : null;
   const nextId = index >= 0 && index < ids.length - 1 ? ids[index + 1] : null;
+  const prevHref = prevId ? leadHref(prevId, navQuery) : null;
+  const nextHref = nextId ? leadHref(nextId, navQuery) : null;
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
       if (target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
       if (target?.isContentEditable) return;
-      if (event.key === "k" && prevId) router.push(`/leads/${prevId}`);
-      if (event.key === "j" && nextId) router.push(`/leads/${nextId}`);
+      if ((event.key === "k" || event.key === "ArrowLeft") && prevHref) router.push(prevHref);
+      if ((event.key === "j" || event.key === "ArrowRight") && nextHref) router.push(nextHref);
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [prevId, nextId, router]);
+  }, [prevHref, nextHref, router]);
 
   if (index < 0) return null;
 
@@ -36,14 +40,14 @@ export function LeadNav({ ids, currentId }: { ids: string[]; currentId: string }
         {index + 1} / {ids.length}
       </span>
       <div className="flex gap-1">
-        <NavKey label="K" href={prevId ? `/leads/${prevId}` : null} title="Lead anterior" />
-        <NavKey label="J" href={nextId ? `/leads/${nextId}` : null} title="Lead siguiente" />
+        <NavKey icon={ChevronLeft} href={prevHref} title="Lead anterior (← o K)" />
+        <NavKey icon={ChevronRight} href={nextHref} title="Lead siguiente (→ o J)" />
       </div>
     </div>
   );
 }
 
-function NavKey({ label, href, title }: { label: string; href: string | null; title: string }) {
+function NavKey({ icon: Icon, href, title }: { icon: LucideIcon; href: string | null; title: string }) {
   const router = useRouter();
   return (
     <button
@@ -52,11 +56,11 @@ function NavKey({ label, href, title }: { label: string; href: string | null; ti
       disabled={!href}
       onClick={() => href && router.push(href)}
       className={cn(
-        "flex size-6 items-center justify-center rounded-lm-xs border border-lm-line font-mono text-[10.5px] font-medium text-lm-ink-3",
+        "flex size-7 items-center justify-center rounded-lm-xs border border-lm-line text-lm-ink-2",
         href ? "hover:border-lm-line-strong hover:text-lm-ink" : "opacity-40",
       )}
     >
-      {label}
+      <Icon className="size-4" strokeWidth={1.5} />
     </button>
   );
 }

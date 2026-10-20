@@ -602,16 +602,19 @@ export async function searchCommandPalette(query: string): Promise<CommandPalett
   return { leads: leadsResult.data ?? [], lists: listsResult.data ?? [] };
 }
 
-/** IDs de una lista en orden de creación, para "anterior/siguiente lead" (K/J) y el indicador "12 / 30" de la ficha. */
-export async function listLeadIdsForNav(leadListId: string): Promise<string[]> {
+/** IDs de los leads que matchean los filtros, en el orden de la tabla, para "anterior/siguiente" y el indicador "12 / 30" de la ficha. */
+export async function listLeadIdsForNav(
+  filters: LeadsFilter,
+  sort: LeadsSortField = "created_at",
+  ascending = false,
+): Promise<string[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("leads")
-    .select("id")
-    .eq("lead_list_id", leadListId)
-    .order("created_at", { ascending: true });
+  const { data, error } = await applyLeadFilters(supabase.from("leads").select("id"), filters)
+    .order(sort, { ascending })
+    .order("id", { ascending: true })
+    .limit(2000);
   if (error) throw error;
-  return (data ?? []).map((row) => row.id);
+  return ((data ?? []) as { id: string }[]).map((row) => row.id);
 }
 
 /** Turnos futuros no cancelados, para la exportación .ics. */
