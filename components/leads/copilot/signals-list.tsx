@@ -1,5 +1,5 @@
 import { SaveSignalButton } from "@/components/leads/copilot/save-signal-button";
-import { CopilotChip, CopilotLabel } from "@/components/leads/ui/copilot";
+import { CopilotLabel } from "@/components/leads/ui/copilot";
 import { EmptyLine } from "@/components/leads/ui/feedback";
 import type { LeadSignalRow } from "@/lib/leads/queries";
 
@@ -11,7 +11,7 @@ const STATUS_LABEL: Record<LeadSignalRow["status"], string> = {
 
 /**
  * Dolores, objeciones y señales de compra del lead (Plan §1.13/§1.15, Design
- * System Copilot): chips agrupados por tipo. El estado persistido, no un
+ * System Copilot): filas agrupadas por tipo (el título puede ser largo: la columna es angosta y un chip de alto fijo lo cortaba). El estado persistido, no un
  * resultado transitorio de la última corrida del analizador. `CONFIRMADO`
  * siempre trae una cita (§1.13) — sin ella no llega, por eso se usa como
  * tooltip de evidencia en vez de mostrarla siempre expandida.
@@ -22,66 +22,42 @@ export function SignalsList({ leadId, signals }: { leadId: string; signals: Lead
   }
 
   const sorted = [...signals].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-  const pains = sorted.filter((s) => s.kind === "DOLOR");
-  const objections = sorted.filter((s) => s.kind === "OBJECION");
-  const buyingSignals = sorted.filter((s) => s.kind === "SENAL_COMPRA");
-
-  function tooltipFor(signal: LeadSignalRow) {
-    const parts = [signal.evidence ? `“${signal.evidence}”` : null, signal.description].filter(Boolean);
-    return parts.length > 0 ? parts.join(" — ") : undefined;
-  }
+  const groups: { label: string; items: LeadSignalRow[] }[] = [
+    { label: "Dolores", items: sorted.filter((s) => s.kind === "DOLOR") },
+    { label: "Objeciones", items: sorted.filter((s) => s.kind === "OBJECION") },
+    { label: "Señales de compra", items: sorted.filter((s) => s.kind === "SENAL_COMPRA") },
+  ];
 
   return (
-    <div className="flex flex-col gap-4">
-      {pains.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          <CopilotLabel>Dolores</CopilotLabel>
-          <div className="flex flex-wrap gap-1.5">
-            {pains.map((signal) => (
-              <CopilotChip key={signal.id} variant="pain" title={tooltipFor(signal)}>
-                {signal.title} · {STATUS_LABEL[signal.status]}
-              </CopilotChip>
-            ))}
+    <div className="flex flex-col gap-5">
+      {groups
+        .filter((group) => group.items.length > 0)
+        .map((group) => (
+          <div key={group.label} className="flex flex-col gap-2">
+            <CopilotLabel>{group.label}</CopilotLabel>
+            <ul className="flex flex-col gap-3">
+              {group.items.map((signal) => (
+                <li key={signal.id} className="flex flex-col gap-1 border-l-2 border-lm-line-strong pl-3">
+                  <p className="text-sm leading-5 text-lm-ink">{signal.title}</p>
+                  <p className="text-xs text-lm-ink-3">
+                    {STATUS_LABEL[signal.status]}
+                    {signal.kind === "OBJECION" && signal.already_solved ? " · ya resuelto" : ""}
+                  </p>
+                  {signal.description ? <p className="text-xs leading-4 text-lm-ink-2">{signal.description}</p> : null}
+                  {signal.evidence ? (
+                    <p className="text-xs leading-4 text-lm-ink-3 italic">“{signal.evidence}”</p>
+                  ) : null}
+                  {/* Sólo lo confirmado o sospechado se puede guardar en memoria global (§1.13). */}
+                  {signal.status !== "HIPOTESIS" ? (
+                    <div className="mt-1">
+                      <SaveSignalButton leadId={leadId} signal={signal} />
+                    </div>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
           </div>
-        </div>
-      ) : null}
-
-      {objections.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          <CopilotLabel>Objeciones</CopilotLabel>
-          <div className="flex flex-wrap gap-1.5">
-            {objections.map((signal) => (
-              <CopilotChip key={signal.id} variant="objection" title={tooltipFor(signal)}>
-                {signal.title}
-                {signal.already_solved ? " · ya resuelto" : ""}
-              </CopilotChip>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {buyingSignals.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          <CopilotLabel>Señales de compra</CopilotLabel>
-          <div className="flex flex-wrap gap-1.5">
-            {buyingSignals.map((signal) => (
-              <CopilotChip key={signal.id} variant="signal" title={tooltipFor(signal)}>
-                {signal.title}
-              </CopilotChip>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {/* Sólo lo confirmado se puede guardar en memoria global (§1.13). */}
-      <div className="flex flex-col gap-2">
-        {sorted
-          .filter((signal) => signal.status !== "HIPOTESIS")
-          .slice(0, 3)
-          .map((signal) => (
-            <SaveSignalButton key={signal.id} leadId={leadId} signal={signal} />
-          ))}
-      </div>
+        ))}
     </div>
   );
 }
