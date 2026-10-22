@@ -67,8 +67,21 @@ const VARIANT_HINT: Record<number, string> = {
  */
 const REFERENCE_OPENING = `Hola! Estuve viendo Vintage y vi que tienen bastante aceitado el tema de reservas con AgendaPro y además manejan varios servicios distintos. Te quería hacer una consulta puntual: cuando alguien pregunta por WhatsApp o Instagram pero después no termina reservando, ¿suelen hacer algún seguimiento?`;
 
-/** Variante balanceada por cuántas aperturas ya salieron con ese ángulo — sin otra consulta a la base. */
-function chooseVariant(angle: SalesAngle, counts: Partial<Record<SalesAngle, number>>): number {
+/**
+ * Hay algo específico y verificado de este negocio que citar. Los tipos 1 y 3
+ * lo necesitan: sin eso el modelo rellena la "observación" con el nombre del
+ * negocio ("vi que se llaman X"), que no es una observación.
+ */
+function hasVerifiedSpecifics(enrichment: EnrichmentResult | null, signals: LeadSignalRow[]): boolean {
+  const fromEnrichment =
+    !!enrichment?.grounded &&
+    (enrichment.detectedServices.length > 0 || enrichment.operationSignals.length > 0 || enrichment.technologySignals.length > 0);
+  return fromEnrichment || signals.some((signal) => !!signal.evidence);
+}
+
+/** Variante balanceada por cuántas aperturas ya salieron con ese ángulo — sin otra consulta a la base. Sin nada verificado, siempre el tipo 2. */
+function chooseVariant(angle: SalesAngle, counts: Partial<Record<SalesAngle, number>>, verifiable: boolean): number {
+  if (!verifiable) return 2;
   const used = counts[angle] ?? 0;
   return (used % OPENING_VARIANT_COUNT) + 1;
 }
@@ -104,7 +117,7 @@ export async function generateOpening(params: {
     recommended: params.enrichment?.recommendedSalesAngle ?? null,
     counts: params.angleCounts,
   });
-  const variant = chooseVariant(angle, params.angleCounts);
+  const variant = chooseVariant(angle, params.angleCounts, hasVerifiedSpecifics(params.enrichment, params.signals));
 
   const stateBlock = buildLeadStateBlock({
     salesProfile: params.salesProfile,
@@ -135,6 +148,8 @@ Qué tiene de bueno, y es lo que tenés que replicar:
 - Sólo afirmaciones en primera persona ("vi que...", "tienen...") sobre lo que figura como HECHO en el enriquecimiento o una cita textual del lead (SPA §4). Con "SIN VERIFICAR" o sin señales, no inventes qué tiene la web, qué sistema usan ni cómo trabajan.
 - Tampoco inventes detalles dentro de la pregunta (que reciben comprobantes de pago, que atienden por tal canal, etc.): la situación que plantees tiene que ser plausible para el rubro y salir del ángulo, no de datos supuestos del negocio.
 - Lo que cuenta como observación es lo ESPECÍFICO de este negocio: una herramienta que usan (un sistema de reservas), un tratamiento o equipo particular, un horario atípico, la ausencia de algo esperable. NO cuentan la ciudad ni la infraestructura estándar (botón flotante de WhatsApp, formulario, WordPress/Wix); si usás esa señal, hablá del comportamiento detrás y no del widget.
+- Lo que sale de la ficha de Google Maps NO es una observación, aunque sea verdadero: nombre, dirección, calle, galería o barrio, ciudad, calificación o estrellas, cantidad de reseñas, teléfono, horarios comunes (sólo uno realmente atípico cuenta). Prohibido "vi que están en X", "vi que tienen 4.9 estrellas", "vi que se llaman X" o cualquier frase que cite alguno de esos datos como si fuera algo que notaste: no muestra que miraste el negocio, muestra que leíste un listado. Si no hay un HECHO específico (servicio, herramienta, práctica de trabajo) para comentar, saludá corto ("Hola! Te quería hacer una consulta puntual:") y andá directo a la pregunta. Usá el nombre corto y natural, o ninguno.
+- No digas que miraste su Instagram, su web ni ninguna red salvo que el HECHO que citás venga de ahí.
 - La frase del ángulo de abajo es el TEMA de la pregunta, no la redacción: no la copies. Convertila en una situación concreta apoyada en una señal verificada de este negocio; si no hay ninguna, igual redactala con tus palabras.
 
 ${stateBlock}
