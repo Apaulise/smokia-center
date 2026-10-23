@@ -67,7 +67,7 @@ Un webhook no tiene sesión de usuario, así que esa ruta usa la service role ke
 
 Es el único lugar del código donde el aislamiento depende del código y no de la base. Está aislado en un solo archivo a propósito. **Cualquier cambio ahí se revisa a mano.**
 
-La API de automatización (`app/api/automation/*`) es el mismo caso: la llama un tercero sin sesión, autenticado con `Authorization: Bearer $AUTOMATION_API_SECRET` (`lib/automation/auth.ts`, comparación de tiempo constante, falla cerrado). Queda atada a un solo owner (`AUTOMATION_OWNER_ID`) y **cada query de `lib/automation/*` filtra por ese `owner_id` explícitamente**. Lo que también hace la UI (registrar contacto, cambiar estado) vive en `lib/leads/contact.ts`, que recibe el cliente y el `ownerId` y lo comparten las Server Actions y la API.
+La API de automatización (`app/api/automation/*`) es el mismo caso: la llama un tercero sin sesión, autenticado con `Authorization: Bearer $AUTOMATION_API_SECRET` (`lib/automation/auth.ts`, comparación de tiempo constante, falla cerrado). Queda atada a un solo owner (`AUTOMATION_OWNER_ID`) y **cada query de `lib/automation/*` filtra por ese `owner_id` explícitamente**. Lo que también hace la UI (registrar contacto, cambiar estado, y guardar notas o próxima acción) vive en `lib/leads/contact.ts`, que recibe el cliente y el `ownerId` y lo comparten las Server Actions y la API. `updateLeadPlanning` sólo escribe `notes` y `next_action_at`: no toca `status` ni inserta actividad. La ficha, encima de eso, sigue dejando la nota en el timeline; `PATCH /api/automation/leads/:id` no.
 
 ### La segunda excepción: el equipo ([Plans/01 §1.23](Plans/01-gestor-de-leads.md))
 

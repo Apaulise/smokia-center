@@ -1,11 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { AppointmentStatus } from "@/lib/leads/appointments";
+import { leadPlanningColumns, type LeadPlanningPatch } from "@/lib/leads/planning";
 import type { LeadStatus } from "@/lib/leads/status";
 import type { Database } from "@/lib/supabase/database.types";
 
 /**
- * Núcleo compartido de "registrar un contacto" y "cambiar de estado".
+ * Núcleo compartido de "registrar un contacto", "cambiar de estado" y
+ * "guardar notas / próxima acción".
  *
  * Lo usan las Server Actions de la ficha (`lib/leads/actions.ts`, con el
  * cliente con RLS del usuario logueado) y la API de automatización
@@ -14,6 +16,8 @@ import type { Database } from "@/lib/supabase/database.types";
  * redundante, con service role es lo único que aísla a un usuario del otro
  * (CLAUDE.md §4).
  */
+
+export type { LeadPlanningPatch };
 export type LeadsClient = SupabaseClient<Database>;
 
 type LeadUpdate = Database["public"]["Tables"]["leads"]["Update"];
@@ -149,4 +153,56 @@ export async function recordLeadContact(
   await supabase.from("leads").update(update).eq("id", input.leadId).eq("owner_id", ownerId);
 
   return { ok: true, newStatus, lastContactedAt };
+}
+
+export type UpdateLeadPlanningResult =
+  | {
+      ok: true;
+      id: string;
+      notes: string | null;
+      nextActionAt: string | null;
+      status: LeadStatus;
+      updatedAt: string;
+    }
+  | { ok: false; reason: "not_found" | "empty" | "error"; message: string };
+
+/**
+ * Escribe `notes` y/o `next_action_at`. No cambia `status`, no toca
+ * `last_contacted_at` y no inserta filas en `lead_activities` ni en
+ * `lead_messages`.
+ *
+ * La ficha (`updateLeadNotes`) lo usa y, si hubo una nota nueva, deja además
+ * una actividad `NOTA`. `PATCH /api/automation/leads/:id` llama esto solo:
+ * el bot guarda la nota y la fecha que armó Ventas, sin fingir un envío.
+ */
+export async function updateLeadPlanning(
+  supabase: LeadsClient,
+  ownerId: string,
+  leadId: string,
+  patch: LeadPlanningPatch,
+): Promise<UpdateLeadPlanningResult> {
+  const columns = leadPlanningColumns(patch);
+  if (!columns) return { ok: false, reason: "empty", message: "Nada para actualizar." };
+
+  const { data, error } = await supabase
+    .from("leads")
+    .update(columns)
+    .eq("id", leadId)
+    .eq("owner_id", ownerId)
+    .select("id, notes, next_action_at, status, updated_at");
+
+  if (error) return { ok: false, reason: "error", message: "No se pudo guardar." };
+  // RLS (o el filtro de owner) no es un error de Postgres: cero filas quiere
+  // decir que no se escribió nada. Sin este chequeo se reporta éxito en vacío.
+  const row = data?.[0];
+  if (!row) return { ok: false, reason: "not_found", message: "Lead no encontrado." };
+
+  return {
+    ok: true,
+    id: row.id,
+    notes: row.notes,
+    nextActionAt: row.next_action_at,
+    status: row.status,
+    updatedAt: row.updated_at,
+  };
 }

@@ -121,7 +121,7 @@ Antes de probar con una clave real, `npm run test:gemini` verifica localmente qu
 
 ## API de automatización (opcional)
 
-`/api/automation/*` deja que una automatización (n8n, un script, un agente) lea la cola de leads, pida la apertura generada por la IA y registre los contactos sin pasar por la UI. Usa la service role key y queda atada a **un solo usuario**.
+`/api/automation/*` deja que una automatización (n8n, un script, un agente) lea la cola de leads, pida la apertura generada por la IA, actualice notas o la próxima acción, y registre los contactos sin pasar por la UI. Usa la service role key y queda atada a **un solo usuario**.
 
 1. Generar el secreto: `openssl rand -hex 32` → `AUTOMATION_API_SECRET` (mínimo 32 caracteres; sin él la API responde 401 a todo)
 2. Buscar el UUID del dueño de los leads: Supabase → **Authentication → Users** → columna **UID** del mail → `AUTOMATION_OWNER_ID`. (Alternativa en el SQL Editor: `select id, email from auth.users;`)
@@ -132,6 +132,7 @@ Antes de probar con una clave real, `npm run test:gemini` verifica localmente qu
 |---|---|---|
 | GET | `/api/automation/leads` | Cola de leads. Filtros: `status` (coma, default `NUEVO,LISTO`), `industry` (UUID o nombre del rubro), `list`, `city`, `uncontacted=true`, `has_phone` (default `true`), `limit` (default 25, máx. 100) |
 | GET | `/api/automation/leads/:id` | Un lead + últimas 20 actividades y mensajes |
+| PATCH | `/api/automation/leads/:id` | Actualiza `notes` y/o `next_action_at` (ISO 8601 con zona, o `null` para borrar). Hace falta al menos uno. No cambia `status` y no registra contacto ni actividad |
 | POST | `/api/automation/leads/:id/opening-message` | Apertura de la IA (Groq, la key de Configuración del owner). Si ya se envió una, devuelve esa salvo `?regenerate=true` |
 | POST | `/api/automation/leads/:id/contact` | Registra el mensaje enviado (`lead_messages`) + el contacto (timeline, `last_contacted_at`, estado, próxima acción) |
 | POST | `/api/automation/leads/:id/status` | Cambio de estado, con el mismo gate de reuniones que la UI |
