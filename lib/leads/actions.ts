@@ -15,6 +15,7 @@ import {
   MEETING_STATUS_GATE,
   meetingGateMessage,
   recordLeadContact,
+  updateLeadPlanning,
 } from "@/lib/leads/contact";
 import { computeDedupeKey } from "@/lib/leads/dedupe";
 import { buildIcsCalendar } from "@/lib/leads/ics";
@@ -785,26 +786,19 @@ export async function updateLeadNotes(
   const supabase = await createClient();
   const newNote = parsed.data.notes?.trim() || null;
 
-  const update: Database["public"]["Tables"]["leads"]["Update"] = {
-    next_action_at: parsed.data.nextActionAt ? new Date(parsed.data.nextActionAt).toISOString() : null,
-  };
   // El cuadro es un registro, no un campo "nota actual" (corrección de
   // diseño, Plan §1.21): un guardado sin texto nuevo (por ejemplo, para
   // tocar sólo la próxima acción) no debe borrar la última nota guardada en
   // `leads.notes` — ese campo queda como caché de "la más reciente" para
   // el CSV, y sólo se pisa cuando hay una nota nueva de verdad.
-  if (newNote) update.notes = newNote;
-
-  const { data, error } = await supabase
-    .from("leads")
-    .update(update)
-    .eq("id", parsed.data.leadId)
-    .select("id");
-  if (error) return { ok: false, message: "No se pudo guardar." };
-  // RLS filtra en silencio: un UPDATE que no matchea ninguna fila no es un
-  // error de Postgres, así que sin este chequeo se reporta éxito sin haber
-  // escrito nada.
-  if (!data || data.length === 0) return { ok: false, message: "No se encontró el lead." };
+  // La próxima acción sí se escribe siempre: el campo vacío la borra.
+  const result = await updateLeadPlanning(supabase, user.id, parsed.data.leadId, {
+    nextActionAt: parsed.data.nextActionAt ?? null,
+    ...(newNote ? { notes: newNote } : {}),
+  });
+  if (!result.ok) {
+    return { ok: false, message: result.reason === "not_found" ? "No se encontró el lead." : "No se pudo guardar." };
+  }
 
   // Toda nota no vacía queda en el timeline — es el historial completo, no
   // sólo la prueba de que se guardó. El cuadro se vacía del lado del cliente
