@@ -121,21 +121,62 @@ Antes de probar con una clave real, `npm run test:gemini` verifica localmente qu
 
 ## API de automatización (opcional)
 
-`/api/automation/*` deja que una automatización (n8n, un script, un agente) lea la cola de leads, pida la apertura generada por la IA, actualice notas o la próxima acción, y registre los contactos sin pasar por la UI. Usa la service role key y queda atada a **un solo usuario**.
+`/api/automation/*` deja que una automatización (n8n, un script, un agente) lea la cola de leads, pida la apertura generada por la IA, corrija teléfono, notas o la próxima acción, y registre los contactos sin pasar por la UI. Usa la service role key y queda atada a **un solo usuario**.
 
 1. Generar el secreto: `openssl rand -hex 32` → `AUTOMATION_API_SECRET` (mínimo 32 caracteres; sin él la API responde 401 a todo)
 2. Buscar el UUID del dueño de los leads: Supabase → **Authentication → Users** → columna **UID** del mail → `AUTOMATION_OWNER_ID`. (Alternativa en el SQL Editor: `select id, email from auth.users;`)
-3. Cargar las dos en `.env.local` y en Vercel (**Settings → Environment Variables**) y redeployar
-4. Toda llamada lleva `Authorization: Bearer $AUTOMATION_API_SECRET`
+3. Opcional: `AUTOMATION_WRITE_AGENTS` — lista separada por comas de quién puede hacer el PATCH de corrección. Si no está, sólo `ventas` y `seguimiento`. Una lista explícita reemplaza el default (`ventas,auditor` deja afuera a seguimiento). No hace falta para leer ni para registrar un contacto de verdad
+4. Cargar las variables en `.env.local` y en Vercel (**Settings → Environment Variables**) y redeployar
+5. Toda llamada lleva `Authorization: Bearer $AUTOMATION_API_SECRET`
+
+No hay migración nueva para este PATCH: usa `leads.phone`, `leads.notes`, `leads.next_action_at` y una actividad `NOTA` que ya existen.
 
 | Método | Ruta | Qué hace |
 |---|---|---|
 | GET | `/api/automation/leads` | Cola de leads. Filtros: `status` (coma, default `NUEVO,LISTO`), `industry` (UUID o nombre del rubro), `list`, `city`, `uncontacted=true`, `has_phone` (default `true`), `limit` (default 25, máx. 100) |
 | GET | `/api/automation/leads/:id` | Un lead + últimas 20 actividades y mensajes |
-| PATCH | `/api/automation/leads/:id` | Actualiza `notes` y/o `next_action_at` (ISO 8601 con zona, o `null` para borrar). Hace falta al menos uno. No cambia `status` y no registra contacto ni actividad |
+| PATCH | `/api/automation/leads/:id` | Corrige `phone`, `notes` y/o `next_action_at` sin registrar un contacto. Pide agente. Ver abajo |
 | POST | `/api/automation/leads/:id/opening-message` | Apertura de la IA (Groq, la key de Configuración del owner). Si ya se envió una, devuelve esa salvo `?regenerate=true` |
-| POST | `/api/automation/leads/:id/contact` | Registra el mensaje enviado (`lead_messages`) + el contacto (timeline, `last_contacted_at`, estado, próxima acción) |
-| POST | `/api/automation/leads/:id/status` | Cambio de estado, con el mismo gate de reuniones que la UI |
+| POST | `/api/automation/leads/:id/contact` | Registra el mensaje enviado (`lead_messages`) + el contacto (timeline, `last_contacted_at`, estado, próxima acción). No pide agente |
+| POST | `/api/automation/leads/:id/status` | Cambio de estado, con el mismo gate de reuniones que la UI. No pide agente |
+
+### PATCH `/api/automation/leads/:id`
+
+Corrige datos del lead cuando la realidad no coincide con lo guardado (el WhatsApp real es otro, hay que anotar el próximo paso, hay que borrar una fecha). **No** crea un mensaje ni un contacto: no toca `status` ni `last_contacted_at`, y no inserta en `lead_messages`. Si algo cambió, deja una actividad `NOTA` en el historial de la ficha, con el agente al principio del texto (`[seguimiento] …`). Repetir el mismo body no duplica la nota ni reescribe la fila.
+
+El teléfono se normaliza como el resto de la app (Argentina: si no trae país se asume `+54`). Se guarda en forma canónica (`+54911…`). Si ese número ya es la clave de otro lead del mismo dueño, responde 409 y no escribe nada. Un número demasiado corto (menos de 6 dígitos) responde 400.
+
+Hace falta al menos uno de `phone`, `notes` o `next_action_at`. `null` (o `""`) borra ese campo. `next_action_at` es ISO 8601 **con zona** (`2026-10-30T15:00:00-03:00` o `…Z`).
+
+El agente va en el body (`"agent": "ventas"`) o en el header `X-Agent`. El id es corto: letras, números y guiones. Mayúsculas no importan. Si vienen los dos, tienen que coincidir. Sin agente, responde 400. Cualquier otro id responde 403. Quien ya llamaba este PATCH tiene que mandar el agente. Los GET, el POST de contacto y el cambio de estado no lo piden.
+
+```bash
+# Corregir WhatsApp, dejar nota y fijar la próxima acción
+curl -s -X PATCH "$APP_URL/api/automation/leads/$LEAD_ID" \
+  -H "Authorization: Bearer $AUTOMATION_API_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent": "seguimiento",
+    "phone": "+54 9 11 5555-6666",
+    "notes": "El WhatsApp real es este. Retomar el jueves.",
+    "next_action_at": "2026-10-30T15:00:00-03:00"
+  }'
+
+# Sólo la fecha, con el agente en el header. null la borra.
+curl -s -X PATCH "$APP_URL/api/automation/leads/$LEAD_ID" \
+  -H "Authorization: Bearer $AUTOMATION_API_SECRET" \
+  -H "Content-Type: application/json" \
+  -H "X-Agent: ventas" \
+  -d '{ "next_action_at": null }'
+
+# Borrar un teléfono que estaba mal
+curl -s -X PATCH "$APP_URL/api/automation/leads/$LEAD_ID" \
+  -H "Authorization: Bearer $AUTOMATION_API_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "agent": "ventas", "phone": null }'
+```
+
+La respuesta es el lead actualizado: `id`, `name`, `phone`, `phoneE164`, `notes`, `nextActionAt`, `status`, `updatedAt`, `agent` y `activity` (`{ "type": "NOTA", "content": "…" }` o `null` si no hubo cambio). `activity: null` con 200 quiere decir que esos datos ya estaban así.
 
 ## Equipo (objetivo y dashboard compartidos, Plan §1.23)
 
