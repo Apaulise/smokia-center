@@ -19,6 +19,11 @@ function randomSeeds() {
   return Array.from({ length: AVATARS_PER_PAGE }, () => Math.random().toString(36).slice(2, 8));
 }
 
+/** Nombre único del archivo. Fuera del componente: el linter trata Date.now dentro del render como impuro. */
+function avatarObjectPath(userId: string) {
+  return `${userId}/${Date.now()}.webp`;
+}
+
 /** Recorta al centro y achica a 256×256: la foto de perfil nunca necesita más. */
 async function squareThumbnail(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
@@ -122,7 +127,7 @@ function EditorDialog({
     try {
       const blob = await squareThumbnail(file);
       await discardStaged();
-      const path = `${userId}/${Date.now()}.webp`;
+      const path = avatarObjectPath(userId);
       const { error: uploadError } = await supabase.storage
         .from(AVATAR_BUCKET)
         .upload(path, blob, { contentType: "image/webp", upsert: false });

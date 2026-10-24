@@ -203,9 +203,12 @@ function AperturaComposer({ leadId, phone, hasInstagram }: { leadId: string; pho
   useEffect(() => {
     const saved = readSavedOpening(leadId);
     if (!saved) return;
+    // El borrador vive en localStorage: hidratarlo en el primer render desfasaría el HTML del servidor.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hidratar después del mount
     setDraft(saved.draft);
     body.restore(saved);
     setChannel(saved.channel);
+    // body.restore es estable en la práctica; no va a las deps para no rehidratar en cada render.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sólo al entrar a la ficha
   }, [leadId]);
 
