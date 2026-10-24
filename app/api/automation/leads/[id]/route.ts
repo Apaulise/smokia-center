@@ -3,19 +3,21 @@
 // GET /api/automation/leads/:id — el lead con sus últimas 20 actividades y
 // sus últimos 20 mensajes.
 //
-// PATCH /api/automation/leads/:id — { notes?, next_action_at? }. Actualiza la
-// nota y/o la próxima acción que armó Ventas. No cambia status y no registra
-// contacto ni actividad (a diferencia de POST .../contact y del formulario de
-// la ficha, que sí deja una NOTA). Hace falta al menos uno de los dos campos.
+// PATCH /api/automation/leads/:id — corrige el lead sin registrar un contacto.
+// Body: { agent?, phone?, notes?, next_action_at? }. El agente va en `agent`
+// o en el header `X-Agent`. Hace falta al menos uno de phone, notes o
+// next_action_at. No cambia status, no toca last_contacted_at y no inserta
+// lead_messages. Si hubo un cambio real, deja una actividad NOTA con el agente.
 
 import { revalidatePath } from "next/cache";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
+import { decideWriteAgent, writeAgentsFromEnv } from "@/lib/automation/agents";
 import { authorizeAutomation, automationError } from "@/lib/automation/auth";
-import { leadPlanningBodySchema, toLeadPlanningPatch } from "@/lib/automation/lead-planning";
+import { correctLeadForAutomation } from "@/lib/automation/correct-lead";
+import { leadPlanningBodySchema, toLeadCorrectionInput } from "@/lib/automation/lead-planning";
 import { getLeadForAutomation } from "@/lib/automation/leads";
-import { updateLeadPlanning } from "@/lib/leads/contact";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -41,21 +43,43 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   const parsed = leadPlanningBodySchema.safeParse(json);
   if (!parsed.success) return automationError(400, "Body inválido.", parsed.error.issues);
 
-  const result = await updateLeadPlanning(createAdminClient(), auth.ownerId, id, toLeadPlanningPatch(parsed.data));
+  const agent = decideWriteAgent({
+    bodyAgent: parsed.data.agent,
+    headerAgent: request.headers.get("x-agent"),
+    allowed: writeAgentsFromEnv(process.env),
+  });
+  if (!agent.ok) return automationError(agent.status, agent.error);
+
+  const result = await correctLeadForAutomation(
+    createAdminClient(),
+    auth.ownerId,
+    id,
+    agent.agent,
+    toLeadCorrectionInput(parsed.data),
+  );
   if (!result.ok) {
-    const status = result.reason === "not_found" ? 404 : result.reason === "empty" ? 400 : 500;
+    const status =
+      result.reason === "not_found" ? 404 : result.reason === "conflict" ? 409 : result.reason === "invalid_phone" ? 400 : 500;
     return automationError(status, result.message);
   }
 
-  revalidatePath(`/leads/${id}`);
-  revalidatePath("/leads/lista");
-  revalidatePath("/leads/seguimiento");
-  revalidatePath("/leads");
+  if (result.changed) {
+    revalidatePath(`/leads/${id}`);
+    revalidatePath("/leads/lista");
+    revalidatePath("/leads/seguimiento");
+    revalidatePath("/leads");
+  }
+
   return NextResponse.json({
     id: result.id,
+    name: result.name,
+    phone: result.phone,
+    phoneE164: result.phoneE164,
     notes: result.notes,
     nextActionAt: result.nextActionAt,
     status: result.status,
     updatedAt: result.updatedAt,
+    agent: result.agent,
+    activity: result.activity,
   });
 }
