@@ -28,7 +28,14 @@ export default async function OperacionesPage({ searchParams }: { searchParams: 
 
   const updatedAt = formatUpdatedAt(records.updatedAtIso ? new Date(records.updatedAtIso) : new Date());
   const delta = periodDelta(kpis.contacted, kpis.contactedPrevious, period);
-  const pending = records.schemaReady ? records.pendingCount : null;
+  const pending = records.schemaReady && !records.readError ? records.pendingCount : null;
+  const pendingDelta = !records.schemaReady
+    ? "falta la migración"
+    : records.readError
+      ? "no se pudo leer la cola"
+      : pending && pending > 0
+        ? "borradores en la cola"
+        : "cola al día";
   const contentTotal = kpis.instagramQueue + kpis.youtubeQueue;
   const areas = summarizeAreas(records.items);
   const blocks = records.items.filter((item) => item.estado === "bloqueo");
@@ -99,7 +106,7 @@ export default async function OperacionesPage({ searchParams }: { searchParams: 
         <Kpi
           label="Necesita tu OK"
           value={pending == null ? "—" : String(pending)}
-          delta={pending == null ? "falta la migración" : pending > 0 ? "borradores en la cola" : "cola al día"}
+          delta={pendingDelta}
           signal={pending != null}
           mark={pending != null}
           muted={pending == null}
