@@ -33,6 +33,10 @@ const ACTIONS: ResultItem[] = [
   { key: "a-agenda", group: "ACCIONES", label: "Ir a la agenda", href: "/leads/agenda", shortcut: "G A" },
   { key: "a-turno", group: "ACCIONES", label: "Nuevo turno", href: "/leads/agenda?nuevo=1", shortcut: "N T" },
   { key: "a-memoria", group: "ACCIONES", label: "Memoria de ventas", href: "/leads/conocimiento", shortcut: "G M" },
+  { key: "a-ops", group: "ACCIONES", label: "Gestor de Operaciones", href: "/operaciones" },
+  { key: "a-ops-ok", group: "ACCIONES", label: "Aprobaciones", href: "/operaciones/aprobaciones" },
+  { key: "a-ops-areas", group: "ACCIONES", label: "Áreas de Operaciones", href: "/operaciones/areas" },
+  { key: "a-ops-auditor", group: "ACCIONES", label: "Auditor", href: "/operaciones/auditor" },
 ];
 
 const GROUP_ICON = {

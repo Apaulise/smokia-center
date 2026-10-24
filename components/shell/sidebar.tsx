@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Activity,
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
@@ -34,6 +35,7 @@ import { cn } from "@/lib/utils";
 const ICONS = {
   panel: LayoutGrid,
   leads: Users,
+  operaciones: Activity,
   facturacion: Receipt,
   marca: Megaphone,
 } as const;
