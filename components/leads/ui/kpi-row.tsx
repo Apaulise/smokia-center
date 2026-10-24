@@ -27,6 +27,8 @@ export function Kpi({
   trend = "neutral",
   signal = false,
   muted = false,
+  mark = false,
+  className,
 }: {
   label: string;
   value: ReactNode;
@@ -34,11 +36,15 @@ export function Kpi({
   trend?: "up" | "down" | "neutral";
   /** El único KPI destacado de la fila. */
   signal?: boolean;
+  /** Marca de 24×2 sobre el KPI destacado. */
+  mark?: boolean;
   /** Métrica en 0: se atenúa en vez de ocupar el mismo espacio visual. */
   muted?: boolean;
+  className?: string;
 }) {
   return (
-    <div className={cn("flex min-w-0 flex-col gap-2 px-4 py-4 first:pl-0 last:pr-0", muted && "opacity-50")}>
+    <div className={cn("relative flex min-w-0 flex-col gap-2 px-4 py-4 first:pl-0 last:pr-0", muted && "opacity-50", className)}>
+      {mark ? <span className="absolute -top-px left-4 h-0.5 w-6 bg-lm-signal" aria-hidden="true" /> : null}
       <span className="truncate font-lm-sans text-[11px] leading-[14px] font-semibold tracking-[0.1em] text-lm-ink-3 uppercase">
         {label}
       </span>

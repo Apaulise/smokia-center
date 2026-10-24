@@ -1,4 +1,4 @@
-import { LayoutGrid, Megaphone, Receipt, Settings, Users } from "lucide-react";
+import { Activity, LayoutGrid, Megaphone, Receipt, Settings, Users } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -81,6 +81,19 @@ export default async function HubPage() {
               src="/leads"
               title="Vista previa del Gestor de Leads"
               delayMs={700}
+            />
+          </HubCard>
+
+          <HubCard
+            eyebrow="Estado del negocio"
+            title="Gestor de Operaciones"
+            href="/operaciones"
+            icon={<Activity className="size-4" strokeWidth={1.5} />}
+          >
+            <ScreenPreview
+              src="/operaciones"
+              title="Vista previa del Gestor de Operaciones"
+              delayMs={1400}
             />
           </HubCard>
 

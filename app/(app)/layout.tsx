@@ -6,6 +6,7 @@ import { countKnowledgeNotes } from "@/lib/brand/knowledge/queries";
 import { countOpenContentItems } from "@/lib/brand/planner/queries";
 import { countBrandPosts } from "@/lib/brand/queries";
 import { countLeadLists, countTodayAppointments } from "@/lib/leads/queries";
+import { countPendingApprovals } from "@/lib/ops/queries";
 import { displayName, getProfile } from "@/lib/profile/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 
@@ -33,14 +34,16 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   // "Biblioteca"/"Planificador"/"Base de conocimiento" de Marca) — counts livianos
   // (head: true, sin traer filas), no vale la pena condicionarlos a estar dentro
   // de un módulo: el sidebar es infra compartida y se ve en todas las pantallas.
-  const [listsCount, todayAppointmentsCount, postsCount, openItemsCount, notesCount, profile] = await Promise.all([
-    countLeadLists(),
-    countTodayAppointments(),
-    countBrandPosts(),
-    countOpenContentItems(),
-    countKnowledgeNotes(),
-    getProfile(),
-  ]);
+  const [listsCount, todayAppointmentsCount, postsCount, openItemsCount, notesCount, pendingApprovals, profile] =
+    await Promise.all([
+      countLeadLists(),
+      countTodayAppointments(),
+      countBrandPosts(),
+      countOpenContentItems(),
+      countKnowledgeNotes(),
+      countPendingApprovals(),
+      getProfile(),
+    ]);
 
   return (
     <div className="flex min-h-dvh flex-col lg:flex-row">
@@ -53,6 +56,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           "/marca/contenido": postsCount,
           "/marca/planificador": openItemsCount,
           "/marca/conocimiento": notesCount,
+          "/operaciones/aprobaciones": pendingApprovals,
         }}
       />
       <main className="min-w-0 flex-1">{children}</main>

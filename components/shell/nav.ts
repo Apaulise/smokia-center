@@ -1,5 +1,5 @@
 /**
- * Las tres patas del negocio más el panel que las agrega.
+ * Las patas del negocio, Operaciones (el estado de los agentes) y el panel que las agrega.
  *
  * Los módulos no construidos quedan visibles pero deshabilitados a propósito:
  * la estructura del negocio se lee completa desde el día 1 y no hay que
@@ -15,7 +15,7 @@ export interface NavChild {
 export interface NavModule {
   href: string;
   label: string;
-  icon: "panel" | "leads" | "facturacion" | "marca";
+  icon: "panel" | "leads" | "operaciones" | "marca" | "facturacion";
   available: boolean;
   children?: NavChild[];
 }
@@ -44,10 +44,16 @@ export const MODULES: NavModule[] = [
     ],
   },
   {
-    href: "/facturacion",
-    label: "Gestor de Facturación",
-    icon: "facturacion",
-    available: false,
+    href: "/operaciones",
+    label: "Gestor de Operaciones",
+    icon: "operaciones",
+    available: true,
+    children: [
+      { href: "/operaciones", label: "Resumen", exact: true },
+      { href: "/operaciones/aprobaciones", label: "Aprobaciones" },
+      { href: "/operaciones/areas", label: "Áreas" },
+      { href: "/operaciones/auditor", label: "Auditor" },
+    ],
   },
   {
     href: "/marca",
@@ -63,5 +69,11 @@ export const MODULES: NavModule[] = [
       { href: "/marca/conocimiento", label: "Base de conocimiento" },
       { href: "/marca/generar", label: "Generar contenido" },
     ],
+  },
+  {
+    href: "/facturacion",
+    label: "Gestor de Facturación",
+    icon: "facturacion",
+    available: false,
   },
 ];
