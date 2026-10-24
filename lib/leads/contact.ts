@@ -172,8 +172,8 @@ export type UpdateLeadPlanningResult =
  * `lead_messages`.
  *
  * La ficha (`updateLeadNotes`) lo usa y, si hubo una nota nueva, deja además
- * una actividad `NOTA`. `PATCH /api/automation/leads/:id` llama esto solo:
- * el bot guarda la nota y la fecha que armó Ventas, sin fingir un envío.
+ * una actividad `NOTA`. El PATCH de la API de automatización no pasa por acá:
+ * corrige teléfono, nota y próxima acción en `lib/automation/correct-lead.ts`.
  */
 export async function updateLeadPlanning(
   supabase: LeadsClient,
