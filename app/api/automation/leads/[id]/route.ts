@@ -1,7 +1,7 @@
 // ⚠️ SERVICE ROLE — API de automatización. Ver lib/automation/auth.ts y CLAUDE.md §4.
 //
 // GET /api/automation/leads/:id — el lead con sus últimas 20 actividades y
-// sus últimos 20 mensajes.
+// sus últimos 20 mensajes. El lead incluye `email` (string o null).
 //
 // PATCH /api/automation/leads/:id — corrige el lead sin registrar un contacto.
 // Body: { agent?, phone?, notes?, next_action_at? }. El agente va en `agent`
