@@ -121,26 +121,66 @@ Antes de probar con una clave real, `npm run test:gemini` verifica localmente qu
 
 ## API de automatización (opcional)
 
-`/api/automation/*` deja que una automatización (n8n, un script, un agente) lea la cola de leads, pida la apertura generada por la IA, corrija teléfono, notas o la próxima acción, y registre los contactos sin pasar por la UI. Usa la service role key y queda atada a **un solo usuario**.
+`/api/automation/*` deja que una automatización (n8n, un script, un agente) lea la cola de leads, cree un lead, pida la apertura generada por la IA, corrija teléfono, notas o la próxima acción, y registre los contactos sin pasar por la UI. Usa la service role key y queda atada a **un solo usuario**.
 
 1. Generar el secreto: `openssl rand -hex 32` → `AUTOMATION_API_SECRET` (mínimo 32 caracteres; sin él la API responde 401 a todo)
 2. Buscar el UUID del dueño de los leads: Supabase → **Authentication → Users** → columna **UID** del mail → `AUTOMATION_OWNER_ID`. (Alternativa en el SQL Editor: `select id, email from auth.users;`)
-3. Opcional: `AUTOMATION_WRITE_AGENTS` — lista separada por comas de quién puede hacer el PATCH de corrección. Si no está, sólo `ventas` y `seguimiento`. Una lista explícita reemplaza el default (`ventas,auditor` deja afuera a seguimiento). No hace falta para leer ni para registrar un contacto de verdad
+3. Opcional: `AUTOMATION_WRITE_AGENTS` — lista separada por comas de quién puede hacer el PATCH de corrección y el POST de alta. Si no está, el PATCH lo hacen sólo `ventas` y `seguimiento`; el POST también deja pasar a `julian`. Una lista explícita reemplaza el default en los dos (`ventas,auditor` deja afuera a seguimiento y a julian). No hace falta para leer ni para registrar un contacto de verdad
 4. Cargar las variables en `.env.local` y en Vercel (**Settings → Environment Variables**) y redeployar
 5. Toda llamada lleva `Authorization: Bearer $AUTOMATION_API_SECRET`
 
-No hay migración nueva para este PATCH: usa `leads.phone`, `leads.notes`, `leads.next_action_at` y una actividad `NOTA` que ya existen.
+No hay migración nueva para el PATCH ni para el alta: usan columnas y la actividad `NOTA` que ya existen.
 
 | Método | Ruta | Qué hace |
 |---|---|---|
 | GET | `/api/automation/leads` | Cola de leads. Filtros: `status` (coma, default `NUEVO,LISTO`), `industry` (UUID o nombre del rubro), `list`, `city`, `uncontacted=true`, `has_phone` (default `true`), `limit` (default 25, máx. 100). Cada lead incluye `email` |
+| POST | `/api/automation/leads` | Crea un lead en `NUEVO`. Pide agente. Ver abajo |
 | GET | `/api/automation/leads/:id` | Un lead (con `email`) + últimas 20 actividades y mensajes |
 | PATCH | `/api/automation/leads/:id` | Corrige `phone`, `notes` y/o `next_action_at` sin registrar un contacto. Pide agente. Ver abajo |
 | POST | `/api/automation/leads/:id/opening-message` | Apertura de la IA (Groq, la key de Configuración del owner). Si ya se envió una, devuelve esa salvo `?regenerate=true` |
 | POST | `/api/automation/leads/:id/contact` | Registra el mensaje enviado (`lead_messages`) + el contacto (timeline, `last_contacted_at`, estado, próxima acción). No pide agente |
 | POST | `/api/automation/leads/:id/status` | Cambio de estado, con el mismo gate de reuniones que la UI. No pide agente |
 
-`GET /api/automation/leads` y `GET /api/automation/leads/:id` incluyen `email` en el lead: el valor guardado en `leads.email`, o `null` si no tiene (un string vacío se devuelve vacío). No hay migración: la columna ya existía. El PATCH no acepta `email`.
+`GET /api/automation/leads` y `GET /api/automation/leads/:id` incluyen `email` en el lead: el valor guardado en `leads.email`, o `null` si no tiene (un string vacío se devuelve vacío). No hay migración: la columna ya existía. El PATCH no acepta `email`. El POST sí lo guarda, en minúsculas, y el lead creado se lee por esas dos rutas.
+
+La cola (`GET /api/automation/leads`) sigue con `has_phone=true` por defecto: un lead creado sólo con email no entra en esa cola hasta pedir `has_phone=false`, o hasta tener teléfono. `GET /api/automation/leads/:id` lo devuelve igual, con el email.
+
+### POST `/api/automation/leads`
+
+Crea un lead del owner de `AUTOMATION_OWNER_ID`, en estado `NUEVO`, sin `last_contacted_at` y sin mensaje. Siempre deja una actividad `NOTA` con el texto `[agente] lead creado vía API`.
+
+| Campo | Qué es |
+|---|---|
+| `name` | Obligatorio |
+| `city`, `website`, `email`, `phone`, `notes` | Opcionales. Vacío o `null` se guarda como `null` |
+| `list` o `lista` | Id o nombre de una lista que ya existe (el nombre no distingue mayúsculas). Si vienen los dos, tienen que coincidir. Sin lista, el lead queda suelto (se ve en la cola y en la ficha, no dentro de una lista) |
+| `agent` | En el body o en el header `X-Agent`. Misma regla que el PATCH |
+
+El teléfono se normaliza como el PATCH (Argentina, `+54` si no trae país) y se guarda canónico. Un número con menos de 6 dígitos responde 400. El email se guarda en minúsculas.
+
+Si ya hay un lead de ese owner con el mismo teléfono, el mismo email, el mismo sitio (dominio) o el mismo nombre y ciudad, responde **409** con `{ "error", "id" }` del lead existente y no escribe nada. El id del 409 es el que se puede leer con `GET /api/automation/leads/:id`.
+
+`list`/`lista` no crea listas. Un id o un nombre que no existe responde 400. Dos listas con el mismo nombre responden 400: hay que pasar el id.
+
+El agente, si `AUTOMATION_WRITE_AGENTS` no está, puede ser `ventas`, `seguimiento` o `julian`. Sin agente, 400. Otro id, 403.
+
+```bash
+curl -s -X POST "$APP_URL/api/automation/leads" \
+  -H "Authorization: Bearer $AUTOMATION_API_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent": "julian",
+    "name": "Acme",
+    "city": "Rosario",
+    "email": "hola@acme.com",
+    "phone": "+54 9 11 5555-6666",
+    "website": "https://acme.com",
+    "lista": "Dentistas Rosario",
+    "notes": "Llegó por el formulario."
+  }'
+```
+
+La respuesta es 201: `{ "lead", "agent", "activity" }`. `lead` tiene la misma forma que en el GET (incluye `email`, `phone`, `phoneE164`, `status: "NUEVO"` y `list`). `activity` es `{ "type": "NOTA", "content": "[julian] lead creado vía API" }`.
 
 ### PATCH `/api/automation/leads/:id`
 

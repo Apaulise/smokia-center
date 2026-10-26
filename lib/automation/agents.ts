@@ -1,14 +1,22 @@
-// Quién puede escribir en PATCH /api/automation/leads/:id.
+// Quién puede escribir en la API de automatización.
 //
 // El Bearer de AUTOMATION_API_SECRET autentica a la integración. Este archivo
-// es el segundo filtro, sólo para esa corrección: el agente se identifica con
-// `agent` en el body o con el header `X-Agent`, y tiene que estar en la lista.
-// Los GET no pasan por acá.
+// es el segundo filtro, para PATCH /api/automation/leads/:id y para
+// POST /api/automation/leads: el agente se identifica con `agent` en el body
+// o con el header `X-Agent`, y tiene que estar en la lista. Los GET no pasan
+// por acá.
 
 import { z } from "zod";
 
 /** Si `AUTOMATION_WRITE_AGENTS` no está, éstos son los únicos que pueden corregir un lead. */
 export const DEFAULT_AUTOMATION_WRITE_AGENTS = ["ventas", "seguimiento"] as const;
+
+/**
+ * Quién puede crear un lead si la variable no está. El default de corrección,
+ * más `julian`: el id ya entra en el esquema (`^[a-z0-9]…`) y sumarlo acá no
+ * cambia quién puede hacer el PATCH.
+ */
+export const DEFAULT_AUTOMATION_CREATE_AGENTS = ["ventas", "seguimiento", "julian"] as const;
 
 const AGENT_ID = /^[a-z0-9][a-z0-9_-]{0,39}$/;
 
@@ -24,13 +32,28 @@ export const automationAgentIdSchema = z
  * el default (no se le suma): `ventas,auditor` deja afuera a seguimiento.
  */
 export function writeAgentsFromEnv(env: NodeJS.ProcessEnv): string[] {
+  const list = explicitAgents(env);
+  return list ?? [...DEFAULT_AUTOMATION_WRITE_AGENTS];
+}
+
+/**
+ * Lista efectiva para el alta. Sin variable (o vacía) → el default de
+ * creación, que incluye a julian. Una lista explícita reemplaza el default
+ * entero, igual que en la corrección: `ventas,auditor` no suma a julian.
+ */
+export function createAgentsFromEnv(env: NodeJS.ProcessEnv): string[] {
+  return explicitAgents(env) ?? [...DEFAULT_AUTOMATION_CREATE_AGENTS];
+}
+
+/** `null` si no hay una lista explícita: el caller pone su default. */
+function explicitAgents(env: NodeJS.ProcessEnv): string[] | null {
   const raw = env.AUTOMATION_WRITE_AGENTS;
-  if (raw == null || raw.trim() === "") return [...DEFAULT_AUTOMATION_WRITE_AGENTS];
+  if (raw == null || raw.trim() === "") return null;
   const list = raw
     .split(",")
     .map((item) => item.trim().toLowerCase())
     .filter((item) => item.length > 0);
-  return list.length > 0 ? list : [...DEFAULT_AUTOMATION_WRITE_AGENTS];
+  return list.length > 0 ? list : null;
 }
 
 export type AgentDecision =
@@ -45,6 +68,8 @@ export function decideWriteAgent(input: {
   bodyAgent?: string | null;
   headerAgent?: string | null;
   allowed: readonly string[];
+  /** Texto del 403. El PATCH habla de modificar; el alta, de crear. */
+  deniedMessage?: string;
 }): AgentDecision {
   const body = normalizeRaw(input.bodyAgent);
   const header = normalizeRaw(input.headerAgent);
@@ -65,7 +90,7 @@ export function decideWriteAgent(input: {
 
   const allowed = new Set(input.allowed.map((item) => item.trim().toLowerCase()));
   if (!allowed.has(parsed.data)) {
-    return { ok: false, status: 403, error: "Este agente no puede modificar leads." };
+    return { ok: false, status: 403, error: input.deniedMessage ?? "Este agente no puede modificar leads." };
   }
 
   return { ok: true, agent: parsed.data };
