@@ -133,12 +133,14 @@ No hay migración nueva para este PATCH: usa `leads.phone`, `leads.notes`, `lead
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| GET | `/api/automation/leads` | Cola de leads. Filtros: `status` (coma, default `NUEVO,LISTO`), `industry` (UUID o nombre del rubro), `list`, `city`, `uncontacted=true`, `has_phone` (default `true`), `limit` (default 25, máx. 100) |
-| GET | `/api/automation/leads/:id` | Un lead + últimas 20 actividades y mensajes |
+| GET | `/api/automation/leads` | Cola de leads. Filtros: `status` (coma, default `NUEVO,LISTO`), `industry` (UUID o nombre del rubro), `list`, `city`, `uncontacted=true`, `has_phone` (default `true`), `limit` (default 25, máx. 100). Cada lead incluye `email` |
+| GET | `/api/automation/leads/:id` | Un lead (con `email`) + últimas 20 actividades y mensajes |
 | PATCH | `/api/automation/leads/:id` | Corrige `phone`, `notes` y/o `next_action_at` sin registrar un contacto. Pide agente. Ver abajo |
 | POST | `/api/automation/leads/:id/opening-message` | Apertura de la IA (Groq, la key de Configuración del owner). Si ya se envió una, devuelve esa salvo `?regenerate=true` |
 | POST | `/api/automation/leads/:id/contact` | Registra el mensaje enviado (`lead_messages`) + el contacto (timeline, `last_contacted_at`, estado, próxima acción). No pide agente |
 | POST | `/api/automation/leads/:id/status` | Cambio de estado, con el mismo gate de reuniones que la UI. No pide agente |
+
+`GET /api/automation/leads` y `GET /api/automation/leads/:id` incluyen `email` en el lead: el valor guardado en `leads.email`, o `null` si no tiene (un string vacío se devuelve vacío). No hay migración: la columna ya existía. El PATCH no acepta `email`.
 
 ### PATCH `/api/automation/leads/:id`
 

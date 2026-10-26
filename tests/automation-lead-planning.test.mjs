@@ -56,6 +56,8 @@ test("rechaza un body vacío, una fecha sin zona, un teléfono inútil y cualqui
   assert.equal(leadPlanningBodySchema.safeParse({ next_action_at: "2026-10-30" }).success, false);
   assert.equal(leadPlanningBodySchema.safeParse({ notes: "x".repeat(4001) }).success, false);
   assert.equal(leadPlanningBodySchema.safeParse({ notes: "hola", status: "CONTACTADO" }).success, false);
+  assert.equal(leadPlanningBodySchema.safeParse({ notes: "hola", email: "hola@acme.com" }).success, false);
+  assert.equal(leadPlanningBodySchema.safeParse({ email: "hola@acme.com" }).success, false);
   assert.equal(leadPlanningBodySchema.safeParse({ nextActionAt: "2026-10-30T18:00:00Z" }).success, false);
   assert.equal(leadPlanningBodySchema.safeParse({ phone: "123" }).success, false);
   assert.equal(leadPlanningBodySchema.safeParse({ phone: "abc", agent: "ventas" }).success, false);

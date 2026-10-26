@@ -44,12 +44,13 @@ export const listLeadsQuerySchema = z.object({
 export type ListLeadsQuery = z.infer<typeof listLeadsQuerySchema>;
 
 const LEAD_SELECT =
-  "id, name, phone, status, city, sales_angle, interest_level, last_contacted_at, next_action_at, notes, instagram_url, website, created_at, industries(id, name), lead_lists(id, name)";
+  "id, name, phone, email, status, city, sales_angle, interest_level, last_contacted_at, next_action_at, notes, instagram_url, website, created_at, industries(id, name), lead_lists(id, name)";
 
 interface LeadRowForApi {
   id: string;
   name: string;
   phone: string | null;
+  email: string | null;
   status: LeadStatus;
   city: string | null;
   sales_angle: Database["public"]["Enums"]["lead_sales_angle"] | null;
@@ -72,6 +73,7 @@ function toApiLead(row: LeadRowForApi) {
     name: row.name,
     phone: row.phone,
     phoneE164,
+    email: row.email,
     status: row.status,
     city: row.city,
     industry: row.industries ? { id: row.industries.id, name: row.industries.name } : null,
@@ -100,7 +102,8 @@ async function resolveIndustryIds(admin: LeadsClient, ownerId: string, industry:
 
 /**
  * Cola de leads para contactar. Los más viejos primero: es una cola, lo que
- * entró antes se trabaja antes.
+ * entró antes se trabaja antes. Cada lead incluye `email` tal como está
+ * guardado (`null` o `""` si no tiene).
  */
 export async function listLeadsForAutomation(admin: LeadsClient, ownerId: string, query: ListLeadsQuery) {
   let q = admin

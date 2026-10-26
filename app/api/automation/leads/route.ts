@@ -4,6 +4,7 @@
 // AUTOMATION_OWNER_ID. Filtros: status (lista separada por comas, default
 // NUEVO,LISTO), industry (UUID o nombre del rubro), list, city,
 // uncontacted, has_phone (default true), limit (default 25, máx. 100).
+// Cada lead incluye `email` (string o null). Este GET no escribe nada.
 
 import { type NextRequest, NextResponse } from "next/server";
 
