@@ -126,8 +126,9 @@ Antes de probar con una clave real, `npm run test:gemini` verifica localmente qu
 1. Generar el secreto: `openssl rand -hex 32` → `AUTOMATION_API_SECRET` (mínimo 32 caracteres; sin él la API responde 401 a todo)
 2. Buscar el UUID del dueño de los leads: Supabase → **Authentication → Users** → columna **UID** del mail → `AUTOMATION_OWNER_ID`. (Alternativa en el SQL Editor: `select id, email from auth.users;`)
 3. Opcional: `AUTOMATION_WRITE_AGENTS` — lista separada por comas de quién puede hacer el PATCH de corrección y el POST de alta. Si no está, el PATCH lo hacen sólo `ventas` y `seguimiento`; el POST también deja pasar a `julian`. Una lista explícita reemplaza el default en los dos (`ventas,auditor` deja afuera a seguimiento y a julian). No hace falta para leer ni para registrar un contacto de verdad
-4. Cargar las variables en `.env.local` y en Vercel (**Settings → Environment Variables**) y redeployar
-5. Toda llamada lleva `Authorization: Bearer $AUTOMATION_API_SECRET`
+4. Opcional y apagado por defecto: `AUTOMATION_ADMIN_AGENTS` — lista separada por comas de quién puede usar `/api/automation/admin/*` (acceso total al CRM de ese owner). Sin la variable, o vacía, nadie entra aunque el Bearer sea válido. Para el orquestador: `AUTOMATION_ADMIN_AGENTS=mr-pou`. No se suma a `AUTOMATION_WRITE_AGENTS`: el PATCH y el alta históricos siguen igual
+5. Cargar las variables en `.env.local` y en Vercel (**Settings → Environment Variables**) y redeployar
+6. Toda llamada lleva `Authorization: Bearer $AUTOMATION_API_SECRET`
 
 No hay migración nueva para el PATCH ni para el alta: usan columnas y la actividad `NOTA` que ya existen.
 
@@ -140,6 +141,7 @@ No hay migración nueva para el PATCH ni para el alta: usan columnas y la activi
 | POST | `/api/automation/leads/:id/opening-message` | Apertura de la IA (Groq, la key de Configuración del owner). Si ya se envió una, devuelve esa salvo `?regenerate=true` |
 | POST | `/api/automation/leads/:id/contact` | Registra el mensaje enviado (`lead_messages`) + el contacto (timeline, `last_contacted_at`, estado, próxima acción). No pide agente |
 | POST | `/api/automation/leads/:id/status` | Cambio de estado, con el mismo gate de reuniones que la UI. No pide agente |
+| * | `/api/automation/admin/*` | Rol admin. Pide un agente de `AUTOMATION_ADMIN_AGENTS` (apagado si la variable no está). Ver abajo |
 
 `GET /api/automation/leads` y `GET /api/automation/leads/:id` incluyen `email` en el lead: el valor guardado en `leads.email`, o `null` si no tiene (un string vacío se devuelve vacío). No hay migración: la columna ya existía. El PATCH no acepta `email`. El POST sí lo guarda, en minúsculas, y el lead creado se lee por esas dos rutas.
 
@@ -219,6 +221,77 @@ curl -s -X PATCH "$APP_URL/api/automation/leads/$LEAD_ID" \
 ```
 
 La respuesta es el lead actualizado: `id`, `name`, `phone`, `phoneE164`, `notes`, `nextActionAt`, `status`, `updatedAt`, `agent` y `activity` (`{ "type": "NOTA", "content": "…" }` o `null` si no hubo cambio). `activity: null` con 200 quiere decir que esos datos ya estaban así.
+
+### Rol admin (`mr-pou`) — `/api/automation/admin/*`
+
+Acceso de lectura y escritura al CRM del owner de `AUTOMATION_OWNER_ID`. Pensado para el orquestador. El Bearer es el mismo. El agente va en `agent` o en `X-Agent` y tiene que estar en `AUTOMATION_ADMIN_AGENTS`. Si la variable no está, estos endpoints responden 403 (o 400 si falta el agente) aunque `ventas`, `seguimiento` o `julian` llamen con el Bearer. Un GET sin body usa el header.
+
+No reemplaza los endpoints de arriba: el PATCH de corrección sigue sin aceptar `status` ni `email`, y sigue limitado a `AUTOMATION_WRITE_AGENTS`.
+
+Todo queda filtrado por `owner_id`. El body no puede mandar `owner_id`, `id`, `created_at`, `updated_at`, `dedupe_key` ni `search`. Cada escritura que toca un lead deja una actividad `NOTA` con el texto `[mr-pou] …` (el id real del agente). El contenido de un mensaje o de una actividad se guarda tal cual: la nota de auditoría es otra fila.
+
+Lista blanca (nada más entra: ni `settings`, ni `scrape_jobs`, ni perfil, ni marca, ni `teams` / `team_members` / `team_goals`):
+
+| Recurso | Tabla | Borrado |
+|---|---|---|
+| `leads` | `leads` | soft: `status = DESCARTADO`. No hay borrado físico |
+| `lead_lists` | `lead_lists` | físico. Los leads de la lista quedan con `lead_list_id` vacío |
+| `lead_activities` | `lead_activities` | físico |
+| `lead_messages` | `lead_messages` | físico |
+| `lead_intel` | `lead_intel` | físico |
+| `lead_signals` | `lead_signals` | físico |
+| `industries` | `industries` | físico |
+| `appointments` | `appointments` | físico. Es la agenda; no hay una tabla `tasks` |
+| `message_templates` | `message_templates` | físico |
+| `sales_goals` y `goals` | `sales_goals` | físico. `goals` es el mismo recurso |
+| `sales_knowledge` | `sales_knowledge` | físico. `search` no se lee ni se escribe |
+
+El cuerpo genérico va en snake_case, como la base. Los endpoints viejos siguen en camelCase.
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| GET | `/api/automation/admin` | Catálogo: recursos, columnas escribibles, filtros y orden. Pide `X-Agent` |
+| GET | `/api/automation/admin/:resource` | Lista. `limit` (default 50, máx. 100), `offset`, `order`, `dir=asc\|desc`, más los filtros del catálogo (`lead_id`, `status`, …). En leads, `raw` no viene en la lista salvo `include_raw=true` |
+| GET | `/api/automation/admin/:resource/:id` | Una fila, con `raw` si la tabla lo tiene |
+| POST | `/api/automation/admin/:resource` | Alta. `owner_id` lo pone el servidor |
+| PATCH | `/api/automation/admin/:resource/:id` | Actualización parcial. Un lead acepta `status`, `email`, `notes`, `next_action_at` y el resto de columnas de la lista |
+| DELETE | `/api/automation/admin/:resource/:id?confirm=true` | Pide `confirm=true` en el query o `"confirm": true` en el body. En leads es soft |
+| POST | `/api/automation/admin/lead-status` | `{ "lead_id", "status" }`. Mismo gate de reuniones que la UI (`REUNION_AGENDADA` / `REUNION_REALIZADA` necesitan un turno). Deja `CAMBIO_ESTADO` y la nota `[agente]` |
+| POST | `/api/automation/admin/lead-activity` | `{ "lead_id", "content", "type"? }`. `content` se guarda exacto. `type` default `NOTA` |
+| POST | `/api/automation/admin/lead-message` | `{ "lead_id", "sender", "content", "channel"? }`. `content` exacto. `confirmed` default `true` (entra al hilo). No cambia `status` ni `last_contacted_at` |
+
+Al crear un `sales_goals` / `goals` activo, si ya había uno `ACTIVA` del mismo owner se archiva y queda el nuevo. Es el mismo criterio que la pantalla de objetivo (un solo activo).
+
+`REUNION_AGENDADA` y `REUNION_REALIZADA` no se pueden poner sin un turno del lead en `appointments`, ni por el PATCH genérico ni por `lead-status`. Un lead nuevo no puede nacer directo en esos dos estados.
+
+```bash
+# Catálogo
+curl -s "$APP_URL/api/automation/admin" \
+  -H "Authorization: Bearer $AUTOMATION_API_SECRET" \
+  -H "X-Agent: mr-pou"
+
+# Leer objetivos (sales_goals). `goals` es el mismo recurso.
+curl -s "$APP_URL/api/automation/admin/goals?status=ACTIVA" \
+  -H "Authorization: Bearer $AUTOMATION_API_SECRET" \
+  -H "X-Agent: mr-pou"
+
+# Cambiar estado
+curl -s -X POST "$APP_URL/api/automation/admin/lead-status" \
+  -H "Authorization: Bearer $AUTOMATION_API_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "agent": "mr-pou", "lead_id": "'"$LEAD_ID"'", "status": "CONTACTADO" }'
+
+# Mensaje con el texto exacto
+curl -s -X POST "$APP_URL/api/automation/admin/lead-message" \
+  -H "Authorization: Bearer $AUTOMATION_API_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "agent": "mr-pou", "lead_id": "'"$LEAD_ID"'", "sender": "VENDEDOR", "content": "Hola, te escribo por el turno." }'
+
+# Descartar un lead (soft). Sin confirm=true responde 400 y no escribe.
+curl -s -X DELETE "$APP_URL/api/automation/admin/leads/$LEAD_ID?confirm=true" \
+  -H "Authorization: Bearer $AUTOMATION_API_SECRET" \
+  -H "X-Agent: mr-pou"
+```
 
 ## Equipo (objetivo y dashboard compartidos, Plan §1.23)
 

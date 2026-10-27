@@ -1,10 +1,10 @@
 // Quién puede escribir en la API de automatización.
 //
 // El Bearer de AUTOMATION_API_SECRET autentica a la integración. Este archivo
-// es el segundo filtro, para PATCH /api/automation/leads/:id y para
-// POST /api/automation/leads: el agente se identifica con `agent` en el body
-// o con el header `X-Agent`, y tiene que estar en la lista. Los GET no pasan
-// por acá.
+// es el segundo filtro: PATCH /api/automation/leads/:id y POST /api/automation/leads
+// miran AUTOMATION_WRITE_AGENTS. /api/automation/admin/* mira AUTOMATION_ADMIN_AGENTS
+// (vacío = nadie) y no ensancha esas dos listas. El agente va en `agent` o en
+// `X-Agent`. Los GET históricos de leads no pasan por acá.
 
 import { z } from "zod";
 
@@ -43,6 +43,24 @@ export function writeAgentsFromEnv(env: NodeJS.ProcessEnv): string[] {
  */
 export function createAgentsFromEnv(env: NodeJS.ProcessEnv): string[] {
   return explicitAgents(env) ?? [...DEFAULT_AUTOMATION_CREATE_AGENTS];
+}
+
+/**
+ * Quién puede usar `/api/automation/admin/*`. Vacío o ausente → nadie: el
+ * acceso total falla cerrado hasta que se configure (en Vercel,
+ * `AUTOMATION_ADMIN_AGENTS=mr-pou`). No se suma a la lista de corrección ni
+ * a la de alta. Un id que no entra en el formato se descarta; si no queda
+ * ninguno, nadie entra.
+ */
+export function adminAgentsFromEnv(env: NodeJS.ProcessEnv): string[] {
+  const raw = env.AUTOMATION_ADMIN_AGENTS;
+  if (raw == null || raw.trim() === "") return [];
+  const seen = new Set<string>();
+  for (const item of raw.split(",")) {
+    const id = item.trim().toLowerCase();
+    if (AGENT_ID.test(id)) seen.add(id);
+  }
+  return [...seen];
 }
 
 /** `null` si no hay una lista explícita: el caller pone su default. */
