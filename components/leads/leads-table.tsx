@@ -2,7 +2,7 @@
 
 import { ArrowDown, ArrowUp, Loader2, Sparkles, Star } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useRef, useState, useTransition } from "react";
 
 import { Button } from "@/components/leads/ui/button";
@@ -20,7 +20,7 @@ import {
 import { enrichSelectedLeads } from "@/lib/leads/ai/actions";
 import { leadHref, navQueryString } from "@/lib/leads/nav-params";
 import { describeNextAction } from "@/lib/leads/next-action-label";
-import type { LeadWithRelations } from "@/lib/leads/queries";
+import type { LeadsSortField, LeadWithRelations } from "@/lib/leads/queries";
 import { LEAD_STATUSES, STATUS_LABEL, type LeadStatus } from "@/lib/leads/status";
 import type { Database } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";
@@ -37,24 +37,13 @@ function downloadCsv(csv: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function SortHeader({ field, label }: { field: string; label: string }) {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const activeSort = searchParams.get("sort") ?? "created_at";
-  const activeDir = searchParams.get("dir") ?? "desc";
+function SortHeader({ field, label, activeSort, ascending, onSort }: { field: LeadsSortField; label: string; activeSort: LeadsSortField; ascending: boolean; onSort: (field: LeadsSortField) => void }) {
   const isActive = activeSort === field;
-  const nextDir = isActive && activeDir === "desc" ? "asc" : "desc";
-
-  const params = new URLSearchParams(searchParams);
-  params.set("sort", field);
-  params.set("dir", nextDir);
-  params.delete("page");
-
   return (
-    <Link href={`${pathname}?${params.toString()}`} className="inline-flex items-center gap-1 hover:text-lm-ink">
+    <button type="button" onClick={() => onSort(field)} className="inline-flex items-center gap-1 hover:text-lm-ink">
       {label}
-      {isActive ? activeDir === "desc" ? <ArrowDown className="size-3" /> : <ArrowUp className="size-3" /> : null}
-    </Link>
+      {isActive ? ascending ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" /> : null}
+    </button>
   );
 }
 
@@ -69,9 +58,15 @@ function SortHeader({ field, label }: { field: string; label: string }) {
 export function LeadsTable({
   leads: initialLeads,
   industries,
+  sort,
+  ascending,
+  onSort,
 }: {
   leads: LeadWithRelations[];
   industries: Industry[];
+  sort: LeadsSortField;
+  ascending: boolean;
+  onSort: (field: LeadsSortField) => void;
 }) {
   const router = useRouter();
   const [leads, setLeads] = useState(initialLeads);
@@ -280,18 +275,18 @@ export function LeadsTable({
               />
             </Th>
             <Th>
-              <SortHeader field="name" label="Nombre" />
+              <SortHeader field="name" label="Nombre" activeSort={sort} ascending={ascending} onSort={onSort} />
             </Th>
             <Th>Rubro</Th>
             <Th>Contacto</Th>
             <Th>Ciudad</Th>
             <Th>Rating</Th>
             <Th>
-              <SortHeader field="status" label="Estado" />
+              <SortHeader field="status" label="Estado" activeSort={sort} ascending={ascending} onSort={onSort} />
             </Th>
             <Th>Lista</Th>
             <Th>
-              <SortHeader field="last_contacted_at" label="Últ. contacto" />
+              <SortHeader field="last_contacted_at" label="Últ. contacto" activeSort={sort} ascending={ascending} onSort={onSort} />
             </Th>
             <Th>Próxima acción</Th>
           </tr>

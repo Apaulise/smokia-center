@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
 import { Sidebar } from "@/components/shell/sidebar";
 import { countKnowledgeNotes } from "@/lib/brand/knowledge/queries";
@@ -30,36 +31,53 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     );
   }
 
-  // Badges de conteo del sidebar (Design System, ítems "Listas"/"Agenda" de Leads y
-  // "Biblioteca"/"Planificador"/"Base de conocimiento" de Marca) — counts livianos
-  // (head: true, sin traer filas), no vale la pena condicionarlos a estar dentro
-  // de un módulo: el sidebar es infra compartida y se ve en todas las pantallas.
-  const [listsCount, todayAppointmentsCount, postsCount, openItemsCount, notesCount, pendingApprovals, profile] =
-    await Promise.all([
-      countLeadLists(),
-      countTodayAppointments(),
-      countBrandPosts(),
-      countOpenContentItems(),
-      countKnowledgeNotes(),
-      countPendingApprovals(),
-      getProfile(),
-    ]);
-
   return (
     <div className="flex min-h-dvh flex-col lg:flex-row">
-      <Sidebar
-        name={displayName(profile, user.email)}
-        avatarUrl={profile.avatarUrl}
-        badges={{
-          "/leads/lista": listsCount,
-          "/leads/agenda": todayAppointmentsCount,
-          "/marca/contenido": postsCount,
-          "/marca/planificador": openItemsCount,
-          "/marca/conocimiento": notesCount,
-          "/operaciones/aprobaciones": pendingApprovals,
-        }}
-      />
+      <Suspense fallback={<SidebarFallback />}>
+        <SidebarData email={user.email} />
+      </Suspense>
       <main className="min-w-0 flex-1">{children}</main>
     </div>
+  );
+}
+
+/** Los contadores no bloquean el contenido principal: llegan en streaming. */
+async function SidebarData({ email }: { email?: string }) {
+  const [listsCount, todayAppointmentsCount, postsCount, openItemsCount, notesCount, pendingApprovals, profile] = await Promise.all([
+    countLeadLists(),
+    countTodayAppointments(),
+    countBrandPosts(),
+    countOpenContentItems(),
+    countKnowledgeNotes(),
+    countPendingApprovals(),
+    getProfile(),
+  ]);
+
+  return (
+    <Sidebar
+      name={displayName(profile, email)}
+      avatarUrl={profile.avatarUrl}
+      badges={{
+        "/leads/lista": listsCount,
+        "/leads/agenda": todayAppointmentsCount,
+        "/marca/contenido": postsCount,
+        "/marca/planificador": openItemsCount,
+        "/marca/conocimiento": notesCount,
+        "/operaciones/aprobaciones": pendingApprovals,
+      }}
+    />
+  );
+}
+
+function SidebarFallback() {
+  return (
+    <aside className="hidden min-h-dvh w-60 shrink-0 border-r border-lm-line bg-lm-surface p-5 lg:block" aria-label="Cargando navegación">
+      <div className="h-7 w-28 animate-pulse rounded bg-lm-raised" />
+      <div className="mt-10 flex flex-col gap-3">
+        {[80, 64, 72, 56, 68, 60].map((width) => (
+          <div key={width} className="h-8 animate-pulse rounded bg-lm-raised" style={{ width: `${width}%` }} />
+        ))}
+      </div>
+    </aside>
   );
 }

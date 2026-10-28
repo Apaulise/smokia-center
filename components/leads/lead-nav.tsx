@@ -21,6 +21,9 @@ export function LeadNav({ ids, currentId, navQuery }: { ids: string[]; currentId
   const nextHref = nextId ? leadHref(nextId, navQuery) : null;
 
   useEffect(() => {
+    if (prevHref) router.prefetch(prevHref);
+    if (nextHref) router.prefetch(nextHref);
+
     function onKeyDown(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
       if (target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;

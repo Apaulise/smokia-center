@@ -1,7 +1,11 @@
-import { MessageSquareReply } from "lucide-react";
+"use client";
+
+import { MessageSquareReply, Search, X } from "lucide-react";
 import Link from "next/link";
+import { useMemo, useState } from "react";
 
 import { EmptyLine } from "@/components/leads/ui/feedback";
+import { Input } from "@/components/leads/ui/field";
 import { Chip, StatusBadge } from "@/components/leads/ui/status-badge";
 import { Table, Td, Th, Tr } from "@/components/leads/ui/table";
 import type { FollowUpQueueLead } from "@/lib/leads/queries";
@@ -10,31 +14,32 @@ import { STATUS_LABEL, STATUS_TEMPERATURE_GROUP } from "@/lib/leads/status";
 /** A partir de acá un lead contactado se marca como "frío" en la lista. */
 const COLD_AFTER_DAYS = 7;
 
-function daysSince(iso: string) {
-  return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / (24 * 60 * 60 * 1000)));
+function daysSince(iso: string, nowMs: number) {
+  return Math.max(0, Math.floor((nowMs - new Date(iso).getTime()) / (24 * 60 * 60 * 1000)));
 }
 
 function lastContactLabel(lead: FollowUpQueueLead): string {
   if (!lead.last_contacted_at) return "—";
-  const days = daysSince(lead.last_contacted_at);
+  const days = daysSince(lead.last_contacted_at, new Date(lead.queue_now).getTime());
   if (days === 0) return "Hoy";
   return `hace ${days} ${days === 1 ? "día" : "días"}`;
 }
 
 function waitingLabel(lead: FollowUpQueueLead): string {
   if (!lead.next_action_at) return "En espera";
-  const days = Math.max(1, Math.ceil((new Date(lead.next_action_at).getTime() - Date.now()) / (24 * 60 * 60 * 1000)));
+  const days = Math.max(1, Math.ceil((new Date(lead.next_action_at).getTime() - new Date(lead.queue_now).getTime()) / (24 * 60 * 60 * 1000)));
   const date = new Date(lead.next_action_at).toLocaleDateString("es-AR", { day: "numeric", month: "short", timeZone: "America/Argentina/Buenos_Aires" });
   return `Próximo seguimiento en ${days} ${days === 1 ? "día" : "días"} (${date})`;
 }
 
 function reasonLabel(lead: FollowUpQueueLead): string {
+  const nowMs = new Date(lead.queue_now).getTime();
   if (lead.waiting) return waitingLabel(lead);
   if (lead.overdue && lead.next_action_at) {
-    const days = daysSince(lead.next_action_at);
+    const days = daysSince(lead.next_action_at, nowMs);
     return days === 0 ? "Fecha de retomar: hoy" : `Retomar vencido hace ${days} ${days === 1 ? "día" : "días"}`;
   }
-  if (lead.last_contacted_at && daysSince(lead.last_contacted_at) >= COLD_AFTER_DAYS) return "Sin novedades";
+  if (lead.last_contacted_at && daysSince(lead.last_contacted_at, nowMs) >= COLD_AFTER_DAYS) return "Sin novedades";
   return "En curso";
 }
 
@@ -55,7 +60,8 @@ function QueueTable({ leads }: { leads: FollowUpQueueLead[] }) {
       </thead>
       <tbody>
         {leads.map((lead) => {
-          const cold = !lead.waiting && (lead.overdue || (lead.last_contacted_at ? daysSince(lead.last_contacted_at) >= COLD_AFTER_DAYS : false));
+          const nowMs = new Date(lead.queue_now).getTime();
+          const cold = !lead.waiting && (lead.overdue || (lead.last_contacted_at ? daysSince(lead.last_contacted_at, nowMs) >= COLD_AFTER_DAYS : false));
           return (
             <Tr key={lead.id}>
               <Td>
@@ -90,13 +96,47 @@ function QueueTable({ leads }: { leads: FollowUpQueueLead[] }) {
  * modo "Seguimiento" del composer arma el mensaje desde toda la información.
  */
 export function FollowUpQueue({ leads }: { leads: FollowUpQueueLead[] }) {
-  const due = leads.filter((lead) => !lead.waiting);
-  const waiting = leads
+  const [query, setQuery] = useState("");
+  const filteredLeads = useMemo(() => {
+    const term = normalizeSearch(query);
+    if (!term) return leads;
+    return leads.filter((lead) => normalizeSearch(lead.name).includes(term));
+  }, [leads, query]);
+  const due = filteredLeads.filter((lead) => !lead.waiting);
+  const waiting = filteredLeads
     .filter((lead) => lead.waiting)
     .sort((a, b) => new Date(a.next_action_at ?? 0).getTime() - new Date(b.next_action_at ?? 0).getTime());
 
   return (
     <div className="flex flex-col gap-8">
+      <div className="max-w-md">
+        <label className="mb-1.5 block text-xs text-lm-ink-2" htmlFor="follow-up-search">
+          Buscar por nombre
+        </label>
+        <div className="relative">
+          <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-lm-ink-3" strokeWidth={1.5} />
+          <Input
+            id="follow-up-search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Escribí el nombre del lead"
+            className="pr-9 pl-9"
+            autoComplete="off"
+          />
+          {query ? (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="absolute top-1/2 right-2.5 -translate-y-1/2 rounded-lm-xs p-1 text-lm-ink-3 hover:text-lm-ink"
+              aria-label="Limpiar búsqueda"
+            >
+              <X className="size-3.5" strokeWidth={1.5} />
+            </button>
+          ) : null}
+        </div>
+        {query ? <p className="mt-1.5 text-xs text-lm-ink-3">{filteredLeads.length} resultado{filteredLeads.length === 1 ? "" : "s"}</p> : null}
+      </div>
+
       <section className="flex flex-col gap-3">
         <h2 className="flex items-center gap-2 font-lm-sans text-sm font-semibold text-lm-ink">
           <MessageSquareReply className="size-4 text-lm-signal" strokeWidth={1.5} />
@@ -105,7 +145,11 @@ export function FollowUpQueue({ leads }: { leads: FollowUpQueueLead[] }) {
         </h2>
         {due.length === 0 ? (
           <EmptyLine>
-            {leads.length === 0
+            {query
+              ? filteredLeads.length === 0
+                ? "Ningún lead coincide con ese nombre."
+                : "Los resultados de esta búsqueda están en espera."
+              : leads.length === 0
               ? "No hay prospecciones abiertas: ningún lead contactado sigue sin cerrar."
               : "Nada para atender ahora: todos tus leads tienen un próximo seguimiento programado."}
           </EmptyLine>
@@ -126,4 +170,8 @@ export function FollowUpQueue({ leads }: { leads: FollowUpQueueLead[] }) {
       ) : null}
     </div>
   );
+}
+
+function normalizeSearch(value: string) {
+  return value.toLocaleLowerCase("es").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 }

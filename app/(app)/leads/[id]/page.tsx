@@ -1,7 +1,7 @@
 import { Mail, MapPin, Star } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { ReactNode } from "react";
+import { cache, type ReactNode } from "react";
 
 import { ContactActions } from "@/components/leads/contact-actions";
 import { MessageThread } from "@/components/leads/conversation/message-thread";
@@ -33,6 +33,7 @@ import type { LeadsSortField } from "@/lib/leads/queries";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/leads/status";
 
 const NAV_SORT_FIELDS: LeadsSortField[] = ["created_at", "name", "status", "last_contacted_at", "next_action_at"];
+const getLeadCached = cache(getLead);
 
 /** Vuelve a la lista con los mismos filtros con los que se abrió la ficha. */
 function listBackHref(listId: string, navQuery: string) {
@@ -41,7 +42,7 @@ function listBackHref(listId: string, navQuery: string) {
 
 export async function generateMetadata({ params }: PageProps<"/leads/[id]">) {
   const { id } = await params;
-  const lead = await getLead(id);
+  const lead = await getLeadCached(id);
   return { title: lead ? `${lead.name} · SmokIA` : "Lead · SmokIA" };
 }
 
@@ -56,7 +57,7 @@ export default async function LeadFichaPage({ params, searchParams }: PageProps<
   const { id } = await params;
   const query = await searchParams;
   const { modo } = query;
-  const lead = await getLead(id);
+  const lead = await getLeadCached(id);
   if (!lead) notFound();
 
   const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) || undefined;

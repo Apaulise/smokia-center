@@ -461,6 +461,8 @@ export type FollowUpQueueLead = LeadWithRelations & {
   overdue: boolean;
   /** Tiene una fecha de próxima acción a futuro: ya se hizo lo que tocaba y se espera. */
   waiting: boolean;
+  /** Instante único de la consulta, para que todas las etiquetas relativas coincidan. */
+  queue_now: string;
 };
 
 /**
@@ -488,6 +490,7 @@ export async function listFollowUpQueue(limit = 200) {
     ...lead,
     overdue: Boolean(lead.next_action_at && new Date(lead.next_action_at) <= new Date(now)),
     waiting: Boolean(lead.next_action_at && new Date(lead.next_action_at) > new Date(now)),
+    queue_now: now,
   })) satisfies FollowUpQueueLead[];
 }
 

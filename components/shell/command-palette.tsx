@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, LayoutDashboard, ListChecks, Plus, Search } from "lucide-react";
+import { Calendar, LayoutDashboard, ListChecks, LoaderCircle, Plus, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -57,6 +57,7 @@ function Palette({ onClose }: { onClose: () => void }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [leads, setLeads] = useState<{ id: string; name: string; status: LeadStatus }[]>([]);
   const [lists, setLists] = useState<{ id: string; name: string }[]>([]);
+  const [completedQuery, setCompletedQuery] = useState("");
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -67,10 +68,14 @@ function Palette({ onClose }: { onClose: () => void }) {
     if (!term) return;
     let cancelled = false;
     const id = setTimeout(async () => {
-      const results = await searchCommandPaletteAction(term);
-      if (!cancelled) {
-        setLeads(results.leads);
-        setLists(results.lists);
+      try {
+        const results = await searchCommandPaletteAction(term);
+        if (!cancelled) {
+          setLeads(results.leads);
+          setLists(results.lists);
+        }
+      } finally {
+        if (!cancelled) setCompletedQuery(term);
       }
     }, 150);
     return () => {
@@ -83,6 +88,7 @@ function Palette({ onClose }: { onClose: () => void }) {
   // todavía tengan la última respuesta — derivado en el render, no en un
   // efecto que los vacíe.
   const hasQuery = query.trim().length > 0;
+  const searching = hasQuery && completedQuery !== query.trim();
   const visibleLeads = useMemo(() => (hasQuery ? leads : []), [hasQuery, leads]);
   const visibleLists = useMemo(() => (hasQuery ? lists : []), [hasQuery, lists]);
 
@@ -166,6 +172,7 @@ function Palette({ onClose }: { onClose: () => void }) {
             className="h-full flex-1 bg-transparent text-[15px] text-lm-ink placeholder:text-lm-ink-3 focus:outline-none"
             style={{ caretColor: "var(--color-lm-signal)" }}
           />
+          {searching ? <LoaderCircle className="size-4 animate-spin text-lm-ink-3" strokeWidth={1.5} aria-label="Buscando" /> : null}
         </div>
 
         <div className="flex-1 overflow-y-auto py-2">
