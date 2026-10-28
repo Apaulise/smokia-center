@@ -1,13 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { Check, Loader2, Pencil, X } from "lucide-react";
+import { useState, useTransition } from "react";
 
+import { ResponseTypeReview } from "@/components/leads/conversation/response-type-review";
+import { Button } from "@/components/leads/ui/button";
+import { Textarea } from "@/components/leads/ui/field";
 import { Tabs, TabButton } from "@/components/leads/ui/tabs";
 import { Timeline, TimelineEvent, TimelineMessage } from "@/components/leads/ui/timeline";
 import { EmptyLine } from "@/components/leads/ui/feedback";
 import { ANGLE_LABEL, type SalesAngle } from "@/lib/leads/ai/angles";
-import type { AnalyzeOutput } from "@/lib/leads/ai/schemas";
 import { mergeConversation, type ThreadItem } from "@/lib/leads/conversation";
+import { updateLeadMessageContent } from "@/lib/leads/message-actions";
+import { messageAnalysisDetails } from "@/lib/leads/message-analysis";
 import type { LeadMessageRow } from "@/lib/leads/queries";
 import { ACTIVITY_LABEL, STATUS_LABEL } from "@/lib/leads/status";
 import type { Database } from "@/lib/supabase/database.types";
@@ -87,17 +92,83 @@ export function MessageThread({
 
 function MessageRow({ message }: { message: LeadMessageRow }) {
   const fromLead = message.sender === "LEAD";
-  const analysis = fromLead ? (message.analysis as AnalyzeOutput | null) : null;
+  const details = fromLead ? messageAnalysisDetails(message.analysis) : null;
+  const [content, setContent] = useState(message.content);
+  const [draft, setDraft] = useState(message.content);
+  const [editing, setEditing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function cancelEdit() {
+    setDraft(content);
+    setEditing(false);
+    setError(null);
+  }
+
+  function saveEdit() {
+    const next = draft.trim();
+    if (!next) {
+      setError("El mensaje no puede quedar vacío.");
+      return;
+    }
+    if (next === content) {
+      cancelEdit();
+      return;
+    }
+    setError(null);
+    startTransition(async () => {
+      const result = await updateLeadMessageContent({ messageId: message.id, content: next });
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      setContent(next);
+      setDraft(next);
+      setEditing(false);
+    });
+  }
 
   return (
     <TimelineEvent incoming={fromLead} time={formatTime(message.occurred_at)}>
-      <div className="mb-1 flex flex-wrap items-center gap-1.5 text-xs text-lm-ink-3">
-        <span>{CHANNEL_LABEL[message.channel]}</span>
-        {!fromLead && message.generated_by === "IA" ? <span className="text-lm-signal-text">IA</span> : null}
-        {!fromLead && message.angle ? <span>· {ANGLE_LABEL[message.angle as SalesAngle]}</span> : null}
-        {analysis ? <span>· interés {analysis.analysis.interest_level}/10</span> : null}
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs text-lm-ink-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span>{CHANNEL_LABEL[message.channel]}</span>
+          {!fromLead && message.generated_by === "IA" ? <span className="text-lm-signal-text">IA</span> : null}
+          {!fromLead && message.angle ? <span>· {ANGLE_LABEL[message.angle as SalesAngle]}</span> : null}
+          {details ? <span>· interés {details.analysis.analysis.interest_level}/10</span> : null}
+        </div>
+        {!editing ? (
+          <button type="button" onClick={() => setEditing(true)} className="inline-flex items-center gap-1 hover:text-lm-ink" aria-label="Editar mensaje">
+            <Pencil className="size-3" strokeWidth={1.5} /> Editar
+          </button>
+        ) : null}
       </div>
-      <TimelineMessage>{message.content}</TimelineMessage>
+      {editing ? (
+        <div className="mt-1 flex flex-col gap-2 rounded-lm-sm bg-lm-raised p-3">
+          <Textarea value={draft} onChange={(event) => setDraft(event.target.value)} disabled={pending} className="min-h-20" autoFocus />
+          {details ? <p className="text-[11px] text-lm-ink-3">La edición corrige el registro; no vuelve a ejecutar el análisis de IA.</p> : null}
+          {error ? <p className="text-xs text-lm-danger">{error}</p> : null}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={cancelEdit} disabled={pending}>
+              <X className="size-3.5" /> Cancelar
+            </Button>
+            <Button type="button" variant="primary" size="sm" onClick={saveEdit} disabled={pending || !draft.trim()}>
+              {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />} Guardar
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <TimelineMessage><span className="whitespace-pre-wrap">{content}</span></TimelineMessage>
+      )}
+      {details ? (
+        <ResponseTypeReview
+          messageId={message.id}
+          aiResponseType={details.aiResponseType}
+          value={details.effectiveResponseType}
+          reviewed={Boolean(details.reviewedAt)}
+          compact
+        />
+      ) : null}
     </TimelineEvent>
   );
 }

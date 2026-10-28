@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 
 import { RewriteButtons } from "@/components/leads/rewrite-buttons";
+import { ResponseTypeReview } from "@/components/leads/conversation/response-type-review";
 import { SuggestedReplyConfirm } from "@/components/leads/suggested-reply-confirm";
 import { Button, Kbd } from "@/components/leads/ui/button";
 import { Composer, ComposerBody, ComposerFoot, ComposerHead } from "@/components/leads/ui/composer";
@@ -20,6 +21,7 @@ import {
   type OpeningActionState,
 } from "@/lib/leads/ai/actions";
 import type { AnalyzeOutput } from "@/lib/leads/ai/schemas";
+import type { ResponseType } from "@/lib/leads/message-analysis";
 import { buildWhatsappLink } from "@/lib/leads/templates";
 import type { LeadMessageRow } from "@/lib/leads/queries";
 import type { LeadStatus } from "@/lib/leads/status";
@@ -155,7 +157,7 @@ function findPendingReply(messages: LeadMessageRow[], nextActionReason: string |
   if (!last || last.sender !== "LEAD" || !last.analysis) return null;
   const analysis = last.analysis as AnalyzeOutput;
   if (!analysis.suggested_reply?.has_reply || !analysis.suggested_reply.message) return null;
-  return { ok: true, analysis, nextActionReason: nextActionReason ?? "" };
+  return { ok: true, analysis, nextActionReason: nextActionReason ?? "", messageId: last.id };
 }
 
 /**
@@ -382,6 +384,7 @@ function AnalizarComposer({
   const pendingReply = findPendingReply(messages, nextBestActionReason);
   // Arranca mostrando la respuesta sugerida pendiente si la hay (ver `findPendingReply`) — no en blanco.
   const [result, setResult] = useState<Analysis | null>(pendingReply);
+  const [reviewedResponseType, setReviewedResponseType] = useState<ResponseType | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -394,6 +397,7 @@ function AnalizarComposer({
         return;
       }
       setResult(response);
+      setReviewedResponseType(null);
       setDismissed(false);
       setText("");
       router.refresh();
@@ -418,11 +422,24 @@ function AnalizarComposer({
         {result ? (
           <div className="flex flex-col gap-3 rounded-lm-sm border border-lm-line bg-lm-raised p-3">
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="text-lm-ink-2">{RESPONSE_TYPE_LABEL[result.analysis.analysis.response_type]}</span>
+              <span className="text-lm-ink-2">{RESPONSE_TYPE_LABEL[reviewedResponseType ?? result.analysis.analysis.response_type]}</span>
               <span className="text-lm-signal-text">Interés {result.analysis.analysis.interest_level}/10</span>
               {result.analysis.analysis.not_now ? <span className="text-lm-ink-3">Ahora no</span> : null}
               {result.analysis.analysis.disqualify ? <span className="text-lm-danger">Descartar</span> : null}
             </div>
+
+            <ResponseTypeReview
+              messageId={result.messageId}
+              aiResponseType={result.analysis.analysis.response_type}
+              value={reviewedResponseType ?? result.analysis.analysis.response_type}
+              onReviewed={(responseType, nextActionReason) => {
+                setReviewedResponseType(responseType);
+                setResult((current) => current ? {
+                  ...current,
+                  nextActionReason: nextActionReason ?? current.nextActionReason,
+                } : current);
+              }}
+            />
 
             {result.analysis.analysis.learned ? (
               <div>
@@ -453,13 +470,18 @@ function AnalizarComposer({
               </div>
             ) : null}
 
-            {result.analysis.suggested_reply.has_reply && result.analysis.suggested_reply.message ? (
+            {(reviewedResponseType ?? result.analysis.analysis.response_type) === "HUMANA" && result.analysis.suggested_reply.has_reply && result.analysis.suggested_reply.message ? (
               <SuggestedReplyBox
                 leadId={leadId}
                 phone={phone}
                 initialMessage={result.analysis.suggested_reply.message}
                 onConfirmed={() => setResult(null)}
               />
+            ) : (reviewedResponseType ?? result.analysis.analysis.response_type) === "HUMANA" ? (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs text-lm-ink-3">La respuesta quedó marcada como humana. Podés escribir el próximo mensaje manualmente.</p>
+                <SuggestedReplyBox leadId={leadId} phone={phone} initialMessage="" onConfirmed={() => setResult(null)} />
+              </div>
             ) : (
               <p className="text-xs text-lm-ink-3">Todavía no corresponde responder — esperá o revisá la próxima acción de arriba.</p>
             )}
@@ -474,6 +496,7 @@ function AnalizarComposer({
             size="sm"
             onClick={() => {
               setResult(null);
+              setReviewedResponseType(null);
               setDismissed(true);
             }}
           >
@@ -489,6 +512,7 @@ function AnalizarComposer({
                 size="sm"
                 onClick={() => {
                   setResult(pendingReply);
+                  setReviewedResponseType(null);
                   setDismissed(false);
                 }}
               >

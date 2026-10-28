@@ -373,7 +373,7 @@ export async function confirmLeadOpening(input: {
 // ── Analizador de respuestas (Plan §1.12) ───────────────────────────────────
 
 export type AnalyzeActionState =
-  | { ok: true; analysis: AnalyzeOutput; nextActionReason: string }
+  | { ok: true; analysis: AnalyzeOutput; nextActionReason: string; messageId: string }
   | { ok: false; message: string };
 
 const analyzeResponseSchema = z.object({
@@ -550,16 +550,20 @@ export async function analyzeLeadResponseAction(input: {
   const supabase = await createClient();
 
   // 1. El mensaje entrante, con el análisis (ya con la respuesta sugerida completa) colgado de su propia fila.
-  const { error: messageError } = await supabase.from("lead_messages").insert({
-    owner_id: user.id,
-    lead_id: parsed.data.leadId,
-    sender: "LEAD",
-    channel: parsed.data.channel,
-    content: parsed.data.responseText,
-    analysis: analysis as unknown as Json,
-    occurred_at: now,
-  });
-  if (messageError) return { ok: false, message: "No se pudo registrar el mensaje entrante." };
+  const { data: insertedMessage, error: messageError } = await supabase
+    .from("lead_messages")
+    .insert({
+      owner_id: user.id,
+      lead_id: parsed.data.leadId,
+      sender: "LEAD",
+      channel: parsed.data.channel,
+      content: parsed.data.responseText,
+      analysis: analysis as unknown as Json,
+      occurred_at: now,
+    })
+    .select("id")
+    .single();
+  if (messageError || !insertedMessage) return { ok: false, message: "No se pudo registrar el mensaje entrante." };
 
   // 2. Señales: insertar o actualizar según corresponda (§1.13), sin retroceder nunca de estado.
   for (const write of writes) {
@@ -631,7 +635,7 @@ export async function analyzeLeadResponseAction(input: {
 
   revalidatePath(`/leads/${parsed.data.leadId}`);
   revalidatePath("/leads/lista");
-  return { ok: true, analysis, nextActionReason: nextAction.reason };
+  return { ok: true, analysis, nextActionReason: nextAction.reason, messageId: insertedMessage.id };
 }
 
 // ── Reescrituras de tono y confirmación de envío (Plan §1.15) ───────────────
