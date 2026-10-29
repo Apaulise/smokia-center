@@ -673,6 +673,14 @@ Los dos socios operan como un solo negocio: **una meta en común**, un dashboard
 10. Cuenta sin equipo (o sin sembrar): `/leads/equipo` muestra el estado vacío y `/leads/objetivo` sigue con la meta personal.
 11. Un `select` directo desde el cliente a `leads` o `lead_messages` del socio sigue devolviendo 0 filas, y `team_execution_metrics` con un id ajeno al equipo devuelve vacío.
 
+### 1.24 Chats de WhatsApp dentro del CRM
+
+> **Estado (2026-10-27): plan aprobado, sin código.** Detalle completo, sub-pasos y riesgos abiertos en [01-chats-de-whatsapp.md](01-chats-de-whatsapp.md).
+
+Ver, dentro del CRM, los chats del WhatsApp del usuario para leer, hacer seguimiento y responder, y darle ese contexto al agente. Va por la Cloud API de Meta con **Coexistence** (el mismo número sigue andando en la app WhatsApp Business del celular). No se prospecta en frío por la API: se recibe, se lee y se responde dentro de la ventana de 24 h.
+
+Seis sub-pasos, cada uno con su checklist manual: 0) alta en Meta y conexión (sin código; cierra dos riesgos abiertos), 1) migración + webhook de recepción, 2) inbox `/leads/chats` en solo lectura, 3) envío y eco del celular, 4) enlace con leads, 5) lectura para el agente y borradores a la cola de aprobaciones, 6) historial de 6 meses. El webhook es la tercera excepción de service role y se documenta en `CLAUDE.md` §4 cuando se escriba.
+
 ---
 
 ## Fases siguientes (fuera de alcance ahora)
