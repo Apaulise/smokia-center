@@ -15,6 +15,13 @@ const VIEW_OPTIONS: Array<{ value: CalendarView; label: string; icon: typeof Lay
   { value: "lista", label: "Lista", icon: List },
 ];
 
+function calendarHref(basePath: string, values: Record<string, string>, extraParams?: Record<string, string | undefined>) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(extraParams ?? {})) if (value) params.set(key, value);
+  for (const [key, value] of Object.entries(values)) params.set(key, value);
+  return `${basePath}?${params.toString()}`;
+}
+
 /**
  * Navegación de un calendario por período: anterior / hoy / siguiente. La usan
  * la agenda de Leads y el planificador de Marca (Plans/01 §1.5, Plans/03
@@ -29,6 +36,7 @@ export function PeriodNav({
   next,
   today,
   variant = "brand",
+  extraParams,
 }: {
   basePath: string;
   view: CalendarView;
@@ -36,25 +44,26 @@ export function PeriodNav({
   next: string;
   today: string;
   variant?: CalendarVariant;
+  extraParams?: Record<string, string | undefined>;
 }) {
   if (variant === "signal") {
     return (
       <div className="flex items-center gap-1 rounded-lm-sm border border-lm-line bg-lm-surface p-1">
         <Link
-          href={`${basePath}?view=${view}&date=${prev}`}
+          href={calendarHref(basePath, { view, date: prev }, extraParams)}
           aria-label="Período anterior"
           className="flex size-7 items-center justify-center rounded-[3px] text-lm-ink-2 hover:bg-lm-raised hover:text-lm-ink"
         >
           <ChevronLeft className="size-4" strokeWidth={1.5} />
         </Link>
         <Link
-          href={`${basePath}?view=${view}&date=${today}`}
+          href={calendarHref(basePath, { view, date: today }, extraParams)}
           className="rounded-[3px] px-2.5 py-1 font-lm-sans text-[13px] text-lm-ink-2 hover:bg-lm-raised hover:text-lm-ink"
         >
           Hoy
         </Link>
         <Link
-          href={`${basePath}?view=${view}&date=${next}`}
+          href={calendarHref(basePath, { view, date: next }, extraParams)}
           aria-label="Período siguiente"
           className="flex size-7 items-center justify-center rounded-[3px] text-lm-ink-2 hover:bg-lm-raised hover:text-lm-ink"
         >
@@ -67,20 +76,20 @@ export function PeriodNav({
   return (
     <div className="flex items-center gap-1 rounded-[12px] border border-line bg-surface/40 p-1">
       <Link
-        href={`${basePath}?view=${view}&date=${prev}`}
+        href={calendarHref(basePath, { view, date: prev }, extraParams)}
         aria-label="Período anterior"
         className="flex size-8 items-center justify-center rounded-[10px] hover:bg-surface/60 hover:text-cyan"
       >
         <ChevronLeft className="size-4" />
       </Link>
       <Link
-        href={`${basePath}?view=${view}&date=${today}`}
+        href={calendarHref(basePath, { view, date: today }, extraParams)}
         className="rounded-[10px] px-2.5 py-1 text-xs text-muted hover:bg-surface/60 hover:text-ink"
       >
         Hoy
       </Link>
       <Link
-        href={`${basePath}?view=${view}&date=${next}`}
+        href={calendarHref(basePath, { view, date: next }, extraParams)}
         aria-label="Período siguiente"
         className="flex size-8 items-center justify-center rounded-[10px] hover:bg-surface/60 hover:text-cyan"
       >
@@ -97,12 +106,14 @@ export function ViewToggle({
   date,
   views = ["mes", "semana", "lista"],
   variant = "brand",
+  extraParams,
 }: {
   basePath: string;
   view: CalendarView;
   date: string;
   views?: CalendarView[];
   variant?: CalendarVariant;
+  extraParams?: Record<string, string | undefined>;
 }) {
   const options = VIEW_OPTIONS.filter((option) => views.includes(option.value));
 
@@ -112,7 +123,7 @@ export function ViewToggle({
         {options.map(({ value, label, icon: Icon }) => (
           <LeadsButtonLink
             key={value}
-            href={`${basePath}?view=${value}&date=${date}`}
+            href={calendarHref(basePath, { view: value, date }, extraParams)}
             variant={view === value ? "secondary" : "ghost"}
             size="sm"
             className={cn("border-transparent", view === value && "bg-lm-raised")}
@@ -130,7 +141,7 @@ export function ViewToggle({
       {options.map(({ value, label, icon: Icon }) => (
         <BrandButtonLink
           key={value}
-          href={`${basePath}?view=${value}&date=${date}`}
+          href={calendarHref(basePath, { view: value, date }, extraParams)}
           variant={view === value ? "secondary" : "ghost"}
           size="sm"
         >

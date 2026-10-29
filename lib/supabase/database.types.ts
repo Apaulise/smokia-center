@@ -2138,6 +2138,29 @@ export type Database = {
           owner_id: string
         }[]
       }
+      team_appointments: {
+        Args: {
+          p_from?: string
+          p_limit?: number
+          p_list?: boolean
+          p_to?: string
+        }
+        Returns: {
+          created_at: string
+          ends_at: string
+          id: string
+          lead_id: string | null
+          lead_name: string | null
+          lead_status: Database["public"]["Enums"]["lead_status"] | null
+          meeting_url: string | null
+          notes: string | null
+          owner_id: string
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          title: string
+          updated_at: string
+        }[]
+      }
       team_execution_metrics: {
         Args: {
           p_booking_lag_days?: number

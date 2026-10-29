@@ -24,6 +24,66 @@ export async function getTeamDirectory(): Promise<TeamMember[]> {
   return (data ?? []).map((row) => ({ ownerId: row.owner_id, name: row.name, avatarUrl: row.avatar_url }));
 }
 
+export type TeamAppointment = Database["public"]["Tables"]["appointments"]["Row"] & {
+  leads: Pick<Database["public"]["Tables"]["leads"]["Row"], "id" | "name" | "status"> | null;
+};
+
+function mapTeamAppointment(row: Database["public"]["Functions"]["team_appointments"]["Returns"][number]): TeamAppointment {
+  return {
+    id: row.id,
+    owner_id: row.owner_id,
+    lead_id: row.lead_id,
+    title: row.title,
+    starts_at: row.starts_at,
+    ends_at: row.ends_at,
+    status: row.status,
+    meeting_url: row.meeting_url,
+    notes: row.notes,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    leads: row.lead_id && row.lead_name && row.lead_status
+      ? { id: row.lead_id, name: row.lead_name, status: row.lead_status }
+      : null,
+  };
+}
+
+/** Reuniones del equipo dentro de un rango. La función SQL verifica membresía. */
+export async function listTeamAppointmentsInRange(startIso: string, endIso: string): Promise<TeamAppointment[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("team_appointments", {
+    p_from: startIso,
+    p_to: endIso,
+    p_list: false,
+    p_limit: 1000,
+  });
+  if (error) throw error;
+  return (data ?? []).map(mapTeamAppointment);
+}
+
+/** Misma semántica que la lista personal: futuras más pendientes de resolver. */
+export async function listTeamUpcomingAppointments(limit = 500): Promise<TeamAppointment[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("team_appointments", {
+    p_list: true,
+    p_limit: limit,
+  });
+  if (error) throw error;
+  return (data ?? []).map(mapTeamAppointment);
+}
+
+/** Permite desplegar UI y migración en pasos separados sin romper Mi agenda. */
+export async function isTeamAgendaAvailable(): Promise<boolean> {
+  const supabase = await createClient();
+  const now = new Date().toISOString();
+  const { error } = await supabase.rpc("team_appointments", {
+    p_from: now,
+    p_to: now,
+    p_list: false,
+    p_limit: 1,
+  });
+  return !error;
+}
+
 /** La meta compartida: es de `SalesGoal` más quién la definió. */
 export interface TeamGoal extends SalesGoal {
   definedBy: string;

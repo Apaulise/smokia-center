@@ -63,6 +63,7 @@ export function CalendarGrid<T extends { id: string }>({
   renderChip,
   getDragTime,
   canDrag,
+  canEdit,
   chipClassName,
   currentMonth,
   today,
@@ -82,6 +83,8 @@ export function CalendarGrid<T extends { id: string }>({
   getDragTime?: (item: T) => string | null;
   /** Por default toda tarjeta se arrastra. */
   canDrag?: (item: T) => boolean;
+  /** Por default toda tarjeta se puede abrir/editar. */
+  canEdit?: (item: T) => boolean;
   /** Clases extra por tarjeta (p. ej. borde punteado para lo planificado). Sin esto, la tarjeta trunca a una línea. */
   chipClassName?: (item: T) => string;
   /** "YYYY-MM" del mes que se está mostrando — para atenuar los días de otro mes (sólo modo mes). */
@@ -176,6 +179,7 @@ export function CalendarGrid<T extends { id: string }>({
               <div className="space-y-1">
                 {visible.map((item) => {
                   const draggable = canDrag ? canDrag(item) : true;
+                  const editable = canEdit ? canEdit(item) : true;
                   return (
                     <div
                       key={item.id}
@@ -185,12 +189,12 @@ export function CalendarGrid<T extends { id: string }>({
                         const time = getDragTime?.(item);
                         if (time) event.dataTransfer.setData("text/x-time", time);
                       }}
-                      onClick={() => onEdit(item)}
+                      onClick={() => editable && onEdit(item)}
                       className={cn(
                         "flex items-start gap-1.5 rounded-[8px] border px-1.5 py-1 text-left text-xs",
                         v.chip,
                         chipClassName?.(item) ?? "truncate",
-                        draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
+                        draggable ? "cursor-grab active:cursor-grabbing" : editable ? "cursor-pointer" : "cursor-default",
                       )}
                     >
                       {renderChip(item)}
