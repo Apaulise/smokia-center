@@ -1577,6 +1577,164 @@ export type Database = {
         }
         Relationships: []
       }
+      ops_approvals: {
+        Row: {
+          agent: string
+          channel: Database["public"]["Enums"]["ops_channel"]
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision: Database["public"]["Enums"]["ops_decision"]
+          draft_body: string
+          external_id: string
+          final_body: string | null
+          history: Json
+          id: string
+          lead_id: string | null
+          lead_name: string
+          occurred_at: string
+          owner_id: string
+          reason: string
+          updated_at: string
+        }
+        Insert: {
+          agent: string
+          channel?: Database["public"]["Enums"]["ops_channel"]
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?: Database["public"]["Enums"]["ops_decision"]
+          draft_body: string
+          external_id: string
+          final_body?: string | null
+          history?: Json
+          id?: string
+          lead_id?: string | null
+          lead_name: string
+          occurred_at?: string
+          owner_id: string
+          reason?: string
+          updated_at?: string
+        }
+        Update: {
+          agent?: string
+          channel?: Database["public"]["Enums"]["ops_channel"]
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?: Database["public"]["Enums"]["ops_decision"]
+          draft_body?: string
+          external_id?: string
+          final_body?: string | null
+          history?: Json
+          id?: string
+          lead_id?: string | null
+          lead_name?: string
+          occurred_at?: string
+          owner_id?: string
+          reason?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ops_approvals_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ops_improvements: {
+        Row: {
+          area: Database["public"]["Enums"]["ops_area"]
+          body: string
+          created_at: string
+          external_id: string
+          id: string
+          impact: Database["public"]["Enums"]["ops_impact"]
+          impact_score: number | null
+          owner_id: string
+          status: Database["public"]["Enums"]["ops_improvement_status"]
+          title: string
+          updated_at: string
+          week_label: string | null
+        }
+        Insert: {
+          area: Database["public"]["Enums"]["ops_area"]
+          body: string
+          created_at?: string
+          external_id: string
+          id?: string
+          impact: Database["public"]["Enums"]["ops_impact"]
+          impact_score?: number | null
+          owner_id: string
+          status?: Database["public"]["Enums"]["ops_improvement_status"]
+          title: string
+          updated_at?: string
+          week_label?: string | null
+        }
+        Update: {
+          area?: Database["public"]["Enums"]["ops_area"]
+          body?: string
+          created_at?: string
+          external_id?: string
+          id?: string
+          impact?: Database["public"]["Enums"]["ops_impact"]
+          impact_score?: number | null
+          owner_id?: string
+          status?: Database["public"]["Enums"]["ops_improvement_status"]
+          title?: string
+          updated_at?: string
+          week_label?: string | null
+        }
+        Relationships: []
+      }
+      ops_status: {
+        Row: {
+          agent: string
+          area: Database["public"]["Enums"]["ops_area"]
+          created_at: string
+          detail: string
+          estado: Database["public"]["Enums"]["ops_estado"]
+          external_id: string
+          id: string
+          needs_ok: boolean
+          occurred_at: string
+          owner_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          agent: string
+          area: Database["public"]["Enums"]["ops_area"]
+          created_at?: string
+          detail?: string
+          estado: Database["public"]["Enums"]["ops_estado"]
+          external_id: string
+          id?: string
+          needs_ok?: boolean
+          occurred_at?: string
+          owner_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          agent?: string
+          area?: Database["public"]["Enums"]["ops_area"]
+          created_at?: string
+          detail?: string
+          estado?: Database["public"]["Enums"]["ops_estado"]
+          external_id?: string
+          id?: string
+          needs_ok?: boolean
+          occurred_at?: string
+          owner_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           alias: string | null
@@ -2294,6 +2452,18 @@ export type Database = {
         | "CERRADO_PERDIDO"
         | "DESCARTADO"
       message_channel: "WHATSAPP" | "EMAIL" | "INSTAGRAM"
+      ops_area:
+        | "prospeccion"
+        | "ventas"
+        | "instagram"
+        | "youtube"
+        | "operaciones"
+        | "auditor"
+      ops_channel: "whatsapp" | "email" | "instagram"
+      ops_decision: "pending" | "approved" | "edited" | "skipped"
+      ops_estado: "hecho" | "pendiente" | "bloqueo"
+      ops_impact: "alto" | "medio" | "bajo"
+      ops_improvement_status: "abierta" | "aplicada" | "descartada"
       sales_goal_status: "ACTIVA" | "ARCHIVADA"
       trend_source: "APIFY" | "META"
     }
@@ -2534,6 +2704,19 @@ export const Constants = {
         "DESCARTADO",
       ],
       message_channel: ["WHATSAPP", "EMAIL", "INSTAGRAM"],
+      ops_area: [
+        "prospeccion",
+        "ventas",
+        "instagram",
+        "youtube",
+        "operaciones",
+        "auditor",
+      ],
+      ops_channel: ["whatsapp", "email", "instagram"],
+      ops_decision: ["pending", "approved", "edited", "skipped"],
+      ops_estado: ["hecho", "pendiente", "bloqueo"],
+      ops_impact: ["alto", "medio", "bajo"],
+      ops_improvement_status: ["abierta", "aplicada", "descartada"],
       sales_goal_status: ["ACTIVA", "ARCHIVADA"],
       trend_source: ["APIFY", "META"],
     },
