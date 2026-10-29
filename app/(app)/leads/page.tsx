@@ -21,6 +21,8 @@ import {
   getLeadsByIndustry,
   getListPerformance,
   getProspectingFunnel,
+  getSentMessagesByChannel,
+  SENT_CHANNELS,
   listStaleLeads,
   listUpcomingAppointments,
 } from "@/lib/leads/queries";
@@ -31,6 +33,7 @@ import { getTodayTile } from "@/lib/leads/team/summary";
 export const metadata = { title: "Gestor de Leads · SmokIA" };
 
 const STALE_DAYS = 7;
+const CHANNEL_LABEL = { WHATSAPP: "WhatsApp", INSTAGRAM: "Instagram", EMAIL: "Mail" } as const;
 const PERIODS = { "7d": 7, "30d": 30, "90d": 90 } as const;
 type Period = keyof typeof PERIODS;
 
@@ -43,7 +46,7 @@ export default async function LeadsDashboardPage({
   const { period: periodParam } = await searchParams;
   const period: Period = periodParam === "7d" || periodParam === "90d" ? periodParam : "30d";
 
-  const [funnel, exitsFunnel, angleExperiments, timeline, byIndustry, listPerformance, appointments, staleLeads, styleStats, execution] =
+  const [funnel, exitsFunnel, angleExperiments, timeline, byIndustry, listPerformance, appointments, staleLeads, styleStats, execution, sentByChannel] =
     await Promise.all([
       getProspectingFunnel(),
       getLeadsFunnel(),
@@ -56,6 +59,7 @@ export default async function LeadsDashboardPage({
       getStyleStats(),
       // Misma ventana por defecto que /leads/objetivo, para que el "Hoy" coincida (Plan §1.22, §1.23).
       getTodayTile(),
+      getSentMessagesByChannel(),
     ]);
 
   const now = new Date();
@@ -109,6 +113,7 @@ export default async function LeadsDashboardPage({
 
   const conversionRate = funnel.total_leads > 0 ? Math.round((funnel.won / funnel.total_leads) * 1000) / 10 : 0;
   const totalRate = totalResponseRate(funnel);
+  const totalSent = SENT_CHANNELS.reduce((sum, channel) => sum + sentByChannel[channel], 0);
 
   return (
     <>
@@ -174,6 +179,18 @@ export default async function LeadsDashboardPage({
             muted={funnel.won === 0}
             delta={totalRate !== null ? `resp. total ${(totalRate * 100).toFixed(0)} % (no evaluativa)` : "—"}
           />
+        </KpiRow>
+
+        <KpiRow>
+          {SENT_CHANNELS.map((channel) => (
+            <Kpi
+              key={channel}
+              label={`Enviados · ${CHANNEL_LABEL[channel]}`}
+              value={sentByChannel[channel]}
+              muted={sentByChannel[channel] === 0}
+              delta={totalSent > 0 ? `${Math.round((sentByChannel[channel] / totalSent) * 100)} % de los enviados` : "—"}
+            />
+          ))}
         </KpiRow>
 
         <Section eyebrow="PIPELINE" title="Prospección" description="Un solo embudo: leads → contactados → respuestas → calificados → interesados → con reunión → ganados.">

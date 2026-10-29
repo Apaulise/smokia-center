@@ -349,6 +349,31 @@ export async function getProspectingFunnel(): Promise<ProspectingFunnel> {
   return data ?? EMPTY_PROSPECTING_FUNNEL;
 }
 
+export type SentChannel = Database["public"]["Enums"]["message_channel"];
+
+/** Orden en que se muestran los canales en el dashboard. */
+export const SENT_CHANNELS: SentChannel[] = ["WHATSAPP", "INSTAGRAM", "EMAIL"];
+
+/**
+ * Mensajes enviados por el vendedor, por canal. A diferencia de `contacts_sent` (leads distintos),
+ * acá cuenta cada mensaje: tres mensajes por mail a un mismo lead son 3 en EMAIL.
+ */
+export async function getSentMessagesByChannel(): Promise<Record<SentChannel, number>> {
+  const supabase = await createClient();
+  const counts = await Promise.all(
+    SENT_CHANNELS.map(async (channel) => {
+      const { count, error } = await supabase
+        .from("lead_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("sender", "VENDEDOR")
+        .eq("channel", channel);
+      if (error) throw error;
+      return [channel, count ?? 0] as const;
+    }),
+  );
+  return Object.fromEntries(counts) as Record<SentChannel, number>;
+}
+
 export type AngleVariantPerformance = Database["public"]["Functions"]["lead_angle_variant_performance"]["Returns"][number];
 
 /** Rendimiento por ángulo y variante de apertura (Plan §1.19) — el `n` viaja siempre junto a cada tasa. */
