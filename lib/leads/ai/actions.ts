@@ -31,6 +31,12 @@ import {
 } from "@/lib/leads/queries";
 import { hasConfirmedPain, planSignalWrites, type SignalPatch } from "@/lib/leads/signals";
 import { openingHoursFromRaw } from "@/lib/leads/opening-hours";
+import {
+  EMAIL_MESSAGE_MAX_LENGTH,
+  leadMessageLimit,
+  leadMessageLimitError,
+  type LeadMessageChannel,
+} from "@/lib/leads/message-limits";
 import { nextStage } from "@/lib/leads/stage-engine";
 import { getSalesProfile } from "@/lib/settings/queries";
 import { createClient, requireUser } from "@/lib/supabase/server";
@@ -298,15 +304,24 @@ function styleColumns(generatedContent: string | undefined, sent: string) {
   return { generated_content: generatedContent, edit_distance: editDistance(generatedContent, sent) };
 }
 
+const messageChannelSchema = z.enum(["WHATSAPP", "EMAIL", "INSTAGRAM"]);
+
 const confirmOpeningSchema = z.object({
   leadId: z.string().uuid(),
-  message: z.string().trim().min(1).max(600),
+  message: z.string().trim().min(1, "Escribí un mensaje antes de confirmarlo."),
   angle: z.string(),
   variant: z.number().int().min(1).max(9),
-  channel: z.enum(["WHATSAPP", "EMAIL", "INSTAGRAM"]).default("WHATSAPP"),
+  channel: messageChannelSchema.default("WHATSAPP"),
   // El borrador de la IA sobre el que el humano escribió (§1.20.1). Sólo
   // llega cuando hubo edición manual: un rewrite de tono no es señal de estilo.
   generatedContent: z.string().trim().max(600).optional(),
+}).superRefine((value, context) => {
+  if (value.message.length <= leadMessageLimit(value.channel)) return;
+  context.addIssue({
+    code: "custom",
+    path: ["message"],
+    message: leadMessageLimitError(value.channel),
+  });
 });
 
 /**
@@ -319,12 +334,12 @@ export async function confirmLeadOpening(input: {
   message: string;
   angle: SalesAngle;
   variant: number;
-  channel?: "WHATSAPP" | "EMAIL" | "INSTAGRAM";
+  channel?: LeadMessageChannel;
   generatedContent?: string;
 }): Promise<ActionState> {
   const user = await requireUser();
   const parsed = confirmOpeningSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, message: "Datos inválidos." };
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Datos inválidos." };
   if (!isSalesAngle(parsed.data.angle)) return { ok: false, message: "Ángulo inválido." };
 
   const supabase = await createClient();
@@ -643,7 +658,7 @@ export async function analyzeLeadResponseAction(input: {
 export type RewriteActionState = { ok: true; message: string } | { ok: false; message: string };
 
 const rewriteSchema = z.object({
-  message: z.string().trim().min(1).max(600),
+  message: z.string().trim().min(1).max(EMAIL_MESSAGE_MAX_LENGTH),
   tone: z.enum(REWRITE_TONES),
 });
 
@@ -689,11 +704,18 @@ async function nextFollowUpDate(supabase: Awaited<ReturnType<typeof createClient
 
 const confirmMessageSchema = z.object({
   leadId: z.string().uuid(),
-  message: z.string().trim().min(1).max(600),
-  channel: z.enum(["WHATSAPP", "EMAIL", "INSTAGRAM"]).default("WHATSAPP"),
+  message: z.string().trim().min(1, "Escribí un mensaje antes de confirmarlo."),
+  channel: messageChannelSchema.default("WHATSAPP"),
   generatedBy: z.enum(["IA", "HUMANO"]).default("IA"),
   kind: z.enum(["RESPUESTA", "SEGUIMIENTO"]).optional(),
   generatedContent: z.string().trim().max(600).optional(),
+}).superRefine((value, context) => {
+  if (value.message.length <= leadMessageLimit(value.channel)) return;
+  context.addIssue({
+    code: "custom",
+    path: ["message"],
+    message: leadMessageLimitError(value.channel),
+  });
 });
 
 /**
@@ -706,14 +728,14 @@ const confirmMessageSchema = z.object({
 export async function confirmMessageSent(input: {
   leadId: string;
   message: string;
-  channel?: "WHATSAPP" | "EMAIL" | "INSTAGRAM";
+  channel?: LeadMessageChannel;
   generatedBy?: "IA" | "HUMANO";
   kind?: "RESPUESTA" | "SEGUIMIENTO";
   generatedContent?: string;
 }): Promise<ActionState> {
   const user = await requireUser();
   const parsed = confirmMessageSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, message: "Datos inválidos." };
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Datos inválidos." };
 
   const supabase = await createClient();
   const { data: lead } = await supabase.from("leads").select("id").eq("id", parsed.data.leadId).maybeSingle();

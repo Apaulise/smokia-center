@@ -24,9 +24,10 @@ import type { AnalyzeOutput } from "@/lib/leads/ai/schemas";
 import type { ResponseType } from "@/lib/leads/message-analysis";
 import { buildWhatsappLink } from "@/lib/leads/templates";
 import type { LeadMessageRow } from "@/lib/leads/queries";
+import { leadMessageLimit, type LeadMessageChannel } from "@/lib/leads/message-limits";
 import type { LeadStatus } from "@/lib/leads/status";
 
-type Channel = "WHATSAPP" | "EMAIL" | "INSTAGRAM";
+type Channel = LeadMessageChannel;
 type Draft = Extract<OpeningActionState, { ok: true }>["opening"];
 type Analysis = Extract<AnalyzeActionState, { ok: true }>;
 
@@ -200,6 +201,9 @@ function AperturaComposer({ leadId, phone, hasInstagram }: { leadId: string; pho
   const [copied, setCopied] = useState(false);
   const [savedAsExample, setSavedAsExample] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const messageLimit = leadMessageLimit(channel);
+  const messageLength = body.text.trim().length;
+  const messageTooLong = messageLength > messageLimit;
 
   // Se lee después de montar (no en el estado inicial) para no desfasar la hidratación.
   useEffect(() => {
@@ -308,7 +312,23 @@ function AperturaComposer({ leadId, phone, hasInstagram }: { leadId: string; pho
             <p className="text-lm-ink">{draft.question}</p>
           </div>
         </div>
-        <Textarea value={body.text} onChange={(e) => body.fromHuman(e.target.value)} className="min-h-24" />
+        <div className="space-y-1">
+          <Textarea
+            value={body.text}
+            onChange={(e) => body.fromHuman(e.target.value)}
+            maxLength={messageLimit}
+            aria-describedby="opening-message-length"
+            error={messageTooLong}
+            className="min-h-24"
+          />
+          <p
+            id="opening-message-length"
+            aria-live="polite"
+            className={`text-right text-xs tabular-nums ${messageTooLong ? "text-lm-danger" : "text-lm-ink-3"}`}
+          >
+            {messageLength} / {messageLimit} caracteres
+          </p>
+        </div>
         <RewriteButtons message={body.text} onRewrite={body.fromAi} disabled={pending} />
         {error ? <p className="text-lm-danger">{error}</p> : null}
 
@@ -320,7 +340,13 @@ function AperturaComposer({ leadId, phone, hasInstagram }: { leadId: string; pho
               <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(false)} disabled={pending}>
                 Volver
               </Button>
-              <Button type="button" variant="primary" size="sm" onClick={handleConfirm} disabled={pending || !body.text.trim()}>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={handleConfirm}
+                disabled={pending || !body.text.trim() || messageTooLong}
+              >
                 {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" strokeWidth={1.5} />}
                 {pending ? "Guardando…" : "Sí, ya lo mandé"}
               </Button>
