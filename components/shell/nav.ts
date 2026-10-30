@@ -52,6 +52,7 @@ export const MODULES: NavModule[] = [
       { href: "/operaciones", label: "Resumen", exact: true },
       { href: "/operaciones/aprobaciones", label: "Aprobaciones" },
       { href: "/operaciones/areas", label: "Áreas" },
+      { href: "/operaciones/analisis", label: "Análisis semanal" },
       { href: "/operaciones/auditor", label: "Auditor" },
     ],
   },

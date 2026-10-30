@@ -14,6 +14,7 @@ La pantalla **no envía WhatsApp, mails ni ningún otro mensaje**. Aprobar, edit
 | `/operaciones/aprobaciones` | Cola. Aprobar, editar o saltar |
 | `/operaciones/areas` | Tareas por área y estado |
 | `/operaciones/auditor` | Hasta tres hallazgos abiertos, y el historial |
+| `/operaciones/analisis` | Análisis semanal por área. Los números salen del CRM; el texto lo publica el agente. Ver [analisis-semanal.md](analisis-semanal.md) |
 
 El contador de Aprobaciones en el sidebar es la cantidad de filas con `decision = pending`.
 

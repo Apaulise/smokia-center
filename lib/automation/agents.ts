@@ -53,7 +53,19 @@ export function createAgentsFromEnv(env: NodeJS.ProcessEnv): string[] {
  * ninguno, nadie entra.
  */
 export function adminAgentsFromEnv(env: NodeJS.ProcessEnv): string[] {
-  const raw = env.AUTOMATION_ADMIN_AGENTS;
+  return agentList(env.AUTOMATION_ADMIN_AGENTS);
+}
+
+/**
+ * Quién puede publicar el análisis semanal de cualquier área, además del rol
+ * admin. Vacío o ausente → nadie extra: las áreas comerciales siguen el
+ * default de alta y de escritura, y el resto queda en el admin.
+ */
+export function weeklyAgentsFromEnv(env: NodeJS.ProcessEnv): string[] {
+  return agentList(env.AUTOMATION_WEEKLY_AGENTS);
+}
+
+function agentList(raw: string | undefined): string[] {
   if (raw == null || raw.trim() === "") return [];
   const seen = new Set<string>();
   for (const item of raw.split(",")) {

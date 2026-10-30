@@ -12,6 +12,7 @@
     "test:gemini": "node --experimental-strip-types --test tests/gemini-url-json.test.mjs",
     "test:leads": "node --experimental-strip-types --import ./tests/alias-register.mjs --test tests/lead-details.test.mjs tests/message-analysis.test.mjs tests/message-limits.test.mjs",
     "test:automation": "node --experimental-strip-types --import ./tests/alias-register.mjs --test tests/automation-lead-planning.test.mjs tests/automation-leads-read.test.mjs tests/automation-create-lead.test.mjs tests/automation-admin.test.mjs",
+    "test:weekly": "node --experimental-strip-types --import ./tests/alias-register.mjs --test tests/weekly-reports.test.mjs",
     "db:push": "supabase db push",
     "db:types": "supabase gen types typescript --linked > lib/supabase/database.types.ts",
     "db:link": "supabase link",
