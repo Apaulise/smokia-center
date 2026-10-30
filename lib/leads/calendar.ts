@@ -18,9 +18,9 @@ const isoDateFormatter = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 });
 
-/** Fecha de hoy en Argentina, como "YYYY-MM-DD". */
-export function todayIso(): string {
-  return isoDateFormatter.format(new Date());
+/** Fecha de hoy en Argentina, como "YYYY-MM-DD". `now` existe para poder fijar el día en un test. */
+export function todayIso(now = new Date()): string {
+  return isoDateFormatter.format(now);
 }
 
 /** A qué día calendario (Argentina) corresponde un timestamptz. */

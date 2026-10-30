@@ -49,6 +49,9 @@ export default async function OperacionesPage({ searchParams }: { searchParams: 
         description="Qué se hizo, qué falta y qué necesita tu OK. Los agentes reportan acá; Mr. Pou te avisa sólo lo que no puede esperar."
         action={
           <div className="flex flex-wrap items-center gap-3">
+            <ButtonLink href="/operaciones/analisis" variant="ghost">
+              Análisis semanal
+            </ButtonLink>
             <Segmented>
               {OPS_PERIODS.map((key) => (
                 <SegmentedLink key={key} href={`/operaciones?period=${key}`} active={key === period}>
