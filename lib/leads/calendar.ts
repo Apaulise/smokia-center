@@ -8,7 +8,8 @@
  * rango para la consulta a Supabase.
  */
 
-const TZ = "America/Argentina/Buenos_Aires";
+export const BUSINESS_TIME_ZONE = "America/Argentina/Buenos_Aires";
+const TZ = BUSINESS_TIME_ZONE;
 const TZ_OFFSET = "-03:00";
 
 const isoDateFormatter = new Intl.DateTimeFormat("en-CA", {

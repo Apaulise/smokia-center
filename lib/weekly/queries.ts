@@ -6,7 +6,7 @@ import { isWeeklyArea, weeklyArea, type WeeklyAreaId } from "./areas";
 import { computeBrand, computeFollowUps, computeProspecting, type CrmMessage, type FollowUpRow } from "./compute";
 import { asWeekly } from "./db";
 import { parseStoredReport } from "./parse";
-import { presentWeekly } from "./present";
+import { presentWeekly, type ReplyGap } from "./present";
 import type { StoredWeeklyReport, WeeklyPageModel } from "./types";
 import { currentWeekStart, isPublishableWeek, parseWeekStart, weekOptions, weekWindow } from "./weeks";
 
@@ -52,6 +52,7 @@ export async function loadWeeklyPage(params: { area?: string; week?: string }, n
     brand: crm.brand,
     report: current,
     previousMetrics,
+    replyGaps: crm.replyGaps,
   });
 }
 
@@ -92,10 +93,11 @@ interface CrmRead {
   prospecting: { current: ReturnType<typeof computeProspecting>; previous: ReturnType<typeof computeProspecting> } | null;
   followups: { current: ReturnType<typeof computeFollowUps>; previous: ReturnType<typeof computeFollowUps> } | null;
   brand: { current: ReturnType<typeof computeBrand>; previous: ReturnType<typeof computeBrand> } | null;
+  replyGaps: ReplyGap[];
 }
 
 async function loadCrm(area: ReturnType<typeof weeklyArea>, weekStart: string, previousStart: string): Promise<CrmRead> {
-  const empty: CrmRead = { error: null, truncated: false, brandConnected: null, prospecting: null, followups: null, brand: null };
+  const empty: CrmRead = { error: null, truncated: false, brandConnected: null, prospecting: null, followups: null, brand: null, replyGaps: [] };
   try {
     if (area.source === "messages" && area.channel) {
       const from = isoDateToUtcInstant(previousStart);
@@ -104,6 +106,7 @@ async function loadCrm(area: ReturnType<typeof weeklyArea>, weekStart: string, p
       return {
         ...empty,
         truncated: loaded.truncated,
+        replyGaps: await readReplyGaps(weekStart),
         prospecting: {
           current: computeProspecting(loaded.rows, weekStart, area.channel),
           previous: computeProspecting(loaded.rows, previousStart, area.channel),
@@ -143,6 +146,62 @@ async function loadCrm(area: ReturnType<typeof weeklyArea>, weekStart: string, p
     console.error("weekly crm:", error instanceof Error ? error.message : "error");
     return { ...empty, error: CRM_ERROR };
   }
+}
+
+async function readReplyGaps(weekStart: string): Promise<ReplyGap[]> {
+  try {
+    return await loadReplyGaps(weekStart);
+  } catch (error) {
+    console.error("weekly reply gaps:", error instanceof Error ? error.message : "error");
+    return [];
+  }
+}
+
+async function loadReplyGaps(weekStart: string): Promise<ReplyGap[]> {
+  const window = weekWindow(weekStart);
+  const from = isoDateToUtcInstant(window.start);
+  const to = isoDateToUtcInstant(window.end);
+  const supabase = await createClient();
+  const activities = await supabase
+    .from("lead_activities")
+    .select("lead_id, to_status")
+    .eq("type", "CAMBIO_ESTADO")
+    .in("to_status", ["RESPONDIO", "AUTORESPUESTA"])
+    .gte("occurred_at", from)
+    .lt("occurred_at", to)
+    .limit(500);
+  if (activities.error) throw activities.error;
+
+  const marked = new Map<string, ReplyGap["status"]>();
+  for (const row of activities.data ?? []) {
+    if (row.to_status !== "RESPONDIO" && row.to_status !== "AUTORESPUESTA") continue;
+    if (!marked.has(row.lead_id)) marked.set(row.lead_id, row.to_status);
+  }
+  const ids = [...marked.keys()];
+  if (ids.length === 0) return [];
+
+  const [messages, leads] = await Promise.all([
+    supabase
+      .from("lead_messages")
+      .select("lead_id")
+      .eq("sender", "LEAD")
+      .in("lead_id", ids)
+      .gte("occurred_at", from)
+      .lt("occurred_at", to),
+    supabase.from("leads").select("id, name").in("id", ids),
+  ]);
+  if (messages.error) throw messages.error;
+  if (leads.error) throw leads.error;
+
+  const withReply = new Set((messages.data ?? []).map((row) => row.lead_id));
+  const names = new Map((leads.data ?? []).map((row) => [row.id, row.name]));
+  return ids
+    .filter((id) => !withReply.has(id))
+    .map((id) => ({
+      leadId: id,
+      name: names.get(id)?.trim() || "Sin nombre",
+      status: marked.get(id) ?? "RESPONDIO",
+    }));
 }
 
 async function loadChannelMessages(channel: "WHATSAPP" | "EMAIL", from: string, to: string) {

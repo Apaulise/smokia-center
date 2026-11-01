@@ -6,7 +6,7 @@ import { canPublishWeekly } from "../lib/weekly/access.ts";
 import { computeBrand, computeFollowUps, computeProspecting, isPositiveReply, replyClass } from "../lib/weekly/compute.ts";
 import { mergeReport } from "../lib/weekly/merge.ts";
 import { parseChanges } from "../lib/weekly/parse.ts";
-import { presentWeekly } from "../lib/weekly/present.ts";
+import { presentWeekly, formatReplyGapNote } from "../lib/weekly/present.ts";
 import { camelizeWeekly, weeklyPublishPayload } from "../lib/weekly/schema.ts";
 import { isPublishableWeek, parseWeekStart, weekWindow } from "../lib/weekly/weeks.ts";
 import { weeklyArea } from "../lib/weekly/areas.ts";
@@ -110,6 +110,49 @@ test("prospección: tasas, muestra y lo que no se puede atribuir", () => {
   assert.equal(week.byType[0].variantLabel, "Variante 2");
   assert.equal(week.daily.find((day) => day.day === "2026-10-26").sent, 1);
   assert.equal(week.daily.find((day) => day.day === "2026-10-25"), undefined);
+  assert.equal(week.leadsOpened, 2);
+  assert.equal(week.leadsReplied, 1);
+});
+
+test("la tasa por lead no cuenta tres mensajes del mismo prospecto, ni la parte 2", () => {
+  const humanReply = (leadId, at) =>
+    message({
+      leadId,
+      sender: "LEAD",
+      kind: null,
+      angle: null,
+      variant: null,
+      occurredAt: at,
+      analysis: human(8),
+    });
+  const week = computeProspecting(
+    [
+      message({ leadId: "a", occurredAt: "2026-10-26T15:00:00.000Z", analysis: { opening: { part: 1, type: "reseñas peluquería", variant: "v2" } } }),
+      message({
+        leadId: "a",
+        occurredAt: "2026-10-26T15:01:00.000Z",
+        analysis: { opening: { part: 2, type: "reseñas peluquería", variant: "v2" } },
+      }),
+      humanReply("a", "2026-10-26T18:00:00.000Z"),
+      humanReply("a", "2026-10-26T19:00:00.000Z"),
+      humanReply("a", "2026-10-27T15:00:00.000Z"),
+      message({ leadId: "b", occurredAt: "2026-10-27T15:00:00.000Z", angle: null, variant: null }),
+      message({ leadId: "c", occurredAt: "2026-10-27T16:00:00.000Z" }),
+      humanReply("d", "2026-10-28T15:00:00.000Z"),
+    ],
+    WEEK,
+    "WHATSAPP",
+  );
+
+  assert.equal(week.totals.sent, 3);
+  assert.equal(week.totals.realReplies, 4);
+  assert.equal(week.leadsOpened, 3);
+  assert.equal(week.leadsReplied, 1);
+  assert.equal(week.unattributedReplies, 1);
+  const reviews = week.byType.find((row) => row.typeLabel === "reseñas peluquería");
+  assert.equal(reviews.variantLabel, "v2");
+  assert.equal(reviews.sent, 1);
+  assert.equal(week.byType.find((row) => row.typeLabel === "Sin tipo").sent, 1);
 });
 
 test("seguimiento: el paso cuenta los anteriores y la respuesta no salta al próximo", () => {
@@ -266,7 +309,13 @@ test("la pantalla no muestra un cero cuando el dato no existe", () => {
   assert.equal(rateKpi.display, "—");
   assert.equal(rateKpi.delta, "sin enviados");
   assert.equal(page.kpis.find((kpi) => kpi.key === "sent").display, "0");
+  assert.equal(page.kpis.find((kpi) => kpi.key === "unknown").label, "Sin clasificar");
+  assert.equal(page.kpis.find((kpi) => kpi.key === "unknown").display, "0");
+  assert.equal(page.kpis.find((kpi) => kpi.key === "unattributed").label, "No atribuidas");
+  assert.equal(page.kpis.find((kpi) => kpi.key === "lead-rate").display, "—");
+  assert.equal(page.kpis.find((kpi) => kpi.key === "lead-rate").delta, "sin aperturas");
   assert.equal(page.table, null);
+  assert.equal(page.replyGapNote, null);
 
   const threads = presentWeekly({
     area: weeklyArea("x_threads"),
@@ -322,6 +371,18 @@ test("la pantalla no muestra un cero cuando el dato no existe", () => {
   assert.equal(reported.table.source, "reporte");
   assert.equal(reported.table.rows[0].sampleNote, "Muestra chica (n = 3)");
   assert.equal(reported.table.rows[0].cells.auto, "—");
+});
+
+test("la alerta nombra a quien quedó en Respondió sin mensaje del lead", () => {
+  assert.equal(formatReplyGapNote([]), null);
+  const note = formatReplyGapNote([
+    { leadId: "a", name: "Peluquería Ana", status: "RESPONDIO" },
+    { leadId: "b", name: "Barbería Sur", status: "AUTORESPUESTA" },
+  ]);
+  assert.match(note, /2 leads/);
+  assert.match(note, /Peluquería Ana \(Respondió\)/);
+  assert.match(note, /Barbería Sur \(Autorespuesta\)/);
+  assert.match(note, /no tienen ningún mensaje del lead/);
 });
 
 test("un cambio mal formado no tira el resto del reporte", () => {

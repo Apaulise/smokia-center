@@ -131,9 +131,15 @@ export async function recordLeadContact(
     content?: string | null;
     newStatus?: LeadStatus | null;
     nextActionAt?: string | null;
+    /** Hora del contacto. Sin ella, el instante de la carga. */
+    occurredAt?: string;
+    /** Si viene, no se pisa un last_contacted_at más nuevo (una carga atrasada). */
+    lastContactedAt?: string;
   },
 ): Promise<RecordContactResult> {
   const newStatus = input.newStatus && input.newStatus !== input.currentStatus ? input.newStatus : null;
+  const occurredAt = input.occurredAt ?? new Date().toISOString();
+  const lastContactedAt = input.lastContactedAt ?? occurredAt;
 
   const { error: activityError } = await supabase.from("lead_activities").insert({
     owner_id: ownerId,
@@ -142,10 +148,10 @@ export async function recordLeadContact(
     content: input.content || null,
     from_status: newStatus ? input.currentStatus : null,
     to_status: newStatus,
+    occurred_at: occurredAt,
   });
   if (activityError) return { ok: false, message: "No se pudo registrar la actividad." };
 
-  const lastContactedAt = new Date().toISOString();
   const update: LeadUpdate = { last_contacted_at: lastContactedAt };
   if (newStatus) update.status = newStatus;
   if (input.nextActionAt) update.next_action_at = new Date(input.nextActionAt).toISOString();
