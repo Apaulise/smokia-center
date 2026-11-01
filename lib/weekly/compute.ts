@@ -2,6 +2,7 @@ import { isoDateOf } from "@/lib/leads/calendar";
 import { KIND_LABEL } from "@/lib/brand/planner/schema";
 import type { ContentKind } from "@/lib/brand/planner/schema";
 import { ANGLE_LABEL, isSalesAngle } from "@/lib/leads/ai/angles";
+import { readOpeningMeta } from "@/lib/leads/opening-meta";
 import { POSITIVE_INTEREST } from "@/lib/weekly/types";
 import { instantInWeek, weekWindow } from "@/lib/weekly/weeks";
 
@@ -25,8 +26,19 @@ export interface CrmMessage {
 
 export type ReplyClass = "real" | "auto" | "unknown";
 
-export function replyClass(analysis: unknown): ReplyClass {
+export function responseTypeOf(analysis: unknown): "HUMANA" | "AUTORESPUESTA" | null {
   const type = nested(analysis)?.response_type;
+  if (type === "HUMANA" || type === "AUTORESPUESTA") return type;
+  return null;
+}
+
+export function interestLevelOf(analysis: unknown): number | null {
+  const value = nested(analysis)?.interest_level;
+  return typeof value === "number" ? value : null;
+}
+
+export function replyClass(analysis: unknown): ReplyClass {
+  const type = responseTypeOf(analysis);
   if (type === "HUMANA") return "real";
   if (type === "AUTORESPUESTA") return "auto";
   return "unknown";
@@ -68,6 +80,10 @@ export interface ProspectingWeek {
   totals: MessageTotals;
   /** Respuestas de la semana que no se atan a una apertura enviada en esa semana. */
   unattributedReplies: number;
+  /** Leads distintos con una apertura (parte 1) confirmada en la semana. */
+  leadsOpened: number;
+  /** De esos, los que tuvieron al menos una respuesta humana en la semana. */
+  leadsReplied: number;
   byType: MessageTypeRow[];
   daily: DailyCount[];
 }
@@ -87,10 +103,11 @@ export function computeProspecting(
   const replies = inWeek.filter((message) => message.sender === "LEAD");
   const totals = emptyTotals();
   totals.sent = sends.length;
+  const openedLeads = new Set(sends.map((send) => send.leadId));
 
   const buckets = new Map<string, MessageTypeRow>();
   for (const send of sends) {
-    const row = bucketFor(buckets, send.angle, send.variant);
+    const row = bucketFor(buckets, send);
     row.sent += 1;
   }
 
@@ -118,15 +135,21 @@ export function computeProspecting(
       unattributed += 1;
       continue;
     }
-    const row = bucketFor(buckets, send.angle, send.variant);
+    const row = bucketFor(buckets, send);
     if (kind === "real") row.realReplies += 1;
     else if (kind === "auto") row.autoReplies += 1;
     if (isPositiveReply(reply.analysis)) row.positive += 1;
   }
 
+  const repliedLeads = new Set(
+    replies.filter((reply) => replyClass(reply.analysis) === "real" && openedLeads.has(reply.leadId)).map((reply) => reply.leadId),
+  );
+
   return {
     totals,
     unattributedReplies: unattributed,
+    leadsOpened: openedLeads.size,
+    leadsReplied: repliedLeads.size,
     byType: [...buckets.values()].sort((a, b) => b.sent - a.sent || a.typeLabel.localeCompare(b.typeLabel, "es")),
     daily: window.days.map((day) => daily.get(day) ?? { day, sent: 0, realReplies: 0 }),
   };
@@ -394,6 +417,8 @@ function nested(analysis: unknown): Record<string, unknown> | null {
 
 function isProspectingSend(message: CrmMessage): boolean {
   if (message.sender !== "VENDEDOR" || !message.confirmed) return false;
+  // El segundo mensaje de la apertura no es otro envío ni un seguimiento.
+  if (readOpeningMeta(message.analysis).part === 2) return false;
   if (message.kind === "APERTURA") return true;
   return message.kind == null && message.angle != null;
 }
@@ -402,15 +427,33 @@ function byTime<T extends { occurredAt: string }>(a: T, b: T): number {
   return Date.parse(a.occurredAt) - Date.parse(b.occurredAt);
 }
 
-function bucketFor(buckets: Map<string, MessageTypeRow>, angle: string | null, variant: number | null): MessageTypeRow {
-  const typeLabel = angle && isSalesAngle(angle) ? ANGLE_LABEL[angle] : angle ? angle : "Sin tipo";
-  const variantLabel = variant != null ? `Variante ${variant}` : null;
-  const key = `${angle ?? "none"}:${variant ?? "none"}`;
-  const existing = buckets.get(key);
+function bucketFor(buckets: Map<string, MessageTypeRow>, send: CrmMessage): MessageTypeRow {
+  const described = describeSend(send);
+  const existing = buckets.get(described.key);
   if (existing) return existing;
-  const created: MessageTypeRow = { key, typeLabel, variantLabel, sent: 0, realReplies: 0, autoReplies: 0, positive: 0 };
-  buckets.set(key, created);
+  const created: MessageTypeRow = { ...described, sent: 0, realReplies: 0, autoReplies: 0, positive: 0 };
+  buckets.set(described.key, created);
   return created;
+}
+
+function describeSend(send: CrmMessage): Pick<MessageTypeRow, "key" | "typeLabel" | "variantLabel"> {
+  const meta = readOpeningMeta(send.analysis);
+  if (meta.type) {
+    return {
+      key: `text:${meta.type}:${meta.variant ?? send.variant ?? "none"}`,
+      typeLabel: meta.type,
+      variantLabel: variantText(meta.variant, send.variant),
+    };
+  }
+  const typeLabel = send.angle && isSalesAngle(send.angle) ? ANGLE_LABEL[send.angle] : send.angle ? send.angle : "Sin tipo";
+  const variantLabel = send.variant != null ? `Variante ${send.variant}` : null;
+  return { key: `${send.angle ?? "none"}:${send.variant ?? "none"}`, typeLabel, variantLabel };
+}
+
+function variantText(text: string | null, numeric: number | null): string | null {
+  if (text && !/^\d+$/.test(text)) return text;
+  const value = text && /^\d+$/.test(text) ? Number(text) : numeric;
+  return value != null ? `Variante ${value}` : null;
 }
 
 function openingBefore(sends: readonly CrmMessage[], weekMessages: readonly CrmMessage[], reply: CrmMessage): CrmMessage | null {
@@ -421,14 +464,20 @@ function openingBefore(sends: readonly CrmMessage[], weekMessages: readonly CrmM
   const sendAt = Date.parse(send.occurredAt);
   const interrupted = weekMessages.some(
     (message) =>
-      message.sender === "VENDEDOR" &&
-      message.confirmed &&
-      message.leadId === reply.leadId &&
       message !== send &&
+      message.leadId === reply.leadId &&
       Date.parse(message.occurredAt) > sendAt &&
-      Date.parse(message.occurredAt) < replyAt,
+      Date.parse(message.occurredAt) < replyAt &&
+      blocksOpening(message),
   );
   return interrupted ? null : send;
+}
+
+function blocksOpening(message: CrmMessage): boolean {
+  if (message.sender !== "VENDEDOR" || !message.confirmed) return false;
+  if (readOpeningMeta(message.analysis).part === 2) return false;
+  if (message.kind === "APERTURA") return false;
+  return true;
 }
 
 function blankDays(days: readonly string[]): Map<string, DailyCount> {

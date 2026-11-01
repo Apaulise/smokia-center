@@ -125,8 +125,8 @@ Antes de probar con una clave real, `npm run test:gemini` verifica localmente qu
 
 1. Generar el secreto: `openssl rand -hex 32` → `AUTOMATION_API_SECRET` (mínimo 32 caracteres; sin él la API responde 401 a todo)
 2. Buscar el UUID del dueño de los leads: Supabase → **Authentication → Users** → columna **UID** del mail → `AUTOMATION_OWNER_ID`. (Alternativa en el SQL Editor: `select id, email from auth.users;`)
-3. Opcional: `AUTOMATION_WRITE_AGENTS` — lista separada por comas de quién puede hacer el PATCH de corrección y el POST de alta. Si no está, el PATCH lo hacen sólo `ventas` y `seguimiento`; el POST también deja pasar a `julian`. Una lista explícita reemplaza el default en los dos (`ventas,auditor` deja afuera a seguimiento y a julian). No hace falta para leer ni para registrar un contacto de verdad
-4. Opcional y apagado por defecto: `AUTOMATION_ADMIN_AGENTS` — lista separada por comas de quién puede usar `/api/automation/admin/*` (acceso total al CRM de ese owner). Sin la variable, o vacía, nadie entra aunque el Bearer sea válido. Para el orquestador: `AUTOMATION_ADMIN_AGENTS=mr-pou`. No se suma a `AUTOMATION_WRITE_AGENTS`: el PATCH y el alta históricos siguen igual
+3. Opcional: `AUTOMATION_WRITE_AGENTS` — lista separada por comas de quién puede hacer el PATCH de corrección y el POST de alta. Si no está, el PATCH lo hacen sólo `ventas` y `seguimiento`; el POST también deja pasar a `julian`. Una lista explícita reemplaza el default en los dos (`ventas,auditor` deja afuera a seguimiento y a julian). No hace falta para leer ni para registrar un contacto de verdad. `POST .../reply` usa otra lista: sin `AUTOMATION_REPLY_AGENTS`, entran `seguimiento`, `julian`, `email-outreach`, la lista de escritura y el admin. `AUTOMATION_PROSPECTING_AGENTS` (default `ventas,seguimiento,julian,email-outreach`) es quién tiene que mandar `type` en una apertura
+4. Opcional y apagado por defecto: `AUTOMATION_ADMIN_AGENTS` — lista separada por comas de quién puede usar `/api/automation/admin/*` (acceso total al CRM de ese owner). Sin la variable, o vacía, nadie entra aunque el Bearer sea válido. Para el orquestador: `AUTOMATION_ADMIN_AGENTS=mr-pou`. No se suma a `AUTOMATION_WRITE_AGENTS`: el PATCH y el alta históricos siguen igual. Sí entra en el default de `POST .../reply` cuando la variable de respuestas no está
 5. Cargar las variables en `.env.local` y en Vercel (**Settings → Environment Variables**) y redeployar
 6. Toda llamada lleva `Authorization: Bearer $AUTOMATION_API_SECRET`
 
@@ -139,7 +139,9 @@ No hay migración nueva para el PATCH ni para el alta: usan columnas y la activi
 | GET | `/api/automation/leads/:id` | Un lead (con `email`) + últimas 20 actividades y mensajes |
 | PATCH | `/api/automation/leads/:id` | Corrige `phone`, `notes` y/o `next_action_at` sin registrar un contacto. Pide agente. Ver abajo |
 | POST | `/api/automation/leads/:id/opening-message` | Apertura de la IA (Groq, la key de Configuración del owner). Si ya se envió una, devuelve esa salvo `?regenerate=true` |
-| POST | `/api/automation/leads/:id/contact` | Registra el mensaje enviado (`lead_messages`) + el contacto (timeline, `last_contacted_at`, estado, próxima acción). No pide agente |
+| POST | `/api/automation/leads/:id/contact` | Registra el mensaje enviado (`lead_messages`) + el contacto (timeline, `last_contacted_at`, estado, próxima acción). No pide agente. Acepta `occurred_at`, `kind` / `part`, `type` y `variant` |
+| POST | `/api/automation/leads/:id/reply` | Registra una respuesta del lead. Pide agente. Ver abajo |
+| GET | `/api/automation/reconcile?date=YYYY-MM-DD` | Salientes y entrantes de ese día (Argentina), por lead. No pide agente |
 | POST | `/api/automation/leads/:id/status` | Cambio de estado, con el mismo gate de reuniones que la UI. No pide agente |
 | * | `/api/automation/admin/*` | Rol admin. Pide un agente de `AUTOMATION_ADMIN_AGENTS` (apagado si la variable no está). Ver abajo |
 
@@ -221,6 +223,26 @@ curl -s -X PATCH "$APP_URL/api/automation/leads/$LEAD_ID" \
 ```
 
 La respuesta es el lead actualizado: `id`, `name`, `phone`, `phoneE164`, `notes`, `nextActionAt`, `status`, `updatedAt`, `agent` y `activity` (`{ "type": "NOTA", "content": "…" }` o `null` si no hubo cambio). `activity: null` con 200 quiere decir que esos datos ya estaban así.
+
+### POST `/api/automation/leads/:id/contact`
+
+El body de siempre sigue valiendo. Lo que se suma, todo opcional:
+
+```bash
+curl -s -X POST "$APP_URL/api/automation/leads/$LEAD_ID/contact" \
+  -H "Authorization: Bearer $AUTOMATION_API_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent": "julian",
+    "kind": "APERTURA",
+    "type": "reseñas peluquería",
+    "variant": "v2",
+    "occurred_at": "2026-10-28T11:04:00-03:00",
+    "content": "Hola, vi que responden las reseñas a mano. ¿Les lleva mucho?"
+  }'
+```
+
+`kind` es `APERTURA`, `APERTURA_M2` o `SEGUIMIENTO`. `part` `2` es el segundo mensaje de la apertura y no cuenta como seguimiento. `occurred_at` es la hora real (ISO con zona). El detalle, el `POST .../reply` y el `GET /api/automation/reconcile?date=YYYY-MM-DD` están en [Plans/analisis-semanal.md](Plans/analisis-semanal.md). No hay migración.
 
 ### Rol admin (`mr-pou`) — `/api/automation/admin/*`
 

@@ -1,5 +1,6 @@
 import type { WeeklyArea } from "@/lib/weekly/areas";
 import type { BrandWeek, FollowUpWeek, MessageTypeRow, ProspectingWeek } from "@/lib/weekly/compute";
+import { STATUS_LABEL, type LeadStatus } from "@/lib/leads/status";
 import { SMALL_SAMPLE_N, type ReportedMetric, type ReportedMessageStat, type StoredWeeklyReport, type WeeklyChart, type WeeklyKpi, type WeeklyPageModel, type WeeklyTable } from "@/lib/weekly/types";
 import { formatWeekRange, weekWindow } from "@/lib/weekly/weeks";
 
@@ -14,10 +15,10 @@ const INFO = "var(--color-lm-info)";
 const CHANNEL_LABEL = { WHATSAPP: "WhatsApp", EMAIL: "Email", INSTAGRAM: "Instagram" } as const;
 
 const PROSPECTING_DEFINITION =
-  "Enviados: aperturas confirmadas. Real: el prospecto escribió y el análisis la marcó humana. Automática: autorespuesta. Positiva: humana, sin descalificar, con interés 7 o más o con pedido de reunión. La tasa es reales dividido enviados. La tabla reparte las respuestas que llegaron en la misma semana.";
+  "Enviados: primeras aperturas confirmadas. El segundo mensaje de la misma apertura no suma. Real: el prospecto escribió y el análisis la marcó humana. Automática: autorespuesta. Sin clasificar: escribió y no hay análisis. No atribuidas: respuestas de la semana que no se atan a una apertura de esos días. Positiva: humana, sin descalificar, con interés 7 o más o con pedido de reunión. Tasa por mensaje: respuestas reales dividido enviados. Tasa por lead: leads con apertura que tuvieron al menos una respuesta real, dividido leads con apertura.";
 
 const FOLLOWUP_DEFINITION =
-  "Enviados: seguimientos confirmados. La respuesta cuenta si llegó en la semana, después de ese mensaje y antes del próximo. Agendó y cerró ocurrieron en esa ventana: es lo que pasó después, no la prueba de que el mensaje lo causó. Positiva usa la misma regla que en prospección.";
+  "Enviados: seguimientos confirmados. El segundo mensaje de una apertura no es un seguimiento. La respuesta cuenta si llegó en la semana, después de ese mensaje y antes del próximo. Agendó y cerró ocurrieron en esa ventana: es lo que pasó después, no la prueba de que el mensaje lo causó. Positiva usa la misma regla que en prospección.";
 
 const BRAND_DEFINITION =
   "Publicados: piezas con fecha en la semana. Seguidores: el último snapshot de esa semana; sin sync no hay número. Alcance e interacciones suman sólo los días que tienen snapshot. En la tabla, el alcance de cada tipo es el acumulado de la pieza al último sync de la semana.";
@@ -36,6 +37,8 @@ export interface PresentInput {
   brand: { current: BrandWeek; previous: BrandWeek } | null;
   report: StoredWeeklyReport | null;
   previousMetrics: ReportedMetric[];
+  /** Leads marcados Respondió o Autorespuesta en la semana, sin mensaje del lead. */
+  replyGaps?: readonly ReplyGap[];
 }
 
 export function presentWeekly(input: PresentInput): WeeklyPageModel {
@@ -70,6 +73,7 @@ export function presentWeekly(input: PresentInput): WeeklyPageModel {
     charts,
     table,
     unattributedNote: crm.unattributedNote,
+    replyGapNote: input.prospecting ? formatReplyGapNote(input.replyGaps ?? []) : null,
     reportedKpis: reportedAreMain ? [] : reportedKpis(input.report?.metrics ?? [], input.previousMetrics),
     report: input.report,
     empty: !input.crmError && !crmVisible && !reportHasText && input.brandConnected !== false,
@@ -94,8 +98,30 @@ function crmBlocks(input: PresentInput): { kpis: WeeklyKpi[]; charts: WeeklyChar
 }
 
 function prospectingBlocks(current: ProspectingWeek, previous: ProspectingWeek) {
-  const kpis = messageKpis(current.totals, previous.totals);
-  const table = messageTable(current.byType, "crm", "De los enviados esta semana. La tasa es respuestas reales sobre n.", true);
+  const kpis = messageKpis(current.totals, previous.totals, true);
+  const rateIndex = kpis.findIndex((kpi) => kpi.key === "rate");
+  if (rateIndex >= 0) {
+    kpis[rateIndex] = { ...kpis[rateIndex], label: "Tasa por mensaje", signal: false };
+    kpis.splice(
+      rateIndex + 1,
+      0,
+      rateKpi(
+        "lead-rate",
+        "Tasa por lead",
+        rate(current.leadsReplied, current.leadsOpened),
+        rate(previous.leadsReplied, previous.leadsOpened),
+        current.leadsOpened === 0 ? "sin aperturas" : "sin dato",
+        true,
+      ),
+    );
+  }
+  const unknownIndex = kpis.findIndex((kpi) => kpi.key === "unknown");
+  kpis.splice(
+    unknownIndex >= 0 ? unknownIndex + 1 : 3,
+    0,
+    countKpi("unattributed", "No atribuidas", current.unattributedReplies, previous.unattributedReplies, false),
+  );
+  const table = messageTable(current.byType, "crm", "De los enviados esta semana. La tasa es respuestas reales sobre n, por mensaje.", true);
   return {
     kpis,
     charts: [activityChart("Por día", "Aperturas confirmadas y respuestas reales que llegaron ese día.", current.daily)],
@@ -160,7 +186,7 @@ function brandBlocks(area: WeeklyArea, current: BrandWeek, previous: BrandWeek) 
   };
 }
 
-function messageKpis(current: ProspectingWeek["totals"], previous: ProspectingWeek["totals"]): WeeklyKpi[] {
+function messageKpis(current: ProspectingWeek["totals"], previous: ProspectingWeek["totals"], alwaysUnknown = false): WeeklyKpi[] {
   const kpis: WeeklyKpi[] = [
     countKpi("sent", "Enviados", current.sent, previous.sent, true),
     countKpi("real", "Respuestas reales", current.realReplies, previous.realReplies, true),
@@ -176,8 +202,8 @@ function messageKpis(current: ProspectingWeek["totals"], previous: ProspectingWe
       false,
     ),
   ];
-  if (current.unclassifiedReplies > 0 || previous.unclassifiedReplies > 0) {
-    kpis.splice(3, 0, countKpi("unknown", "Sin clasificar", current.unclassifiedReplies, previous.unclassifiedReplies, true));
+  if (alwaysUnknown || current.unclassifiedReplies > 0 || previous.unclassifiedReplies > 0) {
+    kpis.splice(3, 0, countKpi("unknown", "Sin clasificar", current.unclassifiedReplies, previous.unclassifiedReplies, !alwaysUnknown));
   }
   return kpis;
 }
@@ -347,8 +373,27 @@ function sampleNote(n: number): string | null {
 
 function unattributed(count: number): string | null {
   if (count <= 0) return null;
-  if (count === 1) return "1 respuesta de la semana no se ata a un envío de estos días.";
-  return `${formatCount(count)} respuestas de la semana no se atan a un envío de estos días.`;
+  if (count === 1) return "No atribuidas: 1 respuesta de la semana no se ata a un envío de estos días.";
+  return `No atribuidas: ${formatCount(count)} respuestas de la semana no se atan a un envío de estos días.`;
+}
+
+export interface ReplyGap {
+  leadId: string;
+  name: string;
+  status: Extract<LeadStatus, "RESPONDIO" | "AUTORESPUESTA">;
+}
+
+/** Aviso del panel cuando el estado dice que contestaron y no hay fila del lead. */
+export function formatReplyGapNote(gaps: readonly ReplyGap[]): string | null {
+  if (gaps.length === 0) return null;
+  const shown = gaps.slice(0, 8);
+  const list = shown.map((gap) => `${gap.name} (${STATUS_LABEL[gap.status]})`).join(", ");
+  const rest = gaps.length - shown.length;
+  const tail = rest > 0 ? ` y ${rest} más` : "";
+  if (gaps.length === 1) {
+    return `1 lead quedó en ${STATUS_LABEL[gaps[0].status]} esta semana y no tiene ningún mensaje del lead: ${list}.`;
+  }
+  return `${gaps.length} leads quedaron en Respondió o Autorespuesta esta semana y no tienen ningún mensaje del lead: ${list}${tail}.`;
 }
 
 function rate(numerator: number, denominator: number): number | null {

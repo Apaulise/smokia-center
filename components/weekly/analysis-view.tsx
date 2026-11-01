@@ -50,6 +50,12 @@ export function WeeklyAnalysis({ model }: { model: WeeklyPageModel }) {
         <EmptyLine>Hay demasiados registros para sumarlos todos. Los números de esta semana pueden estar incompletos.</EmptyLine>
       ) : null}
 
+      {model.replyGapNote ? (
+        <p className="m-0 rounded-lm-md border border-lm-danger/40 bg-lm-danger-soft px-4 py-3 font-lm-sans text-[13px] text-lm-ink">
+          {model.replyGapNote}
+        </p>
+      ) : null}
+
       {model.empty ? (
         <EmptyState
           title={model.schemaReady ? "Todavía no hay análisis de esta semana" : "Falta la base del análisis"}

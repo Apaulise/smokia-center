@@ -4,9 +4,11 @@
 
 import { z } from "zod";
 
-import { isSalesAngle } from "@/lib/leads/ai/angles";
-import { editDistance } from "@/lib/leads/ai/style/diff";
+import { prospectingAgentsFromEnv } from "@/lib/automation/agents";
+import { findDuplicateMessage } from "@/lib/automation/dedupe";
+import { contactBodySchema, planOutboundMessage, type ContactBody } from "@/lib/automation/outbound";
 import { passesMeetingGate, meetingGateMessage, recordLeadContact, type LeadsClient } from "@/lib/leads/contact";
+import { readOpeningMeta } from "@/lib/leads/opening-meta";
 import { normalizePhone } from "@/lib/leads/dedupe";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/leads/status";
 import { buildWhatsappLink } from "@/lib/leads/templates";
@@ -150,7 +152,7 @@ export async function getLeadForAutomation(admin: LeadsClient, ownerId: string, 
       .limit(RECENT_LIMIT),
     admin
       .from("lead_messages")
-      .select("id, sender, channel, kind, content, confirmed, angle, variant, occurred_at")
+      .select("id, sender, channel, kind, content, confirmed, angle, variant, analysis, occurred_at")
       .eq("owner_id", ownerId)
       .eq("lead_id", leadId)
       .order("occurred_at", { ascending: false })
@@ -175,6 +177,7 @@ export async function getLeadForAutomation(admin: LeadsClient, ownerId: string, 
       sender: m.sender,
       channel: m.channel,
       kind: m.kind,
+      part: readOpeningMeta(m.analysis).part,
       content: m.content,
       confirmed: m.confirmed,
       angle: m.angle,
@@ -184,35 +187,22 @@ export async function getLeadForAutomation(admin: LeadsClient, ownerId: string, 
   };
 }
 
-export const contactBodySchema = z.object({
-  channel: z.enum(["WHATSAPP", "EMAIL"]).default("WHATSAPP"),
-  /** El mensaje que se mandó, tal cual. */
-  content: z.string().trim().min(1).max(4000),
-  /** Estado nuevo. Sin él: CONTACTADO si el lead estaba en NUEVO/LISTO; si ya estaba más adelante no se toca. */
-  status: leadStatusSchema.optional(),
-  next_action_at: z.iso.datetime({ offset: true }).optional(),
-  /** Nota interna para el timeline (no es el mensaje). */
-  note: z.string().trim().max(2000).optional(),
-  /**
-   * Si el mensaje salió de `POST .../opening-message`: el ángulo, la variante y
-   * el texto que propuso la IA. Con esto el mensaje queda registrado igual que
-   * "Confirmar y marcar como enviado" de la ficha (cuenta para el antisesgo de
-   * ángulos, §1.19, y para el bucle de estilo si se editó, §1.20.1).
-   */
-  opening: z
-    .object({
-      angle: z.string().refine(isSalesAngle, "Ángulo inválido."),
-      variant: z.number().int().min(1).max(9),
-      generated_content: z.string().trim().min(1).max(600),
-    })
-    .optional(),
-});
-
-export type ContactBody = z.infer<typeof contactBodySchema>;
+export { contactBodySchema };
+export type { ContactBody };
 
 export type ContactResult =
-  | { ok: true; leadId: string; previousStatus: LeadStatus; status: LeadStatus; lastContactedAt: string; messageId: string }
-  | { ok: false; status: 404 | 409 | 500; message: string };
+  | {
+      ok: true;
+      duplicate: boolean;
+      leadId: string;
+      previousStatus: LeadStatus;
+      status: LeadStatus;
+      lastContactedAt: string;
+      messageId: string;
+      kind: "APERTURA" | "APERTURA_M2" | "SEGUIMIENTO";
+      part: 1 | 2 | null;
+    }
+  | { ok: false; status: 400 | 404 | 409 | 500; message: string };
 
 /**
  * "Le mandé este mensaje": deja el mensaje en la conversación (`lead_messages`,
@@ -220,22 +210,67 @@ export type ContactResult =
  * registra el contacto con el mismo núcleo que "Registré un WhatsApp" de la
  * ficha (`recordLeadContact`): actividad en el timeline, `last_contacted_at`,
  * estado y próxima acción.
+ *
+ * Sin `kind`, la primera salida confirmada sigue siendo apertura y el resto
+ * seguimiento. `occurred_at` guarda la hora real. `APERTURA_M2` / `part: 2`
+ * queda como apertura parte 2 y no entra en los seguimientos.
  */
 export async function recordAutomationContact(
   admin: LeadsClient,
   ownerId: string,
   leadId: string,
   body: ContactBody,
+  agent: string | null,
+  now = new Date(),
 ): Promise<ContactResult> {
   const { data: lead } = await admin
     .from("leads")
-    .select("status")
+    .select("status, last_contacted_at")
     .eq("id", leadId)
     .eq("owner_id", ownerId)
     .maybeSingle();
   if (!lead) return { ok: false, status: 404, message: "Lead no encontrado." };
 
-  // Mismo criterio que confirmLeadOpening: el default sólo avanza desde NUEVO/LISTO, nunca retrocede un lead.
+  const { count: priorOutbound, error: countError } = await admin
+    .from("lead_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", ownerId)
+    .eq("lead_id", leadId)
+    .eq("sender", "VENDEDOR")
+    .eq("confirmed", true);
+  if (countError) return { ok: false, status: 500, message: "No se pudo leer la conversación." };
+
+  const planned = planOutboundMessage({
+    body,
+    agent,
+    priorOutbound: priorOutbound ?? 0,
+    prospectingAgents: prospectingAgentsFromEnv(process.env),
+    now,
+  });
+  if (!planned.ok) return { ok: false, status: 400, message: planned.message };
+  const plan = planned.plan;
+
+  if (body.occurred_at) {
+    try {
+      const duplicate = await findDuplicateMessage(admin, ownerId, leadId, "VENDEDOR", body.channel, body.content, plan.occurredAt);
+      if (duplicate) {
+        return {
+          ok: true,
+          duplicate: true,
+          leadId,
+          previousStatus: lead.status,
+          status: lead.status,
+          lastContactedAt: lead.last_contacted_at ?? plan.occurredAt,
+          messageId: duplicate.id,
+          kind: plan.part === 2 ? "APERTURA_M2" : plan.kind,
+          part: plan.part,
+        };
+      }
+    } catch {
+      return { ok: false, status: 500, message: "No se pudo revisar si el mensaje ya estaba." };
+    }
+  }
+
   const advances = lead.status === "NUEVO" || lead.status === "LISTO";
   const targetStatus: LeadStatus | null = body.status ?? (advances ? "CONTACTADO" : null);
 
@@ -243,31 +278,7 @@ export async function recordAutomationContact(
     return { ok: false, status: 409, message: meetingGateMessage(targetStatus) };
   }
 
-  // Primer mensaje saliente confirmado → apertura; si ya hubo alguno, seguimiento.
-  const { count: priorOutbound } = await admin
-    .from("lead_messages")
-    .select("id", { count: "exact", head: true })
-    .eq("owner_id", ownerId)
-    .eq("lead_id", leadId)
-    .eq("sender", "VENDEDOR")
-    .eq("confirmed", true);
-
-  const now = new Date().toISOString();
-  const aiColumns = body.opening
-    ? {
-        generated_by: "IA" as const,
-        angle: body.opening.angle as Database["public"]["Enums"]["lead_sales_angle"],
-        variant: body.opening.variant,
-        // Sólo hay par de estilo si el humano cambió el texto (como styleColumns de la ficha).
-        ...(body.opening.generated_content !== body.content
-          ? {
-              generated_content: body.opening.generated_content,
-              edit_distance: editDistance(body.opening.generated_content, body.content),
-            }
-          : {}),
-      }
-    : {};
-
+  const loggedAt = now.toISOString();
   const { data: message, error: messageError } = await admin
     .from("lead_messages")
     .insert({
@@ -276,15 +287,30 @@ export async function recordAutomationContact(
       sender: "VENDEDOR",
       channel: body.channel,
       content: body.content,
-      kind: body.opening || !priorOutbound ? "APERTURA" : "SEGUIMIENTO",
-      ...aiColumns,
+      kind: plan.kind,
+      ...(plan.angle ? { angle: plan.angle } : {}),
+      ...(plan.variant != null ? { variant: plan.variant } : {}),
+      ...(plan.analysis ? { analysis: plan.analysis } : {}),
+      ...(plan.generatedBy
+        ? {
+            generated_by: plan.generatedBy,
+            ...(plan.generatedContent
+              ? { generated_content: plan.generatedContent, edit_distance: plan.editDistance }
+              : {}),
+          }
+        : {}),
       confirmed: true,
-      confirmed_at: now,
-      occurred_at: now,
+      confirmed_at: loggedAt,
+      occurred_at: plan.occurredAt,
     })
     .select("id")
     .single();
   if (messageError || !message) return { ok: false, status: 500, message: "No se pudo registrar el mensaje." };
+
+  const lastContactedAt =
+    lead.last_contacted_at && Date.parse(lead.last_contacted_at) > Date.parse(plan.occurredAt)
+      ? lead.last_contacted_at
+      : plan.occurredAt;
 
   const result = await recordLeadContact(admin, ownerId, {
     leadId,
@@ -293,16 +319,21 @@ export async function recordAutomationContact(
     content: body.note,
     newStatus: targetStatus,
     nextActionAt: body.next_action_at,
+    occurredAt: plan.occurredAt,
+    lastContactedAt,
   });
   if (!result.ok) return { ok: false, status: 500, message: result.message };
 
   return {
     ok: true,
+    duplicate: false,
     leadId,
     previousStatus: lead.status,
     status: result.newStatus ?? lead.status,
     lastContactedAt: result.lastContactedAt,
     messageId: message.id,
+    kind: plan.part === 2 ? "APERTURA_M2" : plan.kind,
+    part: plan.part,
   };
 }
 

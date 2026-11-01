@@ -130,6 +130,8 @@ export interface WeeklyPageModel {
   table: WeeklyTable | null;
   /** Respuestas de la semana que no se pudieron atar a un envío de esa semana. */
   unattributedNote: string | null;
+  /** Leads pasados a Respondió o Autorespuesta sin una fila del lead en la semana. */
+  replyGapNote: string | null;
   /** Métricas que informó el agente, aparte de las del CRM. */
   reportedKpis: WeeklyKpi[];
   report: StoredWeeklyReport | null;

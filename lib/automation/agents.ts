@@ -65,6 +65,42 @@ export function weeklyAgentsFromEnv(env: NodeJS.ProcessEnv): string[] {
   return agentList(env.AUTOMATION_WEEKLY_AGENTS);
 }
 
+/**
+ * Quién puede registrar una respuesta entrante (`POST .../reply`) si
+ * `AUTOMATION_REPLY_AGENTS` no está. El default de escritura no alcanza:
+ * julian y email-outreach cargan respuestas y no están en ese default.
+ */
+export const DEFAULT_AUTOMATION_REPLY_AGENTS = ["seguimiento", "julian", "email-outreach"] as const;
+
+/**
+ * Quién manda aperturas de prospección. Una APERTURA de estos agentes sin
+ * tipo se rechaza. No se deriva de `AUTOMATION_WRITE_AGENTS`: esa lista
+ * puede dejar afuera a julian y el alta seguiría sin tipo.
+ */
+export const DEFAULT_PROSPECTING_AGENTS = ["ventas", "seguimiento", "julian", "email-outreach"] as const;
+
+/**
+ * Lista efectiva para registrar respuestas. Una lista explícita reemplaza
+ * el default (no se le suma). Sin variable, el default de respuestas más
+ * quien ya puede escribir y el admin.
+ */
+export function replyAgentsFromEnv(env: NodeJS.ProcessEnv): string[] {
+  const raw = env.AUTOMATION_REPLY_AGENTS;
+  if (raw != null && raw.trim() !== "") return agentList(raw);
+  return unique([...DEFAULT_AUTOMATION_REPLY_AGENTS, ...writeAgentsFromEnv(env), ...adminAgentsFromEnv(env)]);
+}
+
+/** Lista efectiva para exigir tipo en una apertura. Vacío o ausente → el default. */
+export function prospectingAgentsFromEnv(env: NodeJS.ProcessEnv): string[] {
+  const raw = env.AUTOMATION_PROSPECTING_AGENTS;
+  if (raw != null && raw.trim() !== "") return agentList(raw);
+  return [...DEFAULT_PROSPECTING_AGENTS];
+}
+
+function unique(values: readonly string[]): string[] {
+  return [...new Set(values)];
+}
+
 function agentList(raw: string | undefined): string[] {
   if (raw == null || raw.trim() === "") return [];
   const seen = new Set<string>();
@@ -123,6 +159,30 @@ export function decideWriteAgent(input: {
     return { ok: false, status: 403, error: input.deniedMessage ?? "Este agente no puede modificar leads." };
   }
 
+  return { ok: true, agent: parsed.data };
+}
+
+/**
+ * Agente opcional: el POST de contacto histórico no lo pide. Si viene en el
+ * body, en `X-Agent`, o en los dos, tiene que ser un id válido y el mismo.
+ * Sin ninguno, `agent` es null y el contacto se registra como hasta ahora.
+ */
+export function readDeclaredAgent(input: {
+  bodyAgent?: string | null;
+  headerAgent?: string | null;
+}): { ok: true; agent: string | null } | { ok: false; status: 400; error: string } {
+  const body = normalizeRaw(input.bodyAgent);
+  const header = normalizeRaw(input.headerAgent);
+
+  if (body && header && body !== header) {
+    return { ok: false, status: 400, error: "El agente del body y el del header X-Agent no coinciden." };
+  }
+
+  const raw = body || header;
+  if (!raw) return { ok: true, agent: null };
+
+  const parsed = automationAgentIdSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, status: 400, error: "Agente inválido." };
   return { ok: true, agent: parsed.data };
 }
 
