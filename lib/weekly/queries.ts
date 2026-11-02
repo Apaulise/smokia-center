@@ -34,7 +34,8 @@ export async function loadWeeklyPage(params: { area?: string; week?: string }, n
 
   const current = reports.byWeek.get(weekStart) ?? null;
   const previousStart = addDaysIso(weekStart, -7);
-  const previousMetrics = reports.byWeek.get(previousStart)?.metrics ?? [];
+  const previousReport = reports.byWeek.get(previousStart) ?? null;
+  const previousMetrics = previousReport?.metrics ?? [];
 
   const crm = await loadCrm(area, weekStart, previousStart);
 
@@ -51,6 +52,7 @@ export async function loadWeeklyPage(params: { area?: string; week?: string }, n
     followups: crm.followups,
     brand: crm.brand,
     report: current,
+    previousReport,
     previousMetrics,
     replyGaps: crm.replyGaps,
   });

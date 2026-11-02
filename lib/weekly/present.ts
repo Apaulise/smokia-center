@@ -2,6 +2,7 @@ import type { WeeklyArea } from "@/lib/weekly/areas";
 import type { BrandWeek, FollowUpWeek, MessageTypeRow, ProspectingWeek } from "@/lib/weekly/compute";
 import { STATUS_LABEL, type LeadStatus } from "@/lib/leads/status";
 import { SMALL_SAMPLE_N, type ReportedMetric, type ReportedMessageStat, type StoredWeeklyReport, type WeeklyChart, type WeeklyKpi, type WeeklyPageModel, type WeeklyTable } from "@/lib/weekly/types";
+import { priorChangeResults } from "@/lib/weekly/results";
 import { formatWeekRange, weekWindow } from "@/lib/weekly/weeks";
 
 const COUNT = new Intl.NumberFormat("es-AR");
@@ -36,6 +37,8 @@ export interface PresentInput {
   followups: { current: FollowUpWeek; previous: FollowUpWeek } | null;
   brand: { current: BrandWeek; previous: BrandWeek } | null;
   report: StoredWeeklyReport | null;
+  /** Reporte de la semana anterior, de la misma área. Null si no hay. */
+  previousReport?: StoredWeeklyReport | null;
   previousMetrics: ReportedMetric[];
   /** Leads marcados Respondió o Autorespuesta en la semana, sin mensaje del lead. */
   replyGaps?: readonly ReplyGap[];
@@ -76,6 +79,7 @@ export function presentWeekly(input: PresentInput): WeeklyPageModel {
     replyGapNote: input.prospecting ? formatReplyGapNote(input.replyGaps ?? []) : null,
     reportedKpis: reportedAreMain ? [] : reportedKpis(input.report?.metrics ?? [], input.previousMetrics),
     report: input.report,
+    priorResults: priorChangeResults(input.previousReport),
     empty: !input.crmError && !crmVisible && !reportHasText && input.brandConnected !== false,
   };
 }

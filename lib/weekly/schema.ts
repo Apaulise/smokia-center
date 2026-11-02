@@ -2,11 +2,13 @@ import { z } from "zod";
 
 import { WEEKLY_AREA_IDS } from "@/lib/weekly/areas";
 import { automationAgentIdSchema } from "@/lib/automation/agents";
-import { REPORTED_UNITS, WEEKLY_CHANGE_STATUSES } from "@/lib/weekly/types";
+import { CHANGE_MEASURE_DIRECTIONS, CHANGE_MEASURE_SOURCES, REPORTED_UNITS, WEEKLY_CHANGE_STATUSES } from "@/lib/weekly/types";
 import { isPublishableWeek, parseWeekStart, weekWindow } from "@/lib/weekly/weeks";
 
 const CHANGE_KEY = /^[a-z0-9][a-z0-9_-]{0,79}$/;
 const METRIC_KEY = /^[a-z0-9][a-z0-9_-]{0,79}$/;
+/** La métrica de un cambio puede llevar punto: `whatsapp.tasa-humana`. */
+const MEASURE_METRIC = /^[a-z0-9][a-z0-9._-]{0,79}$/;
 
 const count = z.number().int().min(0).max(1_000_000);
 const status = z.enum(WEEKLY_CHANGE_STATUSES);
@@ -41,14 +43,49 @@ const reportedPoint = z.object({
   realReplies: count.nullish().transform((value) => value ?? null),
 });
 
+const finite = z.number().finite().min(-1_000_000_000).max(1_000_000_000);
+const monday = z
+  .string()
+  .trim()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "La semana tiene que ser un lunes (2026-10-26).")
+  .refine((value) => parseWeekStart(value) === value, "La semana tiene que ser un lunes (2026-10-26).");
+
+const measure = z.object({
+  metric: z.string().trim().toLowerCase().regex(MEASURE_METRIC, "Clave de métrica inválida."),
+  label: z.string().trim().min(1).max(80),
+  unit: z.enum(REPORTED_UNITS),
+  direction: z.enum(CHANGE_MEASURE_DIRECTIONS),
+  target: z.string().trim().max(80).optional(),
+  baseline: finite.nullable(),
+  baselineWeek: monday,
+  baselineN: count.optional(),
+  startWeek: monday,
+  weeks: z.number().int().min(1).max(52),
+  source: z.enum(CHANGE_MEASURE_SOURCES),
+  segment: z.string().trim().max(120).optional(),
+});
+
+const resultMetric = z.object({
+  metric: z.string().trim().toLowerCase().regex(MEASURE_METRIC, "Clave de métrica inválida."),
+  label: z.string().trim().min(1).max(80),
+  unit: z.enum(REPORTED_UNITS),
+  before: finite.nullable(),
+  after: finite.nullable(),
+  weekBefore: monday,
+  weekAfter: monday,
+  nBefore: count.optional(),
+  nAfter: count.optional(),
+});
+
 const incomingChange = z.object({
   key: z.string().trim().toLowerCase().regex(CHANGE_KEY, "Clave de cambio inválida."),
   title: z.string().trim().min(1).max(160),
   detail: z.string().trim().max(2000).default(""),
-    status: status.optional(),
-    // Ausente no es "borrar": lo resuelve el merge si el cambio ya existía.
-    result: z.string().trim().max(2000).nullish(),
-  });
+  status: status.optional(),
+  // Ausente no es "borrar": lo resuelve el merge si el cambio ya existía.
+  result: z.string().trim().max(2000).nullish(),
+  measure: measure.optional(),
+});
 
 export const weeklyPublishPayload = z
   .object({
@@ -94,6 +131,9 @@ export const weeklyPublishPayload = z
         context.addIssue({ code: "custom", path: ["changes", index, "key"], message: "Clave de cambio repetida." });
       }
       changeKeys.add(change.key);
+      if (change.measure && percentOutOfRange(change.measure.unit, change.measure.baseline)) {
+        context.addIssue({ code: "custom", path: ["changes", index, "measure", "baseline"], message: "Un porcentaje va de 0 a 100." });
+      }
     });
     const hasContent =
       value.conclusions.length > 0 ||
@@ -111,6 +151,50 @@ export const weeklyPublishPayload = z
   }));
 
 export type WeeklyPublishPayload = z.infer<typeof weeklyPublishPayload>;
+
+export const changeResultPayload = z
+  .object({
+    agent: automationAgentIdSchema.optional(),
+    area: z.enum(WEEKLY_AREA_IDS),
+    week: z.string().trim().min(1).max(20),
+    key: z.string().trim().toLowerCase().regex(CHANGE_KEY, "Clave de cambio inválida."),
+    resultText: z.string().trim().min(1, "Falta el resultado.").max(2000),
+    resultMetrics: z.array(resultMetric).max(5).optional(),
+    suggestedStatus: status.nullable().optional(),
+  })
+  .superRefine((value, context) => {
+    const weekStart = parseWeekStart(value.week);
+    if (!weekStart) {
+      context.addIssue({ code: "custom", path: ["week"], message: "La semana tiene que ser un lunes (2026-10-26) o una semana ISO (2026-W44)." });
+      return;
+    }
+    if (!isPublishableWeek(weekStart)) {
+      context.addIssue({ code: "custom", path: ["week"], message: "Esa semana todavía no empezó." });
+    }
+    const seen = new Set<string>();
+    value.resultMetrics?.forEach((metric, index) => {
+      if (seen.has(metric.metric)) {
+        context.addIssue({ code: "custom", path: ["resultMetrics", index, "metric"], message: "Clave de métrica repetida." });
+      }
+      seen.add(metric.metric);
+      if (percentOutOfRange(metric.unit, metric.before)) {
+        context.addIssue({ code: "custom", path: ["resultMetrics", index, "before"], message: "Un porcentaje va de 0 a 100." });
+      }
+      if (percentOutOfRange(metric.unit, metric.after)) {
+        context.addIssue({ code: "custom", path: ["resultMetrics", index, "after"], message: "Un porcentaje va de 0 a 100." });
+      }
+    });
+  })
+  .transform((value) => ({
+    ...value,
+    weekStart: parseWeekStart(value.week) as string,
+  }));
+
+export type ChangeResultPayload = z.infer<typeof changeResultPayload>;
+
+function percentOutOfRange(unit: string, value: number | null | undefined): boolean {
+  return unit === "percent" && value != null && (value < 0 || value > 100);
+}
 
 const listArea = z.enum(WEEKLY_AREA_IDS).optional();
 

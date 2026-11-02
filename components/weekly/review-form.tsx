@@ -6,8 +6,10 @@ import { Button } from "@/components/leads/ui/button";
 import { Field, Select, Textarea } from "@/components/leads/ui/field";
 import { Panel } from "@/components/leads/ui/section";
 import { StatusBadge } from "@/components/leads/ui/status-badge";
+import { ChangeResultDetails } from "@/components/weekly/change-result";
 import { updateWeeklyReview } from "@/lib/weekly/actions";
 import { WEEKLY_STATUS_GROUP, WEEKLY_STATUS_LABEL } from "@/lib/weekly/labels";
+import { visibleSuggestion } from "@/lib/weekly/results";
 import { WEEKLY_CHANGE_STATUSES, type WeeklyChange, type WeeklyChangeStatus } from "@/lib/weekly/types";
 
 export function ConclusionReview({
@@ -58,6 +60,7 @@ export function ChangeList({ reportId, changes }: { reportId: string; changes: W
               reportId={reportId}
               target="change"
               changeKey={change.key}
+              change={change}
               status={change.status}
               result={change.result}
               statusLabel={`Estado de ${change.title}`}
@@ -74,6 +77,7 @@ function DecisionForm({
   reportId,
   target,
   changeKey,
+  change,
   status,
   result,
   statusLabel,
@@ -82,12 +86,14 @@ function DecisionForm({
   reportId: string;
   target: "conclusion" | "change";
   changeKey?: string;
+  change?: WeeklyChange;
   status: WeeklyChangeStatus;
   result: string | null;
   statusLabel: string;
   resultLabel: string;
 }) {
-  const [nextStatus, setNextStatus] = useState(status);
+  const suggested = change ? visibleSuggestion(change) : null;
+  const [nextStatus, setNextStatus] = useState(suggested ?? status);
   const [nextResult, setNextResult] = useState(result ?? "");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -109,6 +115,7 @@ function DecisionForm({
 
   return (
     <div className="flex flex-col gap-3 border-t border-lm-line pt-3">
+      {change ? <ChangeResultDetails change={change} editable /> : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <Field label="Estado" className="sm:w-44">
           <Select aria-label={statusLabel} value={nextStatus} disabled={pending} onChange={(event) => setNextStatus(event.target.value as WeeklyChangeStatus)}>
@@ -119,7 +126,7 @@ function DecisionForm({
             ))}
           </Select>
         </Field>
-        <Field label={resultLabel} hint="Qué se vio después. Vacío si todavía no hay resultado." className="min-w-0 flex-1">
+        <Field label={resultLabel} hint="Qué se vio después. Vacío si todavía no hay resultado. Si lo editás, queda como escrito a mano." className="min-w-0 flex-1">
           <Textarea
             aria-label={resultLabel}
             value={nextResult}

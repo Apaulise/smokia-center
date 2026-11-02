@@ -41,7 +41,7 @@ Migración: `supabase/migrations/20261030120000_weekly_reports.sql`. **No está 
 
 `weekly_reports` lleva `owner_id`, RLS `(select auth.uid()) = owner_id` con `WITH CHECK`, e índice único `(owner_id, area, week_start)`. `week_start` es el lunes.
 
-El estado de la conclusión y de cada cambio: `pendiente`, `aprobado`, `en_prueba`, `descartado`, `medido`. Lo edita la UI. La API no lo pisa si ya dejó de estar pendiente.
+El estado de la conclusión y de cada cambio: `pendiente`, `aprobado`, `en_prueba`, `descartado`, `medido`. Lo edita la UI. Publicar de nuevo no pisa un estado que ya dejó de estar pendiente, y tampoco puede sacar un cambio de pendiente: el `status` que manda el agente en el POST se ignora. El resultado medido entra por el PATCH de abajo, que sugiere un estado y no lo cambia.
 
 ## Quién publica
 
@@ -92,7 +92,8 @@ curl -s -X POST "$APP_URL/api/automation/weekly-reports" \
 - `metrics`: hasta 40. `unit` es `count` (default), `percent` (0 a 100) o `days`. `value` puede ser null. Se muestran aparte de los números del CRM, con la marca "Informado".
 - `messageStats`: hasta 40. `type`, `variant` (texto o número), `sent`, y opcionales `realReplies`, `autoReplies`, `positive`. Si el CRM ya armó la tabla de esa área, estos no se muestran. Si el CRM no tiene filas (X/Threads, o una semana sin envíos), se muestran marcados como informados.
 - `series`: hasta 7 puntos `{ day, sent, realReplies }`. `day` tiene que caer en la semana. Un día ausente no se dibuja como cero. Sirve para las áreas sin serie en el CRM.
-- `changes`: hasta 30. `key` en minúsculas (`reviews-v2`). Republicar actualiza título y detalle. Si el estado ya no es pendiente, se conserva el estado y el resultado. Un cambio pendiente que ya no viene en el payload se borra; uno decidido se queda.
+- `changes`: hasta 30. `key` en minúsculas (`reviews-v2`). Republicar actualiza título y detalle. El `status` que venga en el POST se ignora: un cambio nuevo o pendiente sigue pendiente, y uno que ya decidió una persona conserva su estado. Un resultado ya guardado (y `resultSource`, `resultAgent`, `resultAt`, `resultMetrics`, `suggestedStatus`) se conserva. Un resultado escrito a mano no se pisa ni aunque el cambio siga pendiente. Un cambio pendiente que ya no viene en el payload se borra; uno decidido se queda.
+- `measure`, opcional, en cada cambio. Lo define quien propone el cambio y vive en el mismo jsonb, sin migración. `metric` (puede llevar punto, `whatsapp.tasa-humana`), `label`, `unit` (`count`, `percent`, `days`), `direction` (`up` o `down`), `baseline` (número o null), `baselineWeek` y `startWeek` (lunes), `weeks` (1 a 52), `source` (`crm`, `marca`, `x`, `informado`). Opcionales: `target`, `baselineN`, `segment`. Se puede completar si faltaba, y corregir mientras el cambio está pendiente o aprobado. En prueba, medido o descartado, si ya había `measure`, no se reescribe.
 
 Respuesta:
 
@@ -100,13 +101,52 @@ Respuesta:
 { "id": "…", "area": "whatsapp", "week": "2026-10-26", "unchanged": false, "preservedDecisions": 0 }
 ```
 
-`unchanged: true` cuando el texto ya era el mismo. `preservedDecisions` cuenta estados que la UI ya había movido y esta publicación no tocó.
+`unchanged: true` cuando el texto ya era el mismo. `preservedDecisions` cuenta estados que la UI ya había movido y esta publicación no tocó. Si la fila cambió entre la lectura y el guardado, el POST reintenta una vez y, si sigue en carrera, responde 409. Hay que volver a publicarlo.
 
 Sin migración: `503`. Sin secreto, o con uno distinto: `401`. Agente que no corresponde a esa área: `403`.
 
 ### Leer
 
-`GET /api/automation/weekly-reports?area=whatsapp&week=2026-10-26`, con `X-Agent`. Sin `week`, lista las últimas (`limit` 1–50, default 20). Sin `area`, sólo un agente admin o de `AUTOMATION_WEEKLY_AGENTS`. Si la semana no tiene fila: `404`.
+`GET /api/automation/weekly-reports?area=whatsapp&week=2026-10-26`, con `X-Agent`. Sin `week`, lista las últimas (`limit` 1–50, default 20). Sin `area`, sólo un agente admin o de `AUTOMATION_WEEKLY_AGENTS`. Si la semana no tiene fila: `404`. Cada cambio trae, si estaban guardados, `measure`, `resultSource` (`agente` o `manual`), `resultAgent`, `resultAt`, `resultMetrics` y `suggestedStatus`. Un reporte viejo, sin esos campos, se lee igual.
+
+### Resultado de un cambio
+
+`PATCH /api/automation/weekly-reports/changes`. Misma autenticación y el mismo permiso por área que el POST. Escribe el resultado de **un** cambio que ya está `aprobado`, `en_prueba` o `medido`. No cambia `status`: deja `suggestedStatus` para que la pantalla lo preseleccione. No pisa un resultado con `resultSource: "manual"` (`409`, `code: "manual_result"`). Pendiente o descartado: `409`, `code: "not_measurable"`. Si el texto, las métricas y la sugerencia ya eran esos, responde `unchanged: true` y no mueve la fecha. La fila se guarda con el `updated_at` que se leyó; si alguien guardó en el medio, reintenta una vez y, si sigue en carrera, `409` con `code: "conflict"`.
+
+```bash
+curl -s -X PATCH "$APP_URL/api/automation/weekly-reports/changes" \
+  -H "Authorization: Bearer $AUTOMATION_API_SECRET" \
+  -H "X-Agent: mr-pou" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "area": "whatsapp",
+    "week": "2026-10-26",
+    "key": "reviews-v2",
+    "resultText": "Semana 2–8/11 vs 26/10–1/11: tasa humana 12% (3/25) vs 8% (2/25), +4 pp. Semana 1 de 1.",
+    "resultMetrics": [
+      {
+        "metric": "whatsapp.tasa-humana",
+        "label": "Tasa humana",
+        "unit": "percent",
+        "before": 8,
+        "after": 12,
+        "weekBefore": "2026-10-26",
+        "weekAfter": "2026-11-02",
+        "nBefore": 25,
+        "nAfter": 25
+      }
+    ],
+    "suggestedStatus": "medido"
+  }'
+```
+
+`resultText` es obligatorio, hasta 2000 caracteres. `resultMetrics` es opcional, hasta 5; si no viene, se conservan las que había. Un array vacío las borra. `suggestedStatus` es opcional; `null` borra la sugerencia. `before` y `after` pueden ser null. Un porcentaje va de 0 a 100. La semana es un lunes o una semana ISO, y no puede ser futura.
+
+```json
+{ "id": "…", "area": "whatsapp", "week": "2026-10-26", "key": "reviews-v2", "unchanged": false }
+```
+
+Ese resultado queda en la fila de la semana en que se propuso el cambio. La pantalla de la semana siguiente lo muestra en «Resultados de los cambios de la semana anterior», sólo lectura, con el link a la semana de origen. Ahí entran los cambios `aprobado`, `en_prueba` o `medido` que ya tienen texto. En la ficha del cambio, la UI dice «Automático · mr-pou · dom 01/11 21:00 (UTC-3)» o «Editado a mano», muestra el antes/después y preselecciona el estado sugerido. El cuadro sigue siendo editable: al guardar pasa a escrito a mano, conserva las métricas y, si el estado guardado es el sugerido, borra la sugerencia. Guardar también usa `updated_at`: si el agente escribió en el medio, la pantalla pide recargar.
 
 ## Registrar lo que se mandó y lo que contestaron
 
@@ -246,3 +286,11 @@ Antes de empezar: entrar con la cuenta del dueño. Los ítems 1 y 2 se pueden ve
    Esperado: la otra cuenta no ve el análisis. Sin secreto, 401.
 7. **Mobile** — Abrir la pantalla en un teléfono.
    Esperado: las áreas se pueden deslizar, la semana se elige, y la tabla se desplaza de costado sin tapar el texto.
+8. **No se auto-aprueba** — Con un cambio en Pendiente, repetir el POST del mismo `key` con `status: "aprobado"` y un `result`.
+   Esperado: sigue Pendiente. El texto del resultado puede actualizarse. La fila no pasa a Aprobado.
+9. **Resultado automático** — Pasar ese cambio a En prueba desde la pantalla. Hacer el PATCH de arriba (misma área, semana y `key`). Recargar.
+   Esperado: el estado sigue En prueba. El cuadro muestra el texto, la línea «Tasa humana: 8% (26/10) → 12% (02/11), n 25/25», «Automático · mr-pou · …» y «Sugerido: Medido» con Medido elegido en el selector. Todavía no quedó Medido.
+10. **No pisa a mano** — Editar el texto, guardar, y repetir el mismo PATCH.
+    Esperado: el texto guardado no cambia. La respuesta es 409 con `code: "manual_result"`. La línea dice «Editado a mano».
+11. **Semana siguiente** — Abrir la misma área en la semana posterior.
+    Esperado: aparece «Resultados de los cambios de la semana anterior» con ese cambio, en sólo lectura, y el link vuelve a la semana en que se propuso. Un cambio pendiente o sin resultado no sale ahí.
