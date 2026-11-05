@@ -1,14 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { startOfWeekIso } from "../lib/leads/calendar.ts";
+import { addDaysIso, startOfWeekIso } from "../lib/leads/calendar.ts";
 import { canPublishWeekly } from "../lib/weekly/access.ts";
 import { computeBrand, computeFollowUps, computeProspecting, isPositiveReply, replyClass } from "../lib/weekly/compute.ts";
-import { mergeReport } from "../lib/weekly/merge.ts";
+import { applyAgentResult, applyManualReview, mergeReport, sameReport } from "../lib/weekly/merge.ts";
 import { parseChanges } from "../lib/weekly/parse.ts";
 import { presentWeekly, formatReplyGapNote } from "../lib/weekly/present.ts";
-import { camelizeWeekly, weeklyPublishPayload } from "../lib/weekly/schema.ts";
-import { isPublishableWeek, parseWeekStart, weekWindow } from "../lib/weekly/weeks.ts";
+import { formatResultAt, formatResultMetricLine, formatResultOrigin } from "../lib/weekly/results.ts";
+import { camelizeWeekly, changeResultPayload, weeklyPublishPayload } from "../lib/weekly/schema.ts";
+import { currentWeekStart, isPublishableWeek, parseWeekStart, weekWindow } from "../lib/weekly/weeks.ts";
 import { weeklyArea } from "../lib/weekly/areas.ts";
 
 const WEEK = "2026-10-26";
@@ -272,7 +273,8 @@ test("el payload acepta snake_case y rechaza una semana que no es lunes", () => 
   const bad = weeklyPublishPayload.safeParse({ area: "whatsapp", week: "2026-10-27", conclusions: "Hola" });
   assert.equal(bad.success, false);
 
-  const future = weeklyPublishPayload.safeParse({ area: "x_threads", week: "2026-11-02", conclusions: "Hola" });
+  const futureWeek = addDaysIso(currentWeekStart(new Date()), 7);
+  const future = weeklyPublishPayload.safeParse({ area: "x_threads", week: futureWeek, conclusions: "Hola" });
   assert.equal(future.success, false);
 });
 
@@ -390,4 +392,424 @@ test("un cambio mal formado no tira el resto del reporte", () => {
   assert.equal(changes.length, 1);
   assert.equal(changes[0].status, "en_prueba");
   assert.equal(changes[0].result, "bien");
+});
+
+function blankReport(changes, extra = {}) {
+  return {
+    conclusions: "Texto.",
+    conclusionStatus: "pendiente",
+    conclusionResult: null,
+    metrics: [],
+    messageStats: [],
+    series: [],
+    changes,
+    ...extra,
+  };
+}
+
+function measure(overrides = {}) {
+  return {
+    metric: "whatsapp.tasa-humana",
+    label: "Tasa humana",
+    unit: "percent",
+    direction: "up",
+    target: "≥ +3 pp",
+    baseline: 8,
+    baselineWeek: "2026-10-19",
+    baselineN: 25,
+    startWeek: "2026-10-26",
+    weeks: 1,
+    source: "crm",
+    segment: "variante v3",
+    ...overrides,
+  };
+}
+
+function resultMetric(overrides = {}) {
+  return {
+    metric: "whatsapp.tasa-humana",
+    label: "Tasa humana",
+    unit: "percent",
+    before: 8,
+    after: 12,
+    weekBefore: "2026-10-26",
+    weekAfter: "2026-11-02",
+    nBefore: 25,
+    nAfter: 25,
+    ...overrides,
+  };
+}
+
+function agentInput(overrides = {}) {
+  return {
+    resultText: "Subió 4 pp.",
+    resultMetrics: [resultMetric()],
+    suggestedStatus: "medido",
+    agent: "mr-pou",
+    at: "2026-11-02T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+test("el agente escribe el resultado de un cambio en prueba y no le cambia el estado", () => {
+  const change = { key: "reviews-v2", title: "T", detail: "", status: "en_prueba", result: null, measure: measure() };
+  const applied = applyAgentResult(change, { ...agentInput(), resultText: "  Subió 4 pp.  " });
+  assert.equal(applied.ok, true);
+  assert.equal(applied.unchanged, false);
+  assert.equal(applied.change.status, "en_prueba");
+  assert.equal(applied.change.result, "Subió 4 pp.");
+  assert.equal(applied.change.resultSource, "agente");
+  assert.equal(applied.change.resultAgent, "mr-pou");
+  assert.equal(applied.change.resultAt, "2026-11-02T00:00:00.000Z");
+  assert.equal(applied.change.suggestedStatus, "medido");
+  assert.equal(applied.change.resultMetrics[0].after, 12);
+  assert.equal(applied.change.measure.baseline, 8);
+
+  const again = applyAgentResult(applied.change, agentInput());
+  assert.equal(again.ok, true);
+  assert.equal(again.unchanged, true);
+  assert.equal(again.change.resultAt, "2026-11-02T00:00:00.000Z");
+  assert.equal(again.change.status, "en_prueba");
+
+  const cleared = applyAgentResult(applied.change, agentInput({ suggestedStatus: null, at: "2026-11-02T01:00:00.000Z" }));
+  assert.equal(cleared.unchanged, false);
+  assert.equal(cleared.change.status, "en_prueba");
+  assert.equal(cleared.change.suggestedStatus, undefined);
+
+  const kept = applyAgentResult(applied.change, agentInput({ resultText: "Otro texto.", resultMetrics: undefined, at: "2026-11-02T02:00:00.000Z" }));
+  assert.equal(kept.change.result, "Otro texto.");
+  assert.equal(kept.change.resultMetrics.length, 1);
+  assert.equal(kept.change.status, "en_prueba");
+});
+
+test("un resultado escrito a mano no se pisa, y pendiente o descartado no se miden", () => {
+  const base = { key: "reviews-v2", title: "T", detail: "", status: "en_prueba", result: "Lo vi yo.", resultSource: "manual", resultAt: "2026-11-01T15:00:00.000Z" };
+  const manual = applyAgentResult(base, agentInput());
+  assert.equal(manual.ok, false);
+  assert.equal(manual.code, "manual_result");
+
+  const pending = applyAgentResult({ ...base, resultSource: undefined, status: "pendiente" }, agentInput());
+  assert.equal(pending.ok, false);
+  assert.equal(pending.code, "not_measurable");
+
+  const discarded = applyAgentResult({ ...base, resultSource: undefined, status: "descartado" }, agentInput());
+  assert.equal(discarded.ok, false);
+  assert.equal(discarded.code, "not_measurable");
+
+  const approved = applyAgentResult({ ...base, resultSource: undefined, result: null, status: "aprobado" }, agentInput());
+  assert.equal(approved.ok, true);
+  assert.equal(approved.change.status, "aprobado");
+});
+
+test("republicar conserva measure y result, y no reescribe el arco en prueba", () => {
+  const existing = blankReport([
+    {
+      key: "reviews-v2",
+      title: "Viejo",
+      detail: "antes",
+      status: "en_prueba",
+      result: "Va bien.",
+      measure: measure(),
+      resultSource: "agente",
+      resultAgent: "mr-pou",
+      resultAt: "2026-11-02T00:00:00.000Z",
+      resultMetrics: [resultMetric()],
+      suggestedStatus: "medido",
+    },
+  ]);
+  const merged = mergeReport(existing, {
+    conclusions: "Ahora.",
+    metrics: [],
+    messageStats: [],
+    series: [],
+    changes: [
+      {
+        key: "reviews-v2",
+        title: "Nuevo título",
+        detail: "después",
+        status: "descartado",
+        result: "pisa",
+        measure: measure({ baseline: 1, target: "otro" }),
+      },
+    ],
+  });
+  const change = merged.next.changes.find((item) => item.key === "reviews-v2");
+  assert.equal(change.status, "en_prueba");
+  assert.equal(change.title, "Nuevo título");
+  assert.equal(change.detail, "después");
+  assert.equal(change.result, "Va bien.");
+  assert.equal(change.resultSource, "agente");
+  assert.equal(change.resultAgent, "mr-pou");
+  assert.equal(change.suggestedStatus, "medido");
+  assert.equal(change.measure.baseline, 8);
+  assert.equal(change.measure.target, "≥ +3 pp");
+  assert.equal(change.resultMetrics[0].after, 12);
+
+  const missing = mergeReport(blankReport([{ key: "reviews-v2", title: "T", detail: "", status: "en_prueba", result: null }]), {
+    conclusions: "Texto.",
+    metrics: [],
+    messageStats: [],
+    series: [],
+    changes: [{ key: "reviews-v2", title: "T", detail: "", measure: measure() }],
+  });
+  assert.equal(missing.next.changes[0].status, "en_prueba");
+  assert.equal(missing.next.changes[0].measure.metric, "whatsapp.tasa-humana");
+
+  const approved = mergeReport(
+    blankReport([{ key: "reviews-v2", title: "T", detail: "", status: "aprobado", result: null, measure: measure() }]),
+    {
+      conclusions: "Texto.",
+      metrics: [],
+      messageStats: [],
+      series: [],
+      changes: [{ key: "reviews-v2", title: "T", detail: "", measure: measure({ baseline: 9 }) }],
+    },
+  );
+  assert.equal(approved.next.changes[0].status, "aprobado");
+  assert.equal(approved.next.changes[0].measure.baseline, 9);
+
+  const measured = mergeReport(
+    blankReport([{ key: "reviews-v2", title: "T", detail: "", status: "medido", result: "Listo.", measure: measure() }]),
+    {
+      conclusions: "Texto.",
+      metrics: [],
+      messageStats: [],
+      series: [],
+      changes: [{ key: "reviews-v2", title: "T", detail: "", measure: measure({ baseline: 1 }) }],
+    },
+  );
+  assert.equal(measured.next.changes[0].measure.baseline, 8);
+  assert.equal(measured.next.changes[0].result, "Listo.");
+});
+
+test("el POST no saca un cambio de pendiente ni aprueba uno nuevo", () => {
+  const merged = mergeReport(
+    blankReport([{ key: "reviews-v2", title: "T", detail: "", status: "pendiente", result: null }]),
+    {
+      conclusions: "Texto.",
+      metrics: [],
+      messageStats: [],
+      series: [],
+      changes: [{ key: "reviews-v2", title: "T", detail: "", status: "aprobado", result: "listo" }],
+    },
+  );
+  assert.equal(merged.next.changes[0].status, "pendiente");
+  assert.equal(merged.next.changes[0].result, "listo");
+  assert.equal(merged.next.changes[0].resultSource, undefined);
+
+  const created = mergeReport(null, {
+    conclusions: "Texto.",
+    metrics: [],
+    messageStats: [],
+    series: [],
+    changes: [{ key: "nuevo", title: "Nuevo", detail: "", status: "medido", measure: measure() }],
+  });
+  assert.equal(created.next.changes[0].status, "pendiente");
+  assert.equal(created.next.changes[0].measure.metric, "whatsapp.tasa-humana");
+
+  const manual = mergeReport(
+    blankReport([
+      {
+        key: "reviews-v2",
+        title: "T",
+        detail: "",
+        status: "pendiente",
+        result: "Lo escribí yo.",
+        resultSource: "manual",
+        resultAt: "2026-11-01T18:00:00.000Z",
+      },
+    ]),
+    {
+      conclusions: "Texto.",
+      metrics: [],
+      messageStats: [],
+      series: [],
+      changes: [{ key: "reviews-v2", title: "T", detail: "", status: "en_prueba", result: "del agente" }],
+    },
+  );
+  assert.equal(manual.next.changes[0].status, "pendiente");
+  assert.equal(manual.next.changes[0].result, "Lo escribí yo.");
+  assert.equal(manual.next.changes[0].resultSource, "manual");
+
+  const incoming = {
+    conclusions: "Texto.",
+    metrics: [],
+    messageStats: [],
+    series: [],
+    changes: [{ key: "reviews-v2", title: "T", detail: "d", measure: measure() }],
+  };
+  const first = mergeReport(null, incoming).next;
+  const second = mergeReport(first, incoming).next;
+  assert.equal(sameReport(first, second), true);
+});
+
+test("parseChanges no pierde measure ni el resultado automático", () => {
+  const changes = parseChanges([
+    {
+      key: "reviews-v2",
+      title: "T",
+      status: "en_prueba",
+      result: " bien ",
+      measure: measure(),
+      resultSource: "agente",
+      resultAgent: "Mr-Pou",
+      resultAt: "2026-11-02T00:00:00.000Z",
+      resultMetrics: [resultMetric(), { metric: "rota" }],
+      suggestedStatus: "medido",
+      extra: "se pierde",
+    },
+    { key: "sin-medida", title: "Sigue", measure: { metric: "no" } },
+  ]);
+  assert.equal(changes.length, 2);
+  assert.equal(changes[0].result, "bien");
+  assert.equal(changes[0].measure.metric, "whatsapp.tasa-humana");
+  assert.equal(changes[0].measure.segment, "variante v3");
+  assert.equal(changes[0].resultSource, "agente");
+  assert.equal(changes[0].resultAgent, "mr-pou");
+  assert.equal(changes[0].resultMetrics.length, 1);
+  assert.equal(changes[0].suggestedStatus, "medido");
+  assert.equal(changes[0].extra, undefined);
+  assert.equal(changes[1].measure, undefined);
+  assert.equal(changes[1].status, "pendiente");
+});
+
+test("el payload acepta cómo se mide y el resultado de un cambio", () => {
+  const published = weeklyPublishPayload.safeParse(
+    camelizeWeekly({
+      area: "whatsapp",
+      week: "2026-10-26",
+      conclusions: "Texto.",
+      changes: [
+        {
+          key: "reviews-v2",
+          title: "Dejar la variante",
+          status: "aprobado",
+          measure: {
+            metric: "whatsapp.tasa-humana",
+            label: "Tasa humana",
+            unit: "percent",
+            direction: "up",
+            baseline: 8,
+            baseline_week: "2026-10-19",
+            start_week: "2026-10-26",
+            weeks: 1,
+            source: "crm",
+          },
+        },
+      ],
+    }),
+  );
+  assert.equal(published.success, true);
+  if (published.success) {
+    assert.equal(published.data.changes[0].measure.baselineWeek, "2026-10-19");
+    assert.equal(published.data.changes[0].status, "aprobado");
+  }
+
+  const result = changeResultPayload.safeParse(
+    camelizeWeekly({
+      agent: "mr-pou",
+      area: "whatsapp",
+      week: "2026-W44",
+      key: "reviews-v2",
+      result_text: "Subió.",
+      suggested_status: "medido",
+      result_metrics: [
+        {
+          metric: "whatsapp.tasa-humana",
+          label: "Tasa humana",
+          unit: "percent",
+          before: 8,
+          after: 12,
+          week_before: "2026-10-26",
+          week_after: "2026-11-02",
+          n_before: 25,
+          n_after: 25,
+        },
+      ],
+    }),
+  );
+  assert.equal(result.success, true);
+  if (result.success) {
+    assert.equal(result.data.weekStart, WEEK);
+    assert.equal(result.data.resultText, "Subió.");
+    assert.equal(result.data.suggestedStatus, "medido");
+    assert.equal(result.data.resultMetrics[0].nBefore, 25);
+    assert.equal(result.data.resultMetrics[0].weekAfter, "2026-11-02");
+  }
+
+  const bad = changeResultPayload.safeParse({ area: "whatsapp", week: "2026-10-26", key: "no vale", resultText: "x" });
+  assert.equal(bad.success, false);
+});
+
+test("el origen, las métricas y la semana anterior se leen en la pantalla nueva", () => {
+  assert.equal(formatResultAt("2026-11-02T00:00:00.000Z"), "dom 01/11 21:00 (UTC-3)");
+  assert.equal(formatResultAt("2026-11-01T21:00:00-03:00"), "dom 01/11 21:00 (UTC-3)");
+  assert.equal(
+    formatResultOrigin({ resultSource: "agente", resultAgent: "mr-pou", resultAt: "2026-11-02T00:00:00.000Z" }),
+    "Automático · mr-pou · dom 01/11 21:00 (UTC-3)",
+  );
+  assert.equal(formatResultOrigin({ resultSource: "manual", resultAt: "2026-11-02T00:00:00.000Z" }), "Editado a mano");
+  assert.equal(formatResultOrigin({ result: "viejo" }), null);
+  assert.equal(formatResultMetricLine(resultMetric()), "Tasa humana: 8% (26/10) → 12% (02/11), n 25/25");
+
+  const reviewed = applyManualReview(
+    {
+      key: "reviews-v2",
+      title: "T",
+      detail: "",
+      status: "en_prueba",
+      result: "Subió.",
+      resultSource: "agente",
+      resultAgent: "mr-pou",
+      resultMetrics: [resultMetric()],
+      suggestedStatus: "medido",
+      measure: measure(),
+    },
+    { status: "medido", result: "Lo confirmo.", at: "2026-11-02T12:00:00.000Z" },
+  );
+  assert.equal(reviewed.status, "medido");
+  assert.equal(reviewed.resultSource, "manual");
+  assert.equal(reviewed.resultAgent, undefined);
+  assert.equal(reviewed.suggestedStatus, undefined);
+  assert.equal(reviewed.resultMetrics[0].after, 12);
+  assert.equal(reviewed.measure.metric, "whatsapp.tasa-humana");
+  assert.equal(formatResultOrigin(reviewed), "Editado a mano");
+
+  const page = presentWeekly({
+    area: weeklyArea("whatsapp"),
+    weekStart: "2026-11-02",
+    weeks: ["2026-11-02"],
+    schemaReady: true,
+    reportError: null,
+    crmError: null,
+    truncated: false,
+    brandConnected: null,
+    prospecting: null,
+    followups: null,
+    brand: null,
+    report: null,
+    previousMetrics: [],
+    previousReport: {
+      id: "prev",
+      area: "whatsapp",
+      weekStart: WEEK,
+      conclusions: "",
+      conclusionStatus: "pendiente",
+      conclusionResult: null,
+      metrics: [],
+      messageStats: [],
+      series: [],
+      changes: [
+        { key: "a", title: "En prueba", detail: "", status: "en_prueba", result: "Subió." },
+        { key: "b", title: "Pendiente", detail: "", status: "pendiente", result: "todavía no" },
+        { key: "c", title: "Sin texto", detail: "", status: "aprobado", result: null },
+        { key: "d", title: "Descartado", detail: "", status: "descartado", result: "no va" },
+      ],
+      agent: "mr-pou",
+      publishedAt: "2026-11-01T00:00:00.000Z",
+    },
+  });
+  assert.equal(page.priorResults.weekStart, WEEK);
+  assert.equal(page.priorResults.changes.length, 1);
+  assert.equal(page.priorResults.changes[0].key, "a");
 });

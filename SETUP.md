@@ -142,6 +142,7 @@ No hay migración nueva para el PATCH ni para el alta: usan columnas y la activi
 | POST | `/api/automation/leads/:id/contact` | Registra el mensaje enviado (`lead_messages`) + el contacto (timeline, `last_contacted_at`, estado, próxima acción). No pide agente. Acepta `occurred_at`, `kind` / `part`, `type` y `variant` |
 | POST | `/api/automation/leads/:id/reply` | Registra una respuesta del lead. Pide agente. Ver abajo |
 | GET | `/api/automation/reconcile?date=YYYY-MM-DD` | Salientes y entrantes de ese día (Argentina), por lead. No pide agente |
+| PATCH | `/api/automation/weekly-reports/changes` | Resultado medido de un cambio aprobado, en prueba o medido. No cambia el estado ni pisa un resultado escrito a mano |
 | POST | `/api/automation/leads/:id/status` | Cambio de estado, con el mismo gate de reuniones que la UI. No pide agente |
 | * | `/api/automation/admin/*` | Rol admin. Pide un agente de `AUTOMATION_ADMIN_AGENTS` (apagado si la variable no está). Ver abajo |
 
@@ -243,6 +244,8 @@ curl -s -X POST "$APP_URL/api/automation/leads/$LEAD_ID/contact" \
 ```
 
 `kind` es `APERTURA`, `APERTURA_M2` o `SEGUIMIENTO`. `part` `2` es el segundo mensaje de la apertura y no cuenta como seguimiento. `occurred_at` es la hora real (ISO con zona). El detalle, el `POST .../reply` y el `GET /api/automation/reconcile?date=YYYY-MM-DD` están en [Plans/analisis-semanal.md](Plans/analisis-semanal.md). No hay migración.
+
+`PATCH /api/automation/weekly-reports/changes` escribe el resultado medido de un cambio (texto, métricas y estado sugerido) sin cambiar el `status` y sin pisar un resultado escrito a mano. Mismo Bearer y mismo `X-Agent` que el análisis semanal. El curl está en [Plans/analisis-semanal.md](Plans/analisis-semanal.md). No hay migración: los campos nuevos viven en el jsonb `changes`.
 
 ### Rol admin (`mr-pou`) — `/api/automation/admin/*`
 
