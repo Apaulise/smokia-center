@@ -1435,6 +1435,7 @@ export type Database = {
       }
       leads: {
         Row: {
+          acquisition_source: string | null
           address: string | null
           city: string | null
           country: string | null
@@ -1445,6 +1446,7 @@ export type Database = {
           id: string
           industry_id: string | null
           instagram_url: string | null
+          intake: Json | null
           interest_level: number | null
           last_contacted_at: string | null
           latitude: number | null
@@ -1467,6 +1469,7 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          acquisition_source?: string | null
           address?: string | null
           city?: string | null
           country?: string | null
@@ -1477,6 +1480,7 @@ export type Database = {
           id?: string
           industry_id?: string | null
           instagram_url?: string | null
+          intake?: Json | null
           interest_level?: number | null
           last_contacted_at?: string | null
           latitude?: number | null
@@ -1499,6 +1503,7 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          acquisition_source?: string | null
           address?: string | null
           city?: string | null
           country?: string | null
@@ -1509,6 +1514,7 @@ export type Database = {
           id?: string
           industry_id?: string | null
           instagram_url?: string | null
+          intake?: Json | null
           interest_level?: number | null
           last_contacted_at?: string | null
           latitude?: number | null
@@ -2070,6 +2076,60 @@ export type Database = {
         }
         Relationships: []
       }
+      weekly_reports: {
+        Row: {
+          agent: string
+          area: Database["public"]["Enums"]["weekly_area"]
+          changes: Json
+          conclusion_result: string | null
+          conclusion_status: Database["public"]["Enums"]["weekly_change_status"]
+          conclusions: string
+          created_at: string
+          id: string
+          message_stats: Json
+          metrics: Json
+          owner_id: string
+          published_at: string
+          series: Json
+          updated_at: string
+          week_start: string
+        }
+        Insert: {
+          agent: string
+          area: Database["public"]["Enums"]["weekly_area"]
+          changes?: Json
+          conclusion_result?: string | null
+          conclusion_status?: Database["public"]["Enums"]["weekly_change_status"]
+          conclusions?: string
+          created_at?: string
+          id?: string
+          message_stats?: Json
+          metrics?: Json
+          owner_id: string
+          published_at?: string
+          series?: Json
+          updated_at?: string
+          week_start: string
+        }
+        Update: {
+          agent?: string
+          area?: Database["public"]["Enums"]["weekly_area"]
+          changes?: Json
+          conclusion_result?: string | null
+          conclusion_status?: Database["public"]["Enums"]["weekly_change_status"]
+          conclusions?: string
+          created_at?: string
+          id?: string
+          message_stats?: Json
+          metrics?: Json
+          owner_id?: string
+          published_at?: string
+          series?: Json
+          updated_at?: string
+          week_start?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       lead_first_contacts: {
@@ -2267,6 +2327,29 @@ export type Database = {
         }
         Returns: string
       }
+      team_appointments: {
+        Args: {
+          p_from?: string
+          p_limit?: number
+          p_list?: boolean
+          p_to?: string
+        }
+        Returns: {
+          created_at: string
+          ends_at: string
+          id: string
+          lead_id: string
+          lead_name: string
+          lead_status: Database["public"]["Enums"]["lead_status"]
+          meeting_url: string
+          notes: string
+          owner_id: string
+          starts_at: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          title: string
+          updated_at: string
+        }[]
+      }
       team_can_see: { Args: { p_owner: string }; Returns: boolean }
       team_daily_contacts: {
         Args: { p_from: string; p_owner: string; p_to: string; p_tz?: string }
@@ -2294,29 +2377,6 @@ export type Database = {
           avatar_url: string
           name: string
           owner_id: string
-        }[]
-      }
-      team_appointments: {
-        Args: {
-          p_from?: string
-          p_limit?: number
-          p_list?: boolean
-          p_to?: string
-        }
-        Returns: {
-          created_at: string
-          ends_at: string
-          id: string
-          lead_id: string | null
-          lead_name: string | null
-          lead_status: Database["public"]["Enums"]["lead_status"] | null
-          meeting_url: string | null
-          notes: string | null
-          owner_id: string
-          starts_at: string
-          status: Database["public"]["Enums"]["appointment_status"]
-          title: string
-          updated_at: string
         }[]
       }
       team_execution_metrics: {
@@ -2466,6 +2526,19 @@ export type Database = {
       ops_improvement_status: "abierta" | "aplicada" | "descartada"
       sales_goal_status: "ACTIVA" | "ARCHIVADA"
       trend_source: "APIFY" | "META"
+      weekly_area:
+        | "whatsapp"
+        | "email"
+        | "seguimientos"
+        | "instagram"
+        | "youtube"
+        | "x_threads"
+      weekly_change_status:
+        | "pendiente"
+        | "aprobado"
+        | "en_prueba"
+        | "descartado"
+        | "medido"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2719,6 +2792,21 @@ export const Constants = {
       ops_improvement_status: ["abierta", "aplicada", "descartada"],
       sales_goal_status: ["ACTIVA", "ARCHIVADA"],
       trend_source: ["APIFY", "META"],
+      weekly_area: [
+        "whatsapp",
+        "email",
+        "seguimientos",
+        "instagram",
+        "youtube",
+        "x_threads",
+      ],
+      weekly_change_status: [
+        "pendiente",
+        "aprobado",
+        "en_prueba",
+        "descartado",
+        "medido",
+      ],
     },
   },
 } as const

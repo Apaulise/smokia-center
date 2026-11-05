@@ -27,6 +27,7 @@ import {
 } from "@/lib/leads/queries";
 import { formatAddress } from "@/lib/leads/address";
 import { externalWebUrl } from "@/lib/leads/external-url";
+import { readInstagramIntake } from "@/lib/leads/instagram-intake-view";
 import { openingHoursFromRaw } from "@/lib/leads/opening-hours";
 import { navQueryString } from "@/lib/leads/nav-params";
 import type { LeadsSortField } from "@/lib/leads/queries";
@@ -93,6 +94,19 @@ export default async function LeadFichaPage({ params, searchParams }: PageProps<
   const stageIndex = LEAD_STATUSES.indexOf(lead.status) + 1;
   const websiteUrl = externalWebUrl(lead.website);
   const openingHours = openingHoursFromRaw(lead.raw);
+  const instagram = readInstagramIntake(lead);
+  const instagramRows: [string, string | null][] = instagram
+    ? [
+        ["Usuario", instagram.username ? `@${instagram.username}` : null],
+        ["Etapa del flujo", instagram.stage],
+        ["Rubro", instagram.rubro],
+        ["Tarea", instagram.tarea],
+        ["Tamaño", instagram.tamano],
+        ["Volumen", instagram.volumen],
+        ["Keyword", instagram.keyword],
+        ["Pieza de origen", instagram.piezaOrigen],
+      ]
+    : [];
 
   return (
     <>
@@ -200,6 +214,16 @@ export default async function LeadFichaPage({ params, searchParams }: PageProps<
               </div>
             </div>
           </InfoSection>
+
+          {instagram ? (
+            <InfoSection eyebrow="Instagram" divider>
+              <dl className="flex flex-col gap-2.5 text-[13px]">
+                {instagramRows.map(([label, value]) =>
+                  value ? <InfoRow key={label} label={label} value={label === "Keyword" || label === "Pieza de origen" ? <span className="font-mono">{value}</span> : value} /> : null,
+                )}
+              </dl>
+            </InfoSection>
+          ) : null}
 
           <InfoSection eyebrow="Agenda" divider>
             <ScheduleDialog leadId={lead.id} leadName={lead.name} upcoming={appointments} />
