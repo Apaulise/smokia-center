@@ -57,6 +57,19 @@ export function adminAgentsFromEnv(env: NodeJS.ProcessEnv): string[] {
 }
 
 /**
+ * Quién puede usar `POST /api/automation/leads/instagram` (ManyChat). Vacío o
+ * ausente → `manychat`. Es una lista aparte a propósito: este agente sólo
+ * puede usar ese endpoint, no se suma a la de escritura, alta ni admin.
+ */
+export const DEFAULT_AUTOMATION_INTAKE_AGENTS = ["manychat"] as const;
+
+export function intakeAgentsFromEnv(env: NodeJS.ProcessEnv): string[] {
+  const raw = env.AUTOMATION_INTAKE_AGENTS;
+  if (raw != null && raw.trim() !== "") return agentList(raw);
+  return [...DEFAULT_AUTOMATION_INTAKE_AGENTS];
+}
+
+/**
  * Quién puede publicar el análisis semanal de cualquier área, además del rol
  * admin. Vacío o ausente → nadie extra: las áreas comerciales siguen el
  * default de alta y de escritura, y el resto queda en el admin.
