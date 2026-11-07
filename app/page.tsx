@@ -6,6 +6,7 @@ import { HubCard } from "@/components/shell/hub-card";
 import { ScreenPreview } from "@/components/shell/screen-preview";
 import { ProfileEditor } from "@/components/shell/profile-editor";
 import { SignOutButton } from "@/components/shell/sign-out-button";
+import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { displayName, getProfile } from "@/lib/profile/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 
@@ -44,6 +45,7 @@ export default async function HubPage() {
             </p>
           </div>
           <nav className="flex shrink-0 items-center gap-1">
+            <ThemeToggle className="mr-2 w-[168px]" />
             <Link
               href="/configuracion"
               className="flex h-8 items-center gap-2 rounded-lm-sm px-2.5 text-sm text-lm-ink-2 transition-colors hover:bg-lm-raised hover:text-lm-ink"

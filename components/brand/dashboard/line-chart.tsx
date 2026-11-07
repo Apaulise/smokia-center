@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useId, useRef, useState, type PointerEvent } from "react";
 
 const HEIGHT = 160;
 const PADDING = { top: 2, right: 4, bottom: 2, left: 4 };
@@ -16,6 +16,8 @@ export interface LineChartSeries {
   dashed?: boolean;
   /** Área tenue (8 %) bajo la línea. */
   area?: boolean;
+  /** El área va rayada en diagonal en vez de lisa: se distingue por textura, no sólo por tono. */
+  hatch?: boolean;
 }
 
 export interface LineChartPoint {
@@ -94,6 +96,8 @@ export function BrandLineChart({
 }) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [width, setWidth] = useState(DEFAULT_WIDTH);
+  // useId trae ":" y eso rompe `url(#…)` en algunos navegadores.
+  const patternPrefix = `hatch-${useId().replace(/:/g, "")}`;
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -155,6 +159,15 @@ export function BrandLineChart({
           onPointerMove={handlePointerMove}
           onPointerLeave={() => setHoverIndex(null)}
         >
+          <defs>
+            {series.map((s, i) =>
+              s.hatch ? (
+                <pattern key={s.key} id={`${patternPrefix}-${i}`} width={5} height={5} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                  <line x1={0} y1={0} x2={0} y2={5} stroke={s.color} strokeWidth={1.5} strokeOpacity={0.4} />
+                </pattern>
+              ) : null,
+            )}
+          </defs>
           {[0, 1, 2].map((n) => (
             <line
               key={n}
@@ -177,15 +190,15 @@ export function BrandLineChart({
             />
           ) : null}
 
-          {seriesPoints.map((s) => {
+          {seriesPoints.map((s, seriesIndex) => {
             const xy = s.coords.map(([i, v]) => [xAt(i), yAt(v)] as [number, number]);
             return (
               <g key={s.key}>
                 {s.area ? (
                   <path
                     d={`${buildPath(xy)} L${xy.at(-1)![0].toFixed(1)},${baseY} L${xy[0][0].toFixed(1)},${baseY} Z`}
-                    fill={s.color}
-                    fillOpacity={0.08}
+                    fill={s.hatch ? `url(#${patternPrefix}-${seriesIndex})` : s.color}
+                    fillOpacity={s.hatch ? 1 : 0.08}
                   />
                 ) : null}
                 <path

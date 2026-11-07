@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { HTMLAttributes, ReactNode } from "react";
+import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
  * separa del cuerpo con una línea (handoff MARCA_PERSONAL.md, "Card").
  */
 export function Card({ className, ...props }: HTMLAttributes<HTMLElement>) {
-  return <section className={cn("rounded-lm-lg border border-lm-line bg-lm-surface/50", className)} {...props} />;
+  return <section className={cn("lm-glass-soft rounded-lm-lg border", className)} {...props} />;
 }
 
 export function CardHeader({
@@ -36,16 +36,30 @@ export function CardBody({ className, ...props }: HTMLAttributes<HTMLDivElement>
   return <div className={cn("px-5 py-[18px]", className)} {...props} />;
 }
 
-/** Label de métrica / sección: 10.5px, 0.12em, mayúsculas. */
-export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
+/**
+ * Label de métrica / sección: 10.5px, 0.12em, mayúsculas. Con `dot` suma un
+ * punto de 5px delante (como el eyebrow de los tableros de referencia): gris
+ * por default, `signal` sólo en la métrica que se mueve.
+ */
+export function Eyebrow({
+  children,
+  className,
+  dot,
+}: {
+  children: ReactNode;
+  className?: string;
+  dot?: "neutral" | "signal";
+}) {
   return (
     <span
       className={cn(
         "font-lm-sans text-[10.5px] leading-[14px] font-medium tracking-[0.12em] text-lm-ink-3 uppercase",
+        dot && "inline-flex items-center gap-1.5",
         className,
       )}
     >
-      {children}
+      {dot ? <span className={cn("size-[5px] shrink-0 rounded-full", dot === "signal" ? "bg-lm-signal" : "bg-lm-smoke-3")} aria-hidden /> : null}
+      <span className="truncate">{children}</span>
     </span>
   );
 }
@@ -126,10 +140,14 @@ export function KpiStrip({
         className,
       )}
     >
-      {items.map((item) => (
-        <div key={item.label} className="relative flex min-w-0 flex-col gap-2 px-5 py-[18px] first:pl-0 lg:first:pl-0">
+      {items.map((item, index) => (
+        <div
+          key={item.label}
+          className="lm-rise relative flex min-w-0 flex-col gap-2 px-5 py-[18px] first:pl-0 lg:first:pl-0"
+          style={{ "--i": index } as CSSProperties}
+        >
           {item.accent ? <span className="absolute -top-px left-0 h-0.5 w-6 bg-lm-signal" /> : null}
-          <Eyebrow className="truncate">{item.label}</Eyebrow>
+          <Eyebrow dot={item.accent ? "signal" : "neutral"}>{item.label}</Eyebrow>
           <span
             className={cn(
               "font-mono text-[26px] leading-none tracking-[-0.02em] tabular-nums",

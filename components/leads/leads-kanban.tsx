@@ -101,8 +101,8 @@ export function LeadsKanban({ leads }: { leads: LeadWithRelations[] }) {
               onDragLeave={() => setDragOverGroup((current) => (current === group ? null : current))}
               onDrop={(event) => handleDrop(group, event)}
               className={cn(
-                "flex w-72 shrink-0 flex-col gap-2 rounded-lm-lg border border-lm-line bg-lm-surface p-3 transition-colors",
-                dragOverGroup === group && "border-lm-signal bg-lm-signal-soft",
+                "flex w-72 shrink-0 flex-col gap-2 rounded-lm-lg border border-lm-line p-3 transition-colors",
+                dragOverGroup === group ? "border-lm-signal bg-lm-signal-soft" : "lm-tint",
               )}
             >
               <div className="flex items-center justify-between px-1">

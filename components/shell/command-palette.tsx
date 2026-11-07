@@ -4,6 +4,7 @@ import { Calendar, LayoutDashboard, ListChecks, LoaderCircle, Plus, Search } fro
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { startNavigation } from "@/components/shell/navigation-state";
 import { searchCommandPaletteAction } from "@/lib/leads/actions";
 import { STATUS_LABEL, type LeadStatus } from "@/lib/leads/status";
 import { cn } from "@/lib/utils";
@@ -123,6 +124,7 @@ function Palette({ onClose }: { onClose: () => void }) {
   const activeIndexSafe = items.length === 0 ? 0 : Math.min(activeIndex, items.length - 1);
 
   function go(href: string) {
+    startNavigation(href.split(/[?#]/)[0]);
     router.push(href);
     onClose();
   }
@@ -157,8 +159,8 @@ function Palette({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-center pt-24" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-[rgb(19_19_21/0.66)]" onClick={onClose} aria-hidden />
-      <div className="lm-shadow-pop relative flex h-max max-h-[70vh] w-full max-w-[600px] flex-col overflow-hidden rounded-lm-lg border border-lm-line bg-lm-raised font-lm-sans">
+      <div className="absolute inset-0 bg-lm-scrim backdrop-blur-[3px]" onClick={onClose} aria-hidden />
+      <div className="lm-shadow-pop relative flex h-max max-h-[70vh] w-full max-w-[600px] flex-col overflow-hidden rounded-lm-lg border border-lm-line-strong lm-glass-pop font-lm-sans">
         <div className="flex h-[52px] shrink-0 items-center gap-2.5 border-b border-lm-line px-4">
           <Search className="size-4 shrink-0 text-lm-ink-3" strokeWidth={1.5} />
           <input

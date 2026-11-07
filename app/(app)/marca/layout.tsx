@@ -18,7 +18,7 @@ export const maxDuration = 60;
  */
 export default function MarcaLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-dvh bg-lm-bg font-lm-sans text-lm-ink">
+    <div className="min-h-dvh font-lm-sans text-lm-ink">
       <BrandAutoSync platform={PLATFORM} />
       {children}
     </div>

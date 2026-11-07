@@ -21,7 +21,9 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { CommandPalette } from "@/components/shell/command-palette";
 import { MODULES, type NavModule } from "@/components/shell/nav";
+import { usePendingPath } from "@/components/shell/navigation-state";
 import { ProfileAvatar } from "@/components/shell/profile-avatar";
+import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -74,22 +76,26 @@ export function Sidebar({
   avatarUrl: string | null;
   badges?: Record<string, number>;
 }) {
-  const pathname = usePathname();
+  const currentPathname = usePathname();
+  // Ruta efectiva: la que se está abriendo, si hay una. El ítem activo del menú
+  // cambia en el mismo instante del clic en vez de esperar a que cargue la pantalla.
+  const pendingPath = usePendingPath();
+  const pathname = pendingPath ?? currentPathname;
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   // El snapshot de servidor (false) es el que se usa al hidratar, así server y
   // cliente coinciden; después React relee localStorage y re-renderiza.
   // Cada gestor es un espacio separado: el sidebar sólo muestra el módulo en el que se está.
-  const activeModule = MODULES.find((module) => module.available && isModuleActive(pathname, module));
+  const activeModule = MODULES.find((module) => module.available && isModuleActive(currentPathname, module));
   const ActiveIcon = activeModule ? ICONS[activeModule.icon] : LayoutGrid;
   const collapsed = useSyncExternalStore(subscribeCollapsed, readCollapsed, () => false);
 
   // Cerrar el menú mobile al navegar: se ajusta durante el render, no en un
   // efecto, para no pagar un render extra con el menú todavía abierto.
-  const [lastPathname, setLastPathname] = useState(pathname);
-  if (pathname !== lastPathname) {
-    setLastPathname(pathname);
+  const [lastPathname, setLastPathname] = useState(currentPathname);
+  if (currentPathname !== lastPathname) {
+    setLastPathname(currentPathname);
     setOpen(false);
   }
 
@@ -124,7 +130,7 @@ export function Sidebar({
     <>
       {/* Barra superior — sólo mobile/tablet (<1280). En mobile puro (<768) el
           shell la reemplaza por el tab bar inferior, ver AppShellMobileNav. */}
-      <header className="flex items-center justify-between border-b border-lm-line bg-lm-surface px-4 py-3 lg:hidden">
+      <header className="flex items-center justify-between lm-glass border-b px-4 py-3 lg:hidden">
         <span className="font-lm-sans text-sm font-semibold text-lm-ink">
           Smok<span className="text-lm-ink-2">IA</span>
         </span>
@@ -141,7 +147,7 @@ export function Sidebar({
 
       <aside
         className={cn(
-          "flex-col border-lm-line bg-lm-surface font-lm-sans",
+          "lm-glass flex-col font-lm-sans",
           "lg:sticky lg:top-0 lg:flex lg:h-dvh lg:shrink-0 lg:border-r lg:transition-[width] lg:duration-150",
           collapsed ? "lg:w-16" : "lg:w-60",
           open ? "flex border-b" : "hidden",
@@ -212,29 +218,7 @@ export function Sidebar({
               </div>
 
               {activeModule.children ? (
-                <div className={cn("mt-0.5 ml-[13px] space-y-0.5 border-l border-lm-line pl-[21px]", collapsed && "lg:hidden")}>
-                  {activeModule.children.map((child) => {
-                    const childActive = child.exact
-                      ? pathname === child.href
-                      : pathname === child.href || pathname.startsWith(`${child.href}/`);
-
-                    const badge = badges?.[child.href];
-
-                    return (
-                      <Link
-                        key={child.href}
-                        href={child.href}
-                        className={cn(
-                          "flex h-7 items-center justify-between gap-2 rounded-lm-sm px-2 py-1.5 text-[13px] transition-colors",
-                          childActive ? "text-lm-ink" : "text-lm-ink-2 hover:text-lm-ink",
-                        )}
-                      >
-                        <span className="truncate">{child.label}</span>
-                        {badge ? <span className="shrink-0 font-mono text-xs text-lm-ink-3">{badge}</span> : null}
-                      </Link>
-                    );
-                  })}
-                </div>
+                <ChildNav module={activeModule} pathname={pathname} badges={badges} collapsed={collapsed} />
               ) : null}
             </div>
           ) : null}
@@ -267,6 +251,11 @@ export function Sidebar({
             <span className={cn(collapsed && "lg:hidden")}>Salir</span>
           </button>
 
+          <div className={cn("px-2 pt-1", collapsed && "lg:hidden")}>
+            <ThemeToggle />
+          </div>
+          {collapsed ? <ThemeToggle variant="icon" className="hidden lg:flex" /> : null}
+
           <div
             className={cn("flex items-center gap-2.5 px-2 pt-2", collapsed && "lg:justify-center lg:px-0")}
             title={collapsed ? name : undefined}
@@ -279,5 +268,66 @@ export function Sidebar({
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </>
+  );
+}
+
+/** Alto de cada ítem (h-7 = 28px) + separación (gap-0.5 = 2px): lo que baja el indicador por ítem. */
+const CHILD_PITCH_PX = 30;
+
+function isChildActive(pathname: string, child: { href: string; exact?: boolean }) {
+  return child.exact ? pathname === child.href : pathname === child.href || pathname.startsWith(`${child.href}/`);
+}
+
+/**
+ * Subítems del módulo activo. El fondo `raised` con la marca amarilla es un solo
+ * elemento que se desliza hasta la pestaña elegida (transform, 200ms ease-out)
+ * en vez de apagarse en una y encenderse en otra: se lee como un único foco que
+ * se mueve. Sin movimiento reducido pasa instantáneo.
+ */
+function ChildNav({
+  module,
+  pathname,
+  badges,
+  collapsed,
+}: {
+  module: NavModule;
+  pathname: string;
+  badges?: Record<string, number>;
+  collapsed: boolean;
+}) {
+  const children = module.children ?? [];
+  const activeIndex = children.findIndex((child) => isChildActive(pathname, child));
+
+  return (
+    <div className={cn("relative mt-0.5 ml-[13px] flex flex-col gap-0.5 border-l border-lm-line pl-[21px]", collapsed && "lg:hidden")}>
+      <span
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute top-0 right-0 left-[21px] h-7 rounded-lm-sm bg-lm-raised shadow-[inset_0_1px_0_var(--lm-glass-edge)]",
+          "before:absolute before:top-1.5 before:bottom-1.5 before:left-0 before:w-0.5 before:rounded-lm-xs before:bg-lm-signal",
+          "transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none",
+          activeIndex < 0 && "opacity-0",
+        )}
+        style={{ transform: `translateY(${Math.max(activeIndex, 0) * CHILD_PITCH_PX}px)` }}
+      />
+      {children.map((child, index) => {
+        const badge = badges?.[child.href];
+
+        return (
+          <Link
+            key={child.href}
+            href={child.href}
+            aria-current={index === activeIndex ? "page" : undefined}
+            className={cn(
+              "relative flex h-7 items-center justify-between gap-2 rounded-lm-sm px-2 py-1.5 text-[13px] transition-colors duration-150",
+              index === activeIndex ? "text-lm-ink" : "text-lm-ink-2 hover:bg-lm-raised/50 hover:text-lm-ink",
+            )}
+          >
+            <span className="truncate">{child.label}</span>
+            {badge ? <span className="shrink-0 font-mono text-xs text-lm-ink-3">{badge}</span> : null}
+          </Link>
+        );
+      })}
+    </div>
   );
 }

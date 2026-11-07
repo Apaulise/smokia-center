@@ -30,7 +30,7 @@ export function LeadListCard({ list }: { list: LeadListOverviewRow }) {
   const leadCount = list.leads[0]?.count ?? 0;
 
   return (
-    <div className="flex flex-col gap-3 rounded-lm-lg border border-lm-line-strong bg-lm-surface p-4 outline-1 -outline-offset-1 outline-transparent transition-colors hover:bg-[#1c1c1f] hover:outline-lm-line-strong">
+    <div className="flex flex-col gap-3 lm-tint lm-tint-hover rounded-lm-lg border border-lm-line-strong p-4 outline-1 -outline-offset-1 outline-transparent transition-colors hover:outline-lm-line-strong">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate font-lm-sans text-[15px] font-semibold text-lm-ink">{list.name}</h3>

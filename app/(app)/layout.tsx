@@ -33,6 +33,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   return (
     <div className="flex min-h-dvh flex-col lg:flex-row">
+      <div className="lm-ambient" aria-hidden />
       <Suspense fallback={<SidebarFallback />}>
         <SidebarData email={user.email} />
       </Suspense>

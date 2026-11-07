@@ -35,10 +35,10 @@ const V: Record<Variant, Record<string, string>> = {
     less: "text-muted hover:underline",
   },
   signal: {
-    container: "overflow-hidden rounded-lm-lg border border-lm-line-strong bg-lm-surface",
+    container: "lm-glass-soft overflow-hidden rounded-lm-lg border",
     head: "border-b border-lm-line font-lm-sans text-[11px] font-semibold tracking-[0.1em] text-lm-ink-3 uppercase",
     cell: "border-r border-b border-lm-line p-1.5 last:border-r-0",
-    outsideMonth: "bg-black/[0.18]",
+    outsideMonth: "bg-lm-smoke-1/50",
     dragOver: "bg-lm-signal-soft",
     todayCircle: "bg-lm-signal text-lm-on-signal font-semibold",
     dayNumber: "text-lm-ink-3 hover:text-lm-ink",

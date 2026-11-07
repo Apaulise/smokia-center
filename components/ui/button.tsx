@@ -18,8 +18,7 @@ type Size = "sm" | "md" | "lg";
  */
 const VARIANTS: Record<Variant, string> = {
   primary: cn(
-    "bg-[linear-gradient(135deg,#18D6E8_0%,#4C7DFF_100%)] text-base font-semibold",
-    "hover:brightness-110 hover:shadow-[0_0_22px_rgb(24_214_232/0.28)]",
+    "lm-btn-liquid bg-lm-signal text-lm-on-signal font-semibold",
   ),
   secondary: cn(
     "border border-line bg-elevated/60 text-ink",

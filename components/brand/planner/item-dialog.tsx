@@ -489,7 +489,7 @@ export function PlannerItemDialog({
                     <input
                       type="radio"
                       name="linkable-post"
-                      className="mt-1 accent-[#f2c14e]"
+                      className="mt-1 accent-lm-signal"
                       checked={selectedPostId === post.postId}
                       onChange={() => setSelectedPostId(post.postId)}
                     />

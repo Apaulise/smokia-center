@@ -248,7 +248,7 @@ export default async function AnalisisPage() {
           )}
 
           {historyRecommendations.length > 0 ? (
-            <details className="group rounded-lm-lg border border-lm-line bg-lm-surface/50">
+            <details className="group lm-tint rounded-lm-lg border border-lm-line">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-[13px] text-lm-ink [&::-webkit-details-marker]:hidden">
                 <span>
                   Historial

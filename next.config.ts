@@ -8,6 +8,14 @@ const nextConfig: NextConfig = {
   // corre Claude Code para chequear que compila) fija esta variable y compila
   // aparte en `.next-verify`, así nunca pisa la carpeta del dev server.
   distDir: process.env.NEXT_BUILD_DIST_DIR || ".next",
+  experimental: {
+    // Volver a una pestaña que se visitó hace menos de 30s es instantáneo: el
+    // router reusa la pantalla en vez de pedirla otra vez al servidor. Los
+    // Server Actions que mutan datos invalidan esta caché solos; lo que cambia
+    // desde afuera (webhooks, agentes) puede tardar hasta 30s en aparecer al
+    // cambiar de pestaña. Para volver al comportamiento anterior: dynamic: 0.
+    staleTimes: { dynamic: 30 },
+  },
   // Los dos prompts canónicos —el Sistema Operativo de Contenido (Plans/03
   // §3.10) y el Sistema de Prospección (Plans/01 §1.7)— se leen del disco en
   // runtime (lib/brand/ai/content-os.ts, lib/leads/ai/sales-os.ts). Ningún

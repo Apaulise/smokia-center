@@ -96,15 +96,15 @@ Los dos socios comparten una meta y se ven las métricas. Eso cruza owners, y es
 
 ## 6. Marca
 
-Ver [SmokIA_Manual_de_Marca.md](SmokIA_Manual_de_Marca.md). La app es **dark-only**: el manual es dark-first y no define paleta clara, así que no se inventa una.
+El sistema visual vigente de toda la app es **"Señal y humo"** (Design System artifact "SmokIA — Señal y Humo"; handoffs en `UI mockups request*/`). Los tokens son `--color-lm-*` en `app/globals.css`. [SmokIA_Manual_de_Marca.md](SmokIA_Manual_de_Marca.md) quedó como referencia histórica (cian/violeta): los tokens viejos (`base`, `ink`, `cyan`…) sólo existen como alias de `lm-` para pantallas sin migrar, y no se usan en código nuevo.
 
-Tokens de color definidos en `app/globals.css`.
-
-- **Tipografías:** Sora (titulares), Inter (cuerpo/UI), JetBrains Mono (números y datos)
-- **Convención de color, codificada en las variantes de los componentes:** *cyan = acción y resultado*, *violeta = proceso e innovación*. No se decide pantalla por pantalla
-- **Proporción:** ~70% fondo oscuro, ~20% texto, ~10% acentos. Si una pantalla se ve neón, está mal
-- **Un solo efecto protagonista por vista.** Glow al 10–30% de opacidad, reservado para el foco principal
-- Espaciado 8/16/24/32/48/64; radios 16–24px en contenedores
+- **Dos temas, oscuro (default) y claro.** `data-theme="light"` en `<html>` redefine los mismos tokens `lm-` (valores en `globals.css`, salen de `tokens.json` del Design System). El interruptor es `components/shell/theme-toggle.tsx` y recuerda la elección en `localStorage`. **Nunca un hex suelto en un componente**: siempre un token `lm-` (o `var(--color-lm-…)` en SVG), así el claro funciona solo. Para texto amarillo usar `text-lm-signal-text`, no `text-lm-signal` (en claro no da contraste)
+- **Tipografías:** Host Grotesk (UI), JetBrains Mono (números, fechas, datos, siempre tabulares). Sora/Inter quedan sólo para pantallas sin migrar
+- **El amarillo (`signal`) no es decorativo:** CTA primario (uno por vista), ítem/día activo, foco de teclado y el dato más importante de la vista. Si dos cosas amarillas compiten, una sobra
+- **Capa líquida (decisión del dueño, 2026-11-07, levanta la prohibición anterior de degradados y glassmorphism):** se permite, y sólo con estas clases de `globals.css`: `.lm-ambient` (manchas de luz que flotan detrás de la app), `.lm-glass` / `.lm-glass-soft` / `.lm-glass-pop` (vidrio: sidebar, tarjetas, diálogos, ⌘K) y `.lm-btn-liquid` (degradado amarillo del botón primario, y de la barra de progreso). Todo sale de tokens `lm-`, así que sigue los dos temas. No inventar degradados sueltos con hex en un componente
+- **Sigue prohibido:** glow/neón (`box-shadow` de color), fondos amarillos grandes, sombras (salvo `lm-shadow-pop` en flotantes y el brillo interno de 1px del vidrio). Radios 2–8px, nada de píldoras salvo puntos de estado
+- **Gráficos:** serie principal en `signal` o `smoke-5`, comparaciones en grises del humo; la serie secundaria se distingue por **textura** (`.lm-hatch`, rayado diagonal) y no por color nuevo. Para proporciones, `Waffle` (gráfico de unidades) antes que donut. Cargar la skill `dataviz` igual
+- **Movimiento:** 120–200ms `ease-out`, sin rebote, y siempre con `prefers-reduced-motion` respetado. Carga = esqueleto con la forma real de la pantalla + `lm-smoke`; entrada de bloques con `.lm-rise` (`--i` escalona)
 
 **El criterio editorial de la marca personal es otro documento y otra marca**: [SmokIA_Sistema_de_Contenido.md](SmokIA_Sistema_de_Contenido.md). Es el **system prompt literal** del agente de la Fase 3 ([Plans/03 §3.10](Plans/03-gestor-de-marca-personal.md)), no un documento sobre el prompt — todo lo que se escriba ahí se le manda al modelo en cada mensaje. El manual de arriba es identidad visual de la agencia; no sirve para deducir una voz de escritura.
 

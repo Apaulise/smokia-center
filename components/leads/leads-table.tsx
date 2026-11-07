@@ -271,7 +271,7 @@ export function LeadsTable({
                 checked={allSelected}
                 onChange={toggleAll}
                 aria-label="Seleccionar todos"
-                className="size-3.5 rounded-xs border-lm-line-strong accent-[#f2c14e]"
+                className="size-3.5 rounded-xs border-lm-line-strong accent-lm-signal"
               />
             </Th>
             <Th>
@@ -327,7 +327,7 @@ function LeadRowView({
           checked={selected}
           onChange={onToggle}
           aria-label={`Seleccionar ${lead.name}`}
-          className="size-3.5 rounded-xs border-lm-line-strong accent-[#f2c14e]"
+          className="size-3.5 rounded-xs border-lm-line-strong accent-lm-signal"
         />
       </Td>
       <Td>

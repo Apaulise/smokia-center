@@ -68,7 +68,7 @@ function OutlierCard({
   return (
     <article
       className={cn(
-        "flex flex-col overflow-hidden rounded-lm-lg border border-lm-line bg-lm-surface/50",
+        "flex flex-col lm-tint overflow-hidden rounded-lm-lg border border-lm-line",
         outlier.dismissed && "opacity-50",
       )}
     >
@@ -253,11 +253,11 @@ export function OutlierBoard({
         </div>
         <div className="flex flex-wrap items-center gap-5 text-xs text-lm-ink-2">
           <label className="flex cursor-pointer items-center gap-2">
-            <input type="checkbox" checked={includeOld} onChange={(e) => setIncludeOld(e.target.checked)} className="size-3.5 accent-[#f2c14e]" />
+            <input type="checkbox" checked={includeOld} onChange={(e) => setIncludeOld(e.target.checked)} className="size-3.5 accent-lm-signal" />
             Incluir anteriores a {OUTLIER_MAX_AGE_DAYS} días
           </label>
           <label className="flex cursor-pointer items-center gap-2">
-            <input type="checkbox" checked={showDismissed} onChange={(e) => setShowDismissed(e.target.checked)} className="size-3.5 accent-[#f2c14e]" />
+            <input type="checkbox" checked={showDismissed} onChange={(e) => setShowDismissed(e.target.checked)} className="size-3.5 accent-lm-signal" />
             Ver descartadas ({dismissedCount})
           </label>
         </div>

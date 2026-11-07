@@ -45,12 +45,12 @@ export function Dialog({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-[rgb(19_19_21/0.66)]" onClick={onClose} aria-hidden />
+      <div className="absolute inset-0 bg-lm-scrim backdrop-blur-[3px]" onClick={onClose} aria-hidden />
       <div
         role="dialog"
         aria-modal="true"
         className={cn(
-          "lm-shadow-pop relative flex max-h-[90vh] w-full max-w-lg flex-col rounded-lm-lg border border-lm-line bg-lm-raised font-lm-sans",
+          "lm-shadow-pop relative flex max-h-[90vh] w-full max-w-lg flex-col rounded-lm-lg border border-lm-line-strong lm-glass-pop font-lm-sans",
           className,
         )}
       >

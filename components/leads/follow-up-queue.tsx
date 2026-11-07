@@ -139,7 +139,7 @@ export function FollowUpQueue({ leads }: { leads: FollowUpQueueLead[] }) {
 
       <section className="flex flex-col gap-3">
         <h2 className="flex items-center gap-2 font-lm-sans text-sm font-semibold text-lm-ink">
-          <MessageSquareReply className="size-4 text-lm-signal" strokeWidth={1.5} />
+          <MessageSquareReply className="size-4 text-lm-signal-text" strokeWidth={1.5} />
           Para atender
           <span className="font-mono text-xs font-normal text-lm-ink-3">({due.length})</span>
         </h2>

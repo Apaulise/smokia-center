@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
  */
 export function Composer({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("rounded-lm-lg border border-lm-line-strong bg-lm-surface", className)}>{children}</div>
+    <div className={cn("lm-glass-soft rounded-lm-lg border", className)}>{children}</div>
   );
 }
 

@@ -37,7 +37,7 @@ export function LeadsFilters({
   }
 
   return (
-    <div className="flex flex-wrap items-end gap-3 rounded-lm-lg border border-lm-line bg-lm-surface p-4">
+    <div className="flex flex-wrap items-end gap-3 lm-glass-soft rounded-lm-lg border p-4">
       <div className="min-w-[200px] flex-1">
         <label className="mb-1.5 block text-xs text-lm-ink-2" htmlFor="q">
           Buscar

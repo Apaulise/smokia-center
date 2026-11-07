@@ -47,6 +47,6 @@ export function Section({
 /** Contenedor con borde para lo que sí es independiente y movible. */
 export function Panel({ className, children }: { className?: string; children: ReactNode }) {
   return (
-    <div className={cn("rounded-lm-lg border border-lm-line-strong bg-lm-surface", className)}>{children}</div>
+    <div className={cn("lm-glass-soft rounded-lm-lg border", className)}>{children}</div>
   );
 }

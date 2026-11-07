@@ -14,8 +14,8 @@ const INNER_HEIGHT = HEIGHT - PADDING.top - PADDING.bottom;
 // en `smoke-5` — nunca dos hues saturados compitiendo (README del sistema).
 // La combinación queda desaturada a propósito; se valida con la skill dataviz
 // (chroma floor) y se compensa con leyenda + etiqueta directa en cada línea.
-const CONTACTED_COLOR = "#b9bbbe";
-const WON_COLOR = "#f2c14e";
+const CONTACTED_COLOR = "var(--color-lm-smoke-5)";
+const WON_COLOR = "var(--color-lm-signal)";
 
 /** Redondea hacia arriba al siguiente 1/2/5 × 10ⁿ, para que el gridline superior sea un número limpio. */
 function niceCeil(value: number) {

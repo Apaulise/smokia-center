@@ -1,4 +1,5 @@
 import { Eyebrow, Meter } from "@/components/brand/ui/card";
+import { Waffle, type WaffleSegment } from "@/components/brand/ui/waffle";
 import type { Database } from "@/lib/supabase/database.types";
 
 type AudienceRow = Database["public"]["Functions"]["brand_audience_summary"]["Returns"][number];
@@ -11,6 +12,13 @@ const SECTIONS: { dimension: AudienceRow["dimension"]; label: string }[] = [
 ];
 
 const VISIBLE_ROWS = 5;
+
+/** Mujeres y hombres en grises sólidos; "sin especificar" rayado, porque es la serie secundaria. */
+const GENDER_STYLE: Record<string, Pick<WaffleSegment, "color" | "hatch">> = {
+  F: { color: "var(--color-lm-smoke-5)" },
+  M: { color: "var(--color-lm-smoke-3)" },
+  U: { color: "var(--color-lm-smoke-4)", hatch: true },
+};
 
 const GENDER_LABELS: Record<string, string> = { F: "Mujeres", M: "Hombres", U: "Sin especificar" };
 const countryNames = new Intl.DisplayNames(["es"], { type: "region" });
@@ -49,6 +57,15 @@ export function AudienceBars({ rows }: { rows: AudienceRow[] }) {
             <Eyebrow>{label}</Eyebrow>
             {section.length === 0 ? (
               <p className="text-[12.5px] text-lm-ink-2">Sin datos.</p>
+            ) : dimension === "GENERO" ? (
+              <Waffle
+                segments={section.map((row) => ({
+                  key: row.value,
+                  label: displayValue(dimension, row.value),
+                  value: row.size,
+                  ...(GENDER_STYLE[row.value] ?? { color: "var(--color-lm-smoke-2)" }),
+                }))}
+              />
             ) : (
               <ol className="flex flex-col gap-3">
                 {section.map((row) => (

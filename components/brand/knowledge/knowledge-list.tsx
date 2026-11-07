@@ -76,7 +76,7 @@ function KnowledgeEntry({
     <article
       className={cn(
         "rounded-lm-lg border border-lm-line transition-colors duration-150 hover:border-lm-line-strong",
-        open ? "bg-lm-raised/60" : "bg-lm-surface/50",
+        open ? "bg-lm-raised/60" : "lm-tint",
       )}
     >
       {/* La cabecera de la card abre y cierra la nota; el cuerpo abierto queda afuera para que sus links y botones no sean hijos de un botón. */}

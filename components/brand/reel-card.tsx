@@ -71,7 +71,7 @@ export function ReelCard({
   return (
     <Link
       href={`/marca/contenido/${post.post_id}`}
-      className="flex flex-col overflow-hidden rounded-lm-lg border border-lm-line bg-lm-surface/50 transition-colors duration-150 hover:border-lm-line-strong"
+      className="flex flex-col lm-tint overflow-hidden rounded-lm-lg border border-lm-line transition-colors duration-150 hover:border-lm-line-strong"
     >
       <div className="relative">
         <PostThumb url={post.thumbnail_url} bare className={cn("w-full", library ? "aspect-4/5" : "aspect-3/4")} />

@@ -181,7 +181,7 @@ export default async function LeadFichaPage({ params, searchParams }: PageProps<
                   label="Rating"
                   value={
                     <span className="flex items-center gap-1">
-                      <Star className="size-3.5 text-lm-signal" strokeWidth={1.5} />
+                      <Star className="size-3.5 text-lm-signal-text" strokeWidth={1.5} />
                       {lead.rating} {lead.reviews_count ? `(${lead.reviews_count})` : ""}
                     </span>
                   }

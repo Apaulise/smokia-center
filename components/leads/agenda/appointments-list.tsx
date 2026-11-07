@@ -36,7 +36,7 @@ export function AppointmentsList({
   }
 
   return (
-    <ul className="flex flex-col divide-y divide-lm-line rounded-lm-lg border border-lm-line-strong bg-lm-surface">
+    <ul className="flex flex-col divide-y divide-lm-line lm-glass-soft rounded-lm-lg border">
       {appointments.map((appt) => {
         const member = appointmentMember(appt.owner_id, members);
         const own = appt.owner_id === currentUserId;

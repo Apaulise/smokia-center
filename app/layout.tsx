@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Host_Grotesk, Inter, JetBrains_Mono, Sora } from "next/font/google";
 
+import { NavigationProgress } from "@/components/shell/navigation-progress";
+import { THEME_INIT_SCRIPT } from "@/components/shell/theme-toggle";
+
 import "./globals.css";
 
 // §4 del manual: Sora en titulares, Inter en cuerpo/UI, JetBrains Mono en datos.
@@ -39,11 +42,19 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
+    // suppressHydrationWarning: el script de tema cambia `data-theme` antes de hidratar.
     <html
       lang="es"
+      suppressHydrationWarning
       className={`${sora.variable} ${inter.variable} ${jetbrainsMono.variable} ${hostGrotesk.variable} h-full`}
     >
-      <body className="min-h-full">{children}</body>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body className="min-h-full">
+        <NavigationProgress />
+        {children}
+      </body>
     </html>
   );
 }

@@ -13,7 +13,7 @@ export default async function OperacionesLayout({ children }: { children: ReactN
   const canSubscribe = Boolean(user && process.env.NEXT_PUBLIC_SUPABASE_URL);
 
   return (
-    <div className="min-h-dvh bg-lm-bg font-lm-sans text-lm-ink">
+    <div className="min-h-dvh font-lm-sans text-lm-ink">
       {canSubscribe && user ? <OpsLiveRefresh ownerId={user.id} /> : null}
       {children}
     </div>

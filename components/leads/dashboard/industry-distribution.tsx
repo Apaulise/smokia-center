@@ -1,7 +1,7 @@
 import type { IndustryDistribution } from "@/lib/leads/queries";
 
 const VISIBLE_ROWS = 6;
-const UNASSIGNED_COLOR = "#3A3B3E"; // chart/neutral-1 del handoff: "Sin rubro" siempre en este gris, nunca en un color de rubro real.
+const UNASSIGNED_COLOR = "var(--color-lm-smoke-2)"; // chart/neutral-1 del handoff: "Sin rubro" siempre en este gris, nunca en un color de rubro real.
 
 /**
  * Distribución de leads por rubro: una sola barra apilada (8px) + leyenda con
@@ -24,7 +24,7 @@ export function IndustryDistributionChart({ industries }: { industries: Industry
 
   const segments = [
     ...visible.map((i) => ({ key: i.industry_id as string, color: i.color, count: i.lead_count })),
-    ...(rest.length > 0 ? [{ key: "otros", color: "#8A8C8F", count: restCount }] : []),
+    ...(rest.length > 0 ? [{ key: "otros", color: "var(--color-lm-smoke-4)", count: restCount }] : []),
     ...(unassigned ? [{ key: "sin-rubro", color: UNASSIGNED_COLOR, count: unassigned.lead_count }] : []),
   ];
 
@@ -54,7 +54,7 @@ export function IndustryDistributionChart({ industries }: { industries: Industry
         {rest.length > 0 ? (
           <li className="flex items-center justify-between gap-3 text-lm-ink-2">
             <span className="flex items-center gap-2">
-              <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: "#8A8C8F" }} />
+              <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: "var(--color-lm-smoke-4)" }} />
               Otros rubros ({rest.length})
             </span>
             <span className="font-mono text-xs text-lm-ink-3">{((restCount / total) * 100).toFixed(0)} %</span>

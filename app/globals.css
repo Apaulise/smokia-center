@@ -1,31 +1,30 @@
 @import "tailwindcss";
 
 /*
- * Tokens de SmokIA_Manual_de_Marca.md §3.
- * App dark-only: el manual es dark-first y no define paleta clara, así que no
- * se inventa una. No agregar colores acá sin que estén en el manual.
+ * Tokens de la app. El sistema vigente es "Señal y humo" (prefijo `lm-`, ver
+ * más abajo): tema oscuro por default y tema claro con `data-theme="light"` en
+ * <html> (components/shell/theme-toggle.tsx). Los tokens de abajo (base, ink,
+ * cyan…) son del manual viejo: se conservan sólo como alias de `lm-` para las
+ * pantallas que todavía los usan, así cambian de tema y de acento con el resto.
  */
 @theme {
-  /* Fondos — 70% de la pieza */
-  --color-base: #070b17;
-  --color-elevated: #0c1730;
-  --color-surface: #12213e;
-  --color-line: #2b416d;
+  /* Alias de "Señal y humo": nada de cian ni violeta, y siguen el tema claro/oscuro. */
+  --color-base: var(--color-lm-bg);
+  --color-elevated: var(--color-lm-surface);
+  --color-surface: var(--color-lm-raised);
+  --color-line: var(--color-lm-line-strong);
 
-  /* Texto — 20% */
-  --color-ink: #f4f7ff;
-  --color-muted: #aab8d4;
+  --color-ink: var(--color-lm-ink);
+  --color-muted: var(--color-lm-ink-2);
 
-  /* Acentos — 10%. cyan = acción/resultado · violeta = proceso/innovación */
-  --color-cyan: #18d6e8;
-  --color-cyan-soft: #72f4f1;
-  --color-violet: #7c3aed;
-  --color-purple: #4c1d95;
+  --color-cyan: var(--color-lm-signal-text);
+  --color-cyan-soft: var(--color-lm-signal-hover);
+  --color-violet: var(--color-lm-info);
+  --color-purple: var(--color-lm-smoke-2);
 
-  /* Estados: derivados de la paleta, no colores nuevos */
-  --color-positive: #18d6e8;
-  --color-warning: #f2b53c;
-  --color-danger: #f2557a;
+  --color-positive: var(--color-lm-success);
+  --color-warning: var(--color-lm-signal-text);
+  --color-danger: var(--color-lm-danger);
 
   --font-display: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
@@ -40,9 +39,10 @@
    * "SmokIA — Señal y Humo", 2026-09-26). Namespace `lm-` a propósito:
    * el Gestor de Marca Personal sigue con los tokens de arriba mientras no se
    * rediseñe (CLAUDE.md §2, un gestor por vez); nombres nuevos evitan pisar
-   * --color-surface/--color-line/--color-ink existentes. Sólo tema oscuro:
-   * la app sigue siendo dark-only, el claro del sistema queda sin usar por
-   * ahora.
+   * --color-surface/--color-line/--color-ink existentes. Valores de oscuro
+   * acá; los de claro están en `:root[data-theme="light"]` (más abajo), sacados
+   * de tokens.json del Design System. Nunca un hex suelto en un componente:
+   * siempre un token `lm-`, así el tema claro funciona solo.
    */
   --color-lm-bg: #131315;
   --color-lm-surface: #1b1b1e;
@@ -61,6 +61,8 @@
   --color-lm-signal-text: #f2c14e;
   --color-lm-on-signal: #151515;
   --color-lm-focus-ring: #f2c14e;
+  /* Velo detrás de modales y ⌘K */
+  --color-lm-scrim: #131315a8;
 
   --color-lm-success: #8fb39a;
   --color-lm-success-soft: #8fb39a1f;
@@ -83,28 +85,53 @@
   --radius-lm-lg: 8px;
 }
 
+/* Tema claro de "Señal y humo" (tokens.json del Design System). Especificidad
+   mayor que `:root`, donde Tailwind emite los tokens: gana sin importar el orden. */
+:root[data-theme="light"] {
+  --color-lm-bg: #f5f4f1;
+  --color-lm-surface: #ffffff;
+  --color-lm-raised: #ecebe7;
+  --color-lm-overlay: #e3e2dd;
+  --color-lm-line: #1414161a;
+  --color-lm-line-strong: #1414163d;
+
+  --color-lm-ink: #17171a;
+  --color-lm-ink-2: #55544f;
+  --color-lm-ink-3: #6b6964;
+
+  --color-lm-signal: #e9b63c;
+  --color-lm-signal-hover: #dca82c;
+  --color-lm-signal-soft: #e9b63c2e;
+  --color-lm-signal-text: #7d5c06;
+  --color-lm-on-signal: #17171a;
+  --color-lm-focus-ring: #7d5c06;
+  --color-lm-scrim: #17171a66;
+
+  --color-lm-success: #3f6e4e;
+  --color-lm-success-soft: #3f6e4e1a;
+  --color-lm-danger: #a84a36;
+  --color-lm-danger-soft: #a84a361a;
+  --color-lm-info: #4a5d73;
+
+  --color-lm-smoke-1: #dddcd8;
+  --color-lm-smoke-2: #c4c3bf;
+  --color-lm-smoke-3: #a2a19d;
+  --color-lm-smoke-4: #7f7e7a;
+  --color-lm-smoke-5: #5c5b57;
+}
+
 @layer base {
   html {
     color-scheme: dark;
   }
+  html[data-theme="light"] {
+    color-scheme: light;
+  }
 
   body {
-    /* §3 gradiente ambiental: dos radiales muy tenues sobre la base */
-    background:
-      radial-gradient(
-        circle at 78% 12%,
-        rgb(24 214 232 / 0.1),
-        transparent 40%
-      ),
-      radial-gradient(
-        circle at 12% 88%,
-        rgb(124 58 237 / 0.12),
-        transparent 42%
-      ),
-      var(--color-base);
-    background-attachment: fixed;
-    color: var(--color-ink);
-    font-family: var(--font-sans);
+    background: var(--color-lm-bg);
+    color: var(--color-lm-ink);
+    font-family: var(--font-lm-sans);
     -webkit-font-smoothing: antialiased;
   }
 
@@ -119,7 +146,7 @@
   }
 
   ::selection {
-    background: rgb(24 214 232 / 0.3);
+    background: var(--color-lm-signal-soft);
   }
 
   /* El popup nativo de <select> lo pinta el navegador/SO, fuera del CSS normal. */
@@ -130,44 +157,6 @@
 }
 
 @layer utilities {
-  /* §3 gradiente principal: CTAs, highlights y trazos luminosos */
-  .bg-brand-gradient {
-    background-image: linear-gradient(
-      135deg,
-      #18d6e8 0%,
-      #4c7dff 45%,
-      #7c3aed 100%
-    );
-  }
-
-  .text-brand-gradient {
-    background-image: linear-gradient(
-      135deg,
-      #18d6e8 0%,
-      #4c7dff 45%,
-      #7c3aed 100%
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-
-  /*
-   * §5: glow al 10–30% de opacidad, reservado para el foco principal.
-   * Un solo elemento con glow por pantalla.
-   */
-  .glow-cyan {
-    box-shadow:
-      0 0 22px rgb(24 214 232 / 0.28),
-      0 0 58px rgb(24 214 232 / 0.12);
-  }
-
-  .glow-violet {
-    box-shadow:
-      0 0 22px rgb(124 58 237 / 0.28),
-      0 0 58px rgb(124 58 237 / 0.12);
-  }
-
   /* Números y métricas: tabulares para que no bailen al actualizarse */
   .tabular {
     font-family: var(--font-mono);
@@ -180,6 +169,11 @@
   .lm-shadow-pop {
     box-shadow:
       0 12px 32px rgb(0 0 0 / 0.5),
+      0 0 0 1px var(--color-lm-line);
+  }
+  :root[data-theme="light"] .lm-shadow-pop {
+    box-shadow:
+      0 12px 32px rgb(20 20 22 / 0.16),
       0 0 0 1px var(--color-lm-line);
   }
 
@@ -221,8 +215,39 @@
     );
   }
 
+  /*
+   * Rayado diagonal para la serie secundaria de un gráfico: se distingue por
+   * textura y no sólo por tono (a11y), y no suma color. `--hatch` lo cambia.
+   */
+  .lm-hatch {
+    background-image: repeating-linear-gradient(
+      135deg,
+      var(--hatch, var(--color-lm-smoke-4)) 0 1.5px,
+      transparent 1.5px 5px
+    );
+  }
+
+  /* Entrada de bloques: 200ms ease-out con escalón de 45ms (`--i`). Sin rebote. */
+  @keyframes lm-rise {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 6px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+  .lm-rise {
+    animation: lm-rise 200ms cubic-bezier(0, 0, 0.2, 1) both;
+    animation-delay: calc(var(--i, 0) * 45ms);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .lm-smoke {
+      animation: none;
+    }
+    .lm-rise {
       animation: none;
     }
   }
@@ -267,6 +292,11 @@
   }
   .hub-preview:hover::after {
     opacity: 1;
+  }
+  :root[data-theme="light"] .hub-preview::after {
+    box-shadow:
+      inset 0 0 0 1px rgb(125 92 6 / 0.55),
+      0 18px 44px -20px rgb(20 20 22 / 0.35);
   }
   @media (prefers-reduced-motion: reduce) {
     .hub-preview,
@@ -316,6 +346,18 @@
       radial-gradient(ellipse 70% 48% at 50% -8%, rgb(242 193 78 / 0.2), transparent 70%),
       radial-gradient(ellipse 120% 90% at 50% 40%, transparent 55%, rgb(19 19 21 / 0.75) 100%);
   }
+  /* Claro: mismo humo, sobre papel cálido y sin viñeta oscura. */
+  :root[data-theme="light"] .hub-backdrop::before {
+    background:
+      radial-gradient(ellipse 46% 38% at 18% 28%, rgb(233 182 60 / 0.22), transparent 70%),
+      radial-gradient(ellipse 42% 34% at 82% 18%, rgb(127 126 122 / 0.16), transparent 70%),
+      radial-gradient(ellipse 58% 40% at 62% 92%, rgb(233 182 60 / 0.18), transparent 70%);
+  }
+  :root[data-theme="light"] .hub-backdrop::after {
+    background:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+      radial-gradient(ellipse 70% 48% at 50% -8%, rgb(233 182 60 / 0.16), transparent 70%);
+  }
   @keyframes hub-smoke {
     from {
       transform: translate3d(-3%, 2%, 0) scale(1.04);
@@ -329,4 +371,228 @@
       animation: none;
     }
   }
+}
+
+/*
+ * Navegación fluida (fuera de @layer: los pseudo-elementos de view transition
+ * son globales). Tiempos asimétricos: lo viejo se va rápido (110ms), lo nuevo
+ * llega con calma (200ms, 70ms de espera). Sin rebote ni escala.
+ */
+::view-transition {
+  /* Que un clic durante la transición llegue a la página viva. */
+  pointer-events: none;
+}
+::view-transition-old(.lm-page-out) {
+  animation: 110ms cubic-bezier(0.4, 0, 1, 1) both lm-page-out;
+}
+::view-transition-new(.lm-page-in) {
+  animation: 200ms cubic-bezier(0, 0, 0.2, 1) 70ms both lm-page-in;
+}
+@keyframes lm-page-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes lm-page-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+}
+
+/* Barra de progreso de navegación (components/shell/navigation-progress.tsx). */
+.lm-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 70;
+  height: 2px;
+  background: var(--color-lm-signal);
+  transform-origin: left center;
+  transform: scaleX(0);
+  opacity: 0;
+  pointer-events: none;
+}
+.lm-progress[data-state="loading"] {
+  opacity: 1;
+  animation: lm-progress 8s cubic-bezier(0.1, 0.6, 0.2, 1) both;
+}
+.lm-progress[data-state="done"] {
+  transform: scaleX(1);
+  opacity: 0;
+  transition:
+    transform 140ms ease-out,
+    opacity 240ms ease-out 140ms;
+}
+@keyframes lm-progress {
+  from {
+    transform: scaleX(0.04);
+  }
+  to {
+    transform: scaleX(0.92);
+  }
+}
+
+/* Respuesta táctil: el botón "se hunde" 1px al apretarlo. */
+@media (prefers-reduced-motion: no-preference) {
+  button:not(:disabled):active,
+  [role="button"]:not([aria-disabled="true"]):active {
+    transform: translateY(1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+  .lm-progress[data-state="loading"] {
+    animation: none;
+    transform: scaleX(0.6);
+  }
+  .lm-progress[data-state="done"] {
+    transition: none;
+  }
+}
+
+/*
+ * Capa "líquida" (2026-11-07, decisión del dueño: se levanta la prohibición de
+ * degradados y glass de CLAUDE.md §6 para estos usos y sólo estos).
+ *  - .lm-ambient: manchas de luz que flotan despacio detrás de todo. Es lo que
+ *    el vidrio desenfoca; sin fondo con color, el glass no se nota.
+ *  - .lm-glass / .lm-glass-soft: paneles de vidrio (blur + saturación + brillo
+ *    en el borde superior). Todo sale de tokens `lm-`, así que sigue los dos temas.
+ *  - .lm-btn-liquid: degradado amarillo que "corre" al pasar el mouse.
+ */
+:root {
+  --lm-ambient-a: rgb(242 193 78 / 0.13);
+  --lm-ambient-b: rgb(138 141 146 / 0.14);
+  --lm-glass-fill: 58%;
+  --lm-glass-shine: rgb(255 255 255 / 0.07);
+  --lm-glass-edge: rgb(255 255 255 / 0.08);
+  --lm-signal-light: #f8dd9a;
+}
+:root[data-theme="light"] {
+  --lm-ambient-a: rgb(233 182 60 / 0.26);
+  --lm-ambient-b: rgb(127 126 122 / 0.16);
+  --lm-glass-fill: 66%;
+  --lm-glass-shine: rgb(255 255 255 / 0.55);
+  --lm-glass-edge: rgb(255 255 255 / 0.7);
+  --lm-signal-light: #f6d78a;
+}
+
+.lm-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.lm-ambient::before,
+.lm-ambient::after {
+  content: "";
+  position: absolute;
+  width: 70vmax;
+  height: 70vmax;
+  border-radius: 50%;
+  will-change: transform;
+}
+.lm-ambient::before {
+  top: -32vmax;
+  left: -18vmax;
+  background: radial-gradient(circle at center, var(--lm-ambient-a), transparent 65%);
+  animation: lm-drift-a 34s ease-in-out infinite alternate;
+}
+.lm-ambient::after {
+  right: -26vmax;
+  bottom: -34vmax;
+  background: radial-gradient(circle at center, var(--lm-ambient-b), transparent 65%);
+  animation: lm-drift-b 42s ease-in-out infinite alternate;
+}
+@keyframes lm-drift-a {
+  to {
+    transform: translate3d(14vmax, 10vmax, 0) scale(1.12);
+  }
+}
+@keyframes lm-drift-b {
+  to {
+    transform: translate3d(-12vmax, -8vmax, 0) scale(1.1);
+  }
+}
+
+.lm-glass,
+.lm-glass-soft {
+  background-color: color-mix(in srgb, var(--color-lm-surface) var(--lm-glass-fill), transparent);
+  background-image: linear-gradient(180deg, var(--lm-glass-shine), transparent 42%);
+  border-color: var(--color-lm-line-strong);
+  box-shadow: inset 0 1px 0 var(--lm-glass-edge);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  backdrop-filter: blur(22px) saturate(1.6);
+}
+.lm-glass-soft {
+  background-color: color-mix(in srgb, var(--color-lm-surface) 42%, transparent);
+  border-color: var(--color-lm-line);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.4);
+}
+/* Paneles flotantes (diálogo, ⌘K): más opacos para que el texto siempre se lea. */
+.lm-glass-pop {
+  background-color: color-mix(in srgb, var(--color-lm-raised) 78%, transparent);
+  -webkit-backdrop-filter: blur(26px) saturate(1.7);
+  backdrop-filter: blur(26px) saturate(1.7);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .lm-glass,
+  .lm-glass-soft,
+  .lm-glass-pop {
+    background-color: var(--color-lm-surface);
+  }
+}
+
+.lm-btn-liquid {
+  background-image: linear-gradient(
+    115deg,
+    var(--color-lm-signal-hover) 0%,
+    var(--color-lm-signal) 38%,
+    var(--lm-signal-light) 62%,
+    var(--color-lm-signal) 82%,
+    var(--color-lm-signal-hover) 100%
+  );
+  background-size: 240% 100%;
+  background-position: 0% 0;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.4);
+  transition: background-position 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.lm-btn-liquid:hover {
+  background-position: 100% 0;
+}
+
+/* Barra de progreso e indicador de pestaña: mismo degradado, sin cambiar de color. */
+.lm-progress {
+  background-image: linear-gradient(90deg, var(--color-lm-signal-hover), var(--lm-signal-light));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lm-ambient::before,
+  .lm-ambient::after {
+    animation: none;
+  }
+  .lm-btn-liquid {
+    transition: none;
+  }
+}
+
+/*
+ * Vidrio sin desenfoque, para ítems que se repiten muchas veces (reels,
+ * tarjetas de lista, columnas): mismo relleno translúcido y brillo de borde que
+ * .lm-glass-soft, pero sin backdrop-filter, que es lo caro cuando hay decenas.
+ */
+.lm-tint {
+  background-color: color-mix(in srgb, var(--color-lm-surface) 52%, transparent);
+  background-image: linear-gradient(180deg, var(--lm-glass-shine), transparent 42%);
+  box-shadow: inset 0 1px 0 var(--lm-glass-edge);
+}
+.lm-tint-hover:hover {
+  background-color: color-mix(in srgb, var(--color-lm-raised) 72%, transparent);
 }

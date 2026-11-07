@@ -242,7 +242,7 @@ export default async function CompetenciaPage() {
           />
         ) : (
           <>
-            <div className="rounded-lm-lg border border-lm-line bg-lm-surface px-4 py-3.5 text-[12.5px] leading-[1.6] text-lm-ink-2">
+            <div className="lm-glass-soft rounded-lm-lg border px-4 py-3.5 text-[12.5px] leading-[1.6] text-lm-ink-2">
               <span className="font-medium text-lm-ink">Sólo se ve lo público.</span> Likes, comentarios, views y caption sí; alcance, guardados,
               watch time y skip rate no: son privados del dueño de la cuenta. Un outlier es una publicación con {OUTLIER_THRESHOLD}× o más la
               mediana de su propia cuenta, y sólo se marca con al menos {MIN_BASELINE_SAMPLE} publicaciones del mismo tipo para comparar. Se

@@ -55,7 +55,7 @@ function KnowledgeEntry({ note, onEdit }: { note: KnowledgeRow; onEdit: () => vo
   }
 
   return (
-    <details className="group rounded-lm-lg border border-lm-line-strong bg-lm-surface">
+    <details className="group lm-tint rounded-lm-lg border border-lm-line-strong">
       <summary className="flex cursor-pointer list-none items-start justify-between gap-4 px-5 py-4 [&::-webkit-details-marker]:hidden">
         <div className="min-w-0 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">

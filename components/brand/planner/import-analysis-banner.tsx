@@ -38,7 +38,7 @@ export function ImportAnalysisBanner({ pending, failed }: { pending: number; fai
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lm-lg border border-lm-line bg-lm-raised px-4 py-3">
-      <Sparkles className="size-4 shrink-0 text-lm-signal" aria-hidden />
+      <Sparkles className="size-4 shrink-0 text-lm-signal-text" aria-hidden />
       <p className="min-w-0 flex-1 text-[13px] leading-[1.5] text-lm-ink-2">
         {pending > 0
           ? `${pending} ${pending === 1 ? "reel importado espera" : "reels importados esperan"} que se lea su contenido (transcripción, hook e idea).`

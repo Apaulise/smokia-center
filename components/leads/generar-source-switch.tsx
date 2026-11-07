@@ -87,7 +87,7 @@ function SourceCard({
       aria-pressed={selected}
       className={cn(
         "flex flex-col items-start gap-2 rounded-lm-lg border p-4 text-left transition-colors",
-        selected ? "border-[rgb(237_235_230_/_0.4)] bg-lm-raised" : "border-lm-line bg-lm-surface hover:border-lm-line-strong",
+        selected ? "border-lm-ink-3 bg-lm-raised" : "border-lm-line bg-lm-surface hover:border-lm-line-strong",
       )}
     >
       <span className="flex items-center gap-2 font-lm-sans text-[15px] font-semibold text-lm-ink">

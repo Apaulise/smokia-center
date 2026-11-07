@@ -13,8 +13,8 @@ type Size = "sm" | "md";
 
 const VARIANTS: Record<Variant, string> = {
   primary: cn(
-    "border-lm-signal bg-lm-signal text-lm-on-signal font-semibold",
-    "hover:border-lm-signal-hover hover:bg-lm-signal-hover",
+    "lm-btn-liquid border-lm-signal bg-lm-signal text-lm-on-signal font-semibold",
+    "hover:border-lm-signal-hover",
   ),
   secondary: cn(
     "border-lm-line-strong bg-lm-surface text-lm-ink",

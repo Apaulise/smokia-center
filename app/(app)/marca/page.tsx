@@ -1,11 +1,13 @@
 import { KeyRound } from "lucide-react";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 
 import { AudienceBars } from "@/components/brand/dashboard/audience-bars";
 import { BrandLineChart, ChartLegend, type LineChartSeries } from "@/components/brand/dashboard/line-chart";
 import { GoalCard } from "@/components/brand/goals/goal-card";
 import { NextStepsCard } from "@/components/brand/goals/next-steps-card";
 import { ReelCard } from "@/components/brand/reel-card";
+import { CountUp } from "@/components/brand/ui/count-up";
 import { BrandSyncProvider, SyncButton, SyncStatus } from "@/components/brand/sync-panel";
 import { Card, CardBody, CardHeader, Crumbs, KpiStrip } from "@/components/brand/ui/card";
 import { ButtonLink } from "@/components/leads/ui/button";
@@ -48,13 +50,9 @@ const LATEST_REELS = 6;
 
 const FOLLOWER_SERIES: LineChartSeries[] = [{ key: "followers_count", label: "Seguidores", color: "var(--color-lm-ink)" }];
 const REACH_SERIES: LineChartSeries[] = [
-  { key: "reach", label: "Alcance", color: "var(--color-lm-smoke-5)", area: true },
+  { key: "reach", label: "Alcance", color: "var(--color-lm-smoke-5)", area: true, hatch: true },
   { key: "total_interactions", label: "Interacciones", color: "var(--color-lm-smoke-4)", dashed: true },
 ];
-
-function formatCompact(value: number) {
-  return new Intl.NumberFormat("es-AR", { notation: "compact" }).format(value);
-}
 
 /** "2026-09-18" → "18/9" */
 function shortDay(iso: string) {
@@ -177,7 +175,7 @@ export default async function MarcaPage() {
           action={<SyncButton />}
         />
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="lm-rise grid grid-cols-1 gap-4 lg:grid-cols-2" style={{ "--i": 0 } as CSSProperties}>
           <GoalCard platform={PLATFORM} goal={goal} progress={goalProgress} currentFollowers={currentFollowers} />
           <NextStepsCard steps={nextSteps} />
         </div>
@@ -186,23 +184,23 @@ export default async function MarcaPage() {
           items={[
             {
               label: "Seguidores",
-              value: account.followers_count ?? "—",
+              value: account.followers_count !== null ? <CountUp value={account.followers_count} /> : "—",
               sub: followersSub,
               subTone: followersDelta !== null && followersDelta > 0 ? "up" : "muted",
               accent: true,
             },
-            { label: `Alcance (${WINDOW_DAYS}d)`, value: formatCompact(reachTotal), sub: "cuentas únicas" },
-            { label: "Views (contenido)", value: formatCompact(viewsTotal), sub: `${posts.length} piezas` },
+            { label: `Alcance (${WINDOW_DAYS}d)`, value: <CountUp value={reachTotal} format="compact" />, sub: "cuentas únicas" },
+            { label: "Views (contenido)", value: <CountUp value={viewsTotal} format="compact" />, sub: `${posts.length} piezas` },
             {
               label: `Interacciones (${WINDOW_DAYS}d)`,
-              value: formatCompact(interactionsTotal),
+              value: <CountUp value={interactionsTotal} format="compact" />,
               sub: "likes, guardados y comentarios",
             },
-            { label: "Seguidos", value: account.follows_count ?? "—" },
+            { label: "Seguidos", value: account.follows_count !== null ? <CountUp value={account.follows_count} /> : "—" },
           ]}
         />
 
-        <section className="flex flex-col gap-3.5">
+        <section className="lm-rise flex flex-col gap-3.5" style={{ "--i": 6 } as CSSProperties}>
           <div className="flex items-baseline gap-3">
             <h3 className="flex-1 font-lm-sans text-[15px] font-medium">Últimos reels</h3>
             <Link href="/marca/contenido" className="text-xs text-lm-ink-2 transition-colors hover:text-lm-signal-text">
@@ -220,7 +218,7 @@ export default async function MarcaPage() {
           )}
         </section>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="lm-rise grid grid-cols-1 gap-4 lg:grid-cols-2" style={{ "--i": 8 } as CSSProperties}>
           <Card>
             <CardHeader
               title="Curva de seguidores"
@@ -242,7 +240,7 @@ export default async function MarcaPage() {
           </Card>
         </div>
 
-        <Card>
+        <Card className="lm-rise" style={{ "--i": 10 } as CSSProperties}>
           <CardHeader title="Audiencia" description="Edad, género y top de ciudades." />
           <CardBody className="p-5">
             <AudienceBars rows={audience} />

@@ -60,7 +60,7 @@ export function HubCard({
     </>
   );
 
-  const base = "flex flex-col rounded-lm-lg border border-lm-line bg-lm-surface p-5";
+  const base = "lm-glass-soft flex flex-col rounded-lm-lg border p-5";
 
   if (disabledNote) {
     return (
