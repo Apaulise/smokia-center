@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { decrypt } from "@/lib/crypto";
-import { GEMINI_KEY_SETTING, GROQ_KEY_SETTING } from "@/lib/settings/constants";
+import { GEMINI_KEY_SETTING, HUAWEI_MAAS_KEY_SETTING } from "@/lib/settings/constants";
 import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -58,10 +58,10 @@ export async function getGeminiApiKeyForOwner(db: SupabaseClient<Database>, owne
 }
 
 /**
- * La key de Groq (Plans/migracion-fuera-de-anthropic.md, Etapa 1): las
+ * La key de Huawei Cloud MaaS: las
  * recomendaciones de contenido (§3.5) — lo que decide qué repetir, cortar o
  * probar.
  */
-export async function getGroqApiKey(): Promise<ApiKeyResult> {
-  return getDecryptedKey(GROQ_KEY_SETTING, "Groq");
+export async function getHuaweiMaasApiKey(): Promise<ApiKeyResult> {
+  return getDecryptedKey(HUAWEI_MAAS_KEY_SETTING, "Huawei Cloud MaaS");
 }

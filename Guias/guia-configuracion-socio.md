@@ -4,10 +4,10 @@ Todo se hace en **Configuración** (menú lateral). Cada clave se pega, se guard
 
 ## 1. Motores de IA (hacelo primero, sin esto fallan varias funciones)
 
-**Groq** (aperturas, análisis del copiloto, recomendaciones de contenido)
-1. Entrá a https://console.groq.com/keys con tu cuenta de Google.
-2. Tocá **Create API Key** y copiala (empieza con `gsk_`).
-3. En Configuración → **Groq**, pegala y guardala.
+**Huawei Cloud MaaS** (aperturas, análisis, respuestas y recomendaciones de contenido)
+1. En Huawei Cloud International, elegí CN-Hong Kong y suscribite al servicio preconfigurado **DeepSeek-V4.1-Flash-1017** en ModelArts Studio (MaaS).
+2. Creá una API key regional de MaaS.
+3. En Configuración → **Huawei Cloud MaaS**, pegala, guardala y probá la conexión.
 
 **Google AI Studio / Gemini** (enriquecer leads, guiones, reescrituras)
 1. Entrá a https://aistudio.google.com/apikey.
@@ -55,4 +55,4 @@ Pasos:
 
 **Si algo falla:**
 - *"Esta cuenta no tiene acceso"*: tu mail no está en la lista de permitidos. Avisá.
-- Error 429 de Gemini o Groq: llegaste al límite del plan gratis. Esperá un rato o avisá.
+- Error 429 de Gemini o Huawei Cloud MaaS: se alcanzó el límite o no hay cuota/saldo disponible. Revisá la consola del proveedor.

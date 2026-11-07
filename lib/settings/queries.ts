@@ -7,7 +7,7 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import {
   APIFY_KEY_SETTING,
   GEMINI_KEY_SETTING,
-  GROQ_KEY_SETTING,
+  HUAWEI_MAAS_KEY_SETTING,
   SALES_PROFILE_SETTING,
 } from "./constants";
 
@@ -72,8 +72,8 @@ export async function getGeminiKeyStatus() {
   return getKeyStatus(GEMINI_KEY_SETTING);
 }
 
-export async function getGroqKeyStatus() {
-  return getKeyStatus(GROQ_KEY_SETTING);
+export async function getHuaweiMaasKeyStatus() {
+  return getKeyStatus(HUAWEI_MAAS_KEY_SETTING);
 }
 
 /**

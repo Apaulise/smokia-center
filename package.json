@@ -10,6 +10,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test:gemini": "node --experimental-strip-types --test tests/gemini-url-json.test.mjs",
+    "test:maas": "node --experimental-strip-types --test tests/huawei-maas-client.test.mjs",
     "test:leads": "node --experimental-strip-types --import ./tests/alias-register.mjs --test tests/lead-details.test.mjs tests/message-analysis.test.mjs tests/message-limits.test.mjs",
     "test:automation": "node --experimental-strip-types --import ./tests/alias-register.mjs --test tests/automation-lead-planning.test.mjs tests/automation-leads-read.test.mjs tests/automation-create-lead.test.mjs tests/automation-admin.test.mjs tests/automation-outreach.test.mjs tests/automation-instagram-intake.test.mjs",
     "test:weekly": "node --experimental-strip-types --import ./tests/alias-register.mjs --test tests/weekly-reports.test.mjs",

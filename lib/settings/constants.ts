@@ -11,12 +11,10 @@ export const APIFY_KEY_SETTING = "apify_api_key";
 export const GEMINI_KEY_SETTING = "gemini_api_key";
 
 /**
- * Clave en `settings` para la API key de Groq (Plans/migracion-fuera-de-anthropic.md,
- * Etapa 1). Es el modelo gratuito de mayor criterio del reparto: reemplaza a
- * Claude Opus en lo que antes decidía qué escribirle a un lead o qué
- * recomendar sobre un período de contenido.
+ * API key regional de Huawei Cloud ModelArts Studio (MaaS). DeepSeek ejecuta
+ * los prompts canónicos de Leads y Marca con salida JSON estructurada.
  */
-export const GROQ_KEY_SETTING = "groq_api_key";
+export const HUAWEI_MAAS_KEY_SETTING = "huawei_maas_api_key";
 
 /**
  * Perfil del vendedor (Plan §1.7). No es una key: es el texto que le dice al

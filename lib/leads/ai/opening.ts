@@ -1,10 +1,10 @@
 import { resolveStructuredJson } from "@/lib/ai/structured-output";
-import { generateGroqJson } from "@/lib/groq/client";
+import { generateMaasJson } from "@/lib/huawei-maas/client";
 import { SALES_ANGLES, type SalesAngle } from "@/lib/leads/ai/angles";
 import type { EnrichmentResult } from "@/lib/leads/ai/enrich";
 import { buildAngleBlock, buildLeadStateBlock, type LeadContext, type LeadMemory } from "@/lib/leads/ai/prompts";
 import type { LeadNoteRow, LeadSignalRow } from "@/lib/leads/queries";
-import { OPENING_GROQ_SCHEMA, OpeningSchema, type OpeningOutput } from "@/lib/leads/ai/schemas";
+import { OPENING_MAAS_SCHEMA, OpeningSchema, type OpeningOutput } from "@/lib/leads/ai/schemas";
 import { getSalesOS } from "@/lib/leads/ai/sales-os";
 import { buildStyleBlock, type StyleExample } from "@/lib/leads/ai/style/examples";
 
@@ -93,10 +93,8 @@ export interface GeneratedOpening extends OpeningOutput {
 }
 
 /**
- * `generateOpening()` (Plan §1.11): desde Plans/migracion-fuera-de-anthropic.md
- * (Etapa 1), Groq con salida estructurada, el Sistema de Prospección como
- * `system` y el estado del turno concatenado al prompt de usuario (Groq no
- * tiene el segundo rol `{ role: "system" }` que usaba Anthropic).
+ * `generateOpening()` (Plan §1.11): DeepSeek en MaaS recibe el Sistema de
+ * Prospección como `system` y el estado del turno en el prompt de usuario.
  *
  * No persiste nada — el llamador decide qué hacer con el borrador, y no se
  * guarda como enviado hasta que el usuario confirma (SPA §24).
@@ -160,24 +158,21 @@ ${angleBlock}${styleBlock}
 ${VARIANT_HINT[variant]}`;
 
   const parsed = await resolveStructuredJson(OpeningSchema, (repairNote) =>
-    generateGroqJson({
+    generateMaasJson({
       apiKey: params.apiKey,
       system: getSalesOS(),
       prompt: repairNote ? `${basePrompt}\n\n${repairNote}` : basePrompt,
-      schema: OPENING_GROQ_SCHEMA,
+      schema: OPENING_MAAS_SCHEMA,
       schemaName: "lead_opening",
-      maxTokens: 2000,
+      maxTokens: 8192,
       // Temperature 0 (el default del cliente) es para extracción determinística;
       // acá es redacción creativa y con el ángulo repitiendo la misma frase de
       // regla en cada llamada, 0 producía casi la misma pregunta para todo
       // negocio con el mismo ángulo (encontrado en checklist manual §1.11).
       temperature: 0.7,
-      // "low" (el default) alcanza para extraer o clasificar; acá hay que
-      // juzgar qué señal verificada es específica de este negocio y cuál es
-      // infraestructura estándar del rubro (botón de WhatsApp, formulario,
-      // ciudad) — encontrado en checklist manual §1.11, "medium" le da margen
-      // a ese paso de criterio antes de escribir.
-      reasoningEffort: "medium",
+      // High deja margen para distinguir señales específicas de la
+      // infraestructura estándar del rubro antes de escribir.
+      reasoningEffort: "high",
     }),
   );
 

@@ -14,7 +14,7 @@ import { generateOpening, type GeneratedOpening } from "@/lib/leads/ai/opening";
 import { toLeadContext, type LeadMemory } from "@/lib/leads/ai/prompts";
 import { STYLE_CANDIDATE_WINDOW, STYLE_EXAMPLE_COLUMNS, selectStyleExamples } from "@/lib/leads/ai/style/examples";
 import type { LeadsClient } from "@/lib/leads/contact";
-import { GROQ_KEY_SETTING, SALES_PROFILE_SETTING } from "@/lib/settings/constants";
+import { HUAWEI_MAAS_KEY_SETTING, SALES_PROFILE_SETTING } from "@/lib/settings/constants";
 
 export type OpeningResult =
   | { ok: true; opening: GeneratedOpening; lead: { id: string; name: string; phone: string | null; status: string } }
@@ -74,9 +74,9 @@ export async function generateOpeningForAutomation(
   if (leadError) throw leadError;
   if (!lead) return { ok: false, status: 404, message: "Lead no encontrado." };
 
-  const apiKey = await readSetting(admin, ownerId, GROQ_KEY_SETTING);
+  const apiKey = await readSetting(admin, ownerId, HUAWEI_MAAS_KEY_SETTING);
   if (!apiKey) {
-    return { ok: false, status: 422, message: "Falta cargar la API key de Groq en Configuración (o no se pudo leer)." };
+    return { ok: false, status: 422, message: "Falta cargar la API key de Huawei Cloud MaaS en Configuración (o no se pudo leer)." };
   }
 
   const [salesProfile, intel, signals, notes, angleCounts, styleRows] = await Promise.all([

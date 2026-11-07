@@ -3,7 +3,7 @@ import { Bot, KeyRound, Sparkles, Tags, UserRound } from "lucide-react";
 import { ActorOverridesForm } from "@/components/settings/actor-overrides-form";
 import { ApifyKeyForm } from "@/components/settings/apify-key-form";
 import { GeminiKeyForm } from "@/components/settings/gemini-key-form";
-import { GroqKeyForm } from "@/components/settings/groq-key-form";
+import { HuaweiMaasKeyForm } from "@/components/settings/huawei-maas-key-form";
 import { IndustriesManager } from "@/components/settings/industries-manager";
 import { SalesProfileForm } from "@/components/settings/sales-profile-form";
 import { InstagramConnection } from "@/components/settings/instagram-connection";
@@ -13,7 +13,7 @@ import {
   getActorOverrides,
   getApifyKeyStatus,
   getGeminiKeyStatus,
-  getGroqKeyStatus,
+  getHuaweiMaasKeyStatus,
   getSalesProfile,
   getInstagramConnectionStatus,
   listIndustries,
@@ -22,11 +22,11 @@ import {
 export const metadata = { title: "Configuración · SmokIA" };
 
 export default async function ConfiguracionPage() {
-  const [apifyStatus, geminiStatus, groqStatus, salesProfile, industries, actorOverrides, instagramStatus] =
+  const [apifyStatus, geminiStatus, huaweiMaasStatus, salesProfile, industries, actorOverrides, instagramStatus] =
     await Promise.all([
       getApifyKeyStatus(),
       getGeminiKeyStatus(),
-      getGroqKeyStatus(),
+      getHuaweiMaasKeyStatus(),
       getSalesProfile(),
       listIndustries(),
       getActorOverrides(),
@@ -139,13 +139,13 @@ export default async function ConfiguracionPage() {
             title={
               <span className="flex items-center gap-2">
                 <Sparkles className="size-4 text-lm-ink-2" strokeWidth={1.5} />
-                Groq
+                Huawei Cloud MaaS
               </span>
             }
-            description="Free tier: lo que hoy decide (aperturas y análisis del copiloto de prospección, recomendaciones de contenido)."
+            description="DeepSeek-V4.1-Flash-1017 en razonamiento high: aperturas, análisis y respuestas del copiloto, y recomendaciones de contenido."
           >
             <Panel className="p-4">
-              <GroqKeyForm configured={groqStatus.configured} masked={groqStatus.masked} />
+              <HuaweiMaasKeyForm configured={huaweiMaasStatus.configured} masked={huaweiMaasStatus.masked} />
             </Panel>
           </Section>
 

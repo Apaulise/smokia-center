@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { resolveStructuredJson } from "@/lib/ai/structured-output";
-import { generateGroqJson, type GroqJsonSchema } from "@/lib/groq/client";
+import { generateMaasJson, type MaasJsonSchema } from "@/lib/huawei-maas/client";
 import { getContentOSSections } from "./content-os";
 import { buildRecommendationsUserPrompt } from "./prompts";
 import type { BrandInsightsSummary } from "@/lib/brand/insights";
@@ -48,11 +48,10 @@ const RecommendationsOutputSchema = z.object({
 });
 
 /**
- * `metrics` es un diccionario de claves abiertas: no entra en el modo
- * `strict` de Groq (Plans/migracion-fuera-de-anthropic.md, Etapa 1) — este es
- * el único de los 4 call sites de Groq que usa `strict: false`.
+ * `metrics` es un diccionario de claves abiertas. El schema de function
+ * calling lo deja abierto y Zod valida después sus valores.
  */
-const RECOMMENDATIONS_GROQ_SCHEMA: GroqJsonSchema = {
+const RECOMMENDATIONS_MAAS_SCHEMA: MaasJsonSchema = {
   type: "object",
   properties: {
     knowns: { type: "string" },
@@ -149,14 +148,13 @@ export async function generateBrandRecommendations(params: {
   );
 
   const parsed = await resolveStructuredJson(RecommendationsOutputSchema, (repairNote) =>
-    generateGroqJson({
+    generateMaasJson({
       apiKey: params.apiKey,
       system,
       prompt: repairNote ? `${basePrompt}\n\n${repairNote}` : basePrompt,
-      schema: RECOMMENDATIONS_GROQ_SCHEMA,
+      schema: RECOMMENDATIONS_MAAS_SCHEMA,
       schemaName: "brand_recommendations",
-      strict: false,
-      maxTokens: 3500,
+      maxTokens: 8192,
     }),
   );
 

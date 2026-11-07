@@ -7,7 +7,7 @@
 // La app no guarda borradores: una apertura sólo queda en `lead_messages`
 // cuando se confirma como enviada. Por eso:
 //   · si el lead YA tiene una apertura enviada, se devuelve esa
-//     (`source: "sent"`) y no se gasta una llamada a Groq — salvo ?regenerate=true;
+//     (`source: "sent"`) y no se gasta una llamada a MaaS — salvo ?regenerate=true;
 //   · si no, se genera una nueva (`source: "generated"`). Para que cuente como
 //     apertura de la IA (antisesgo de ángulos, §1.19) hay que reportar el envío
 //     con POST .../contact incluyendo { opening: { angle, variant, generated_content } }.
@@ -21,7 +21,7 @@ import { generateOpeningForAutomation } from "@/lib/automation/opening";
 import { normalizePhone } from "@/lib/leads/dedupe";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// Groq suele contestar en pocos segundos, pero el plan Hobby corta a los 60.
+// MaaS puede usar razonamiento high, pero el plan Hobby corta a los 60.
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {

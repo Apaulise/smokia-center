@@ -8,7 +8,7 @@ import { analyzeLeadResponse } from "@/lib/leads/ai/analyze";
 import { isSalesAngle, type SalesAngle } from "@/lib/leads/ai/angles";
 import { enrichLead, type EnrichmentInput, type EnrichmentResult } from "@/lib/leads/ai/enrich";
 import { generateFollowup } from "@/lib/leads/ai/follow-up";
-import { getGeminiApiKey, getGroqApiKey } from "@/lib/leads/ai/key";
+import { getGeminiApiKey, getHuaweiMaasApiKey } from "@/lib/leads/ai/key";
 import { rebuildLeadMemory } from "@/lib/leads/ai/memory";
 import { computeNextBestAction, isReplyWorthyAction } from "@/lib/leads/ai/next-action";
 import { generateOpening, type GeneratedOpening } from "@/lib/leads/ai/opening";
@@ -260,7 +260,7 @@ export async function generateLeadOpening(leadId: string): Promise<OpeningAction
   await requireUser();
   if (!idSchema.safeParse(leadId).success) return { ok: false, message: "Lead inválido." };
 
-  const keyResult = await getGroqApiKey();
+  const keyResult = await getHuaweiMaasApiKey();
   if (!keyResult.ok) return { ok: false, message: keyResult.message };
 
   const lead = await getLead(leadId);
@@ -412,7 +412,7 @@ export async function analyzeLeadResponseAction(input: {
   const parsed = analyzeResponseSchema.safeParse(input);
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Datos inválidos." };
 
-  const keyResult = await getGroqApiKey();
+  const keyResult = await getHuaweiMaasApiKey();
   if (!keyResult.ok) return { ok: false, message: keyResult.message };
 
   const lead = await getLead(parsed.data.leadId);
@@ -662,13 +662,13 @@ const rewriteSchema = z.object({
   tone: z.enum(REWRITE_TONES),
 });
 
-/** Botones "MÁS CORTO" / "MÁS INFORMAL" / "MÁS DIRECTO" (SPA §24): Groq, no persiste nada. */
+/** Botones "MÁS CORTO" / "MÁS INFORMAL" / "MÁS DIRECTO" (SPA §24): MaaS, no persiste nada. */
 export async function rewriteLeadMessage(message: string, tone: RewriteTone): Promise<RewriteActionState> {
   await requireUser();
   const parsed = rewriteSchema.safeParse({ message, tone });
   if (!parsed.success) return { ok: false, message: "Datos inválidos." };
 
-  const keyResult = await getGroqApiKey();
+  const keyResult = await getHuaweiMaasApiKey();
   if (!keyResult.ok) return { ok: false, message: keyResult.message };
 
   try {
@@ -783,7 +783,7 @@ export async function generateLeadFollowup(leadId: string): Promise<FollowUpActi
   await requireUser();
   if (!idSchema.safeParse(leadId).success) return { ok: false, message: "Lead inválido." };
 
-  const keyResult = await getGroqApiKey();
+  const keyResult = await getHuaweiMaasApiKey();
   if (!keyResult.ok) return { ok: false, message: keyResult.message };
 
   const lead = await getLead(leadId);

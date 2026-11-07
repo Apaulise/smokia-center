@@ -5,7 +5,7 @@ import { after } from "next/server";
 
 import { runBrandChatTurn } from "@/lib/brand/ai/chat";
 import type { BrandChatWireTurn } from "@/lib/brand/ai/chat-types";
-import { getGeminiApiKey, getGroqApiKey } from "@/lib/brand/ai/key";
+import { getGeminiApiKey, getHuaweiMaasApiKey } from "@/lib/brand/ai/key";
 import { generateBrandRecommendations } from "@/lib/brand/ai/recommendations";
 import { computeBrandInsights, MIN_POSTS_FOR_ANALYSIS } from "@/lib/brand/insights";
 import { getPublishedHypotheses } from "@/lib/brand/planner/queries";
@@ -50,7 +50,7 @@ export async function generateBrandAnalysis(platform: BrandPlatform): Promise<Ge
   const user = await requireUser();
   const supabase = await createClient();
 
-  const keyResult = await getGroqApiKey();
+  const keyResult = await getHuaweiMaasApiKey();
   if (!keyResult.ok) return { ok: false, message: keyResult.message };
   const apiKey = keyResult.apiKey;
 

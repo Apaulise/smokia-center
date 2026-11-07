@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Ni Groq ni Gemini tienen el chequeo nativo que Anthropic hacía en
+ * Ni MaaS ni Gemini reemplazan la validación de negocio que hacía Anthropic en
  * `messages.parse()` (`"Failed to parse structured output"`). Reemplazo
  * genérico para los 7 llamados de la Etapa 1 de
  * Plans/migracion-fuera-de-anthropic.md: sin nada de proveedor ni dominio.

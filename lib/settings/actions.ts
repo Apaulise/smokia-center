@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { decrypt, encrypt } from "@/lib/crypto";
 import { generateGeminiJson } from "@/lib/gemini/client";
-import { generateGroqJson } from "@/lib/groq/client";
+import { generateMaasJson } from "@/lib/huawei-maas/client";
 import { getMetaCredentials, graphGet, type MetaCredentials } from "@/lib/meta/client";
 import type { LeadSource } from "@/lib/providers/types";
 import { createClient, requireUser } from "@/lib/supabase/server";
@@ -15,7 +15,7 @@ import {
   APIFY_KEY_SETTING,
   DEFAULT_INDUSTRIES,
   GEMINI_KEY_SETTING,
-  GROQ_KEY_SETTING,
+  HUAWEI_MAAS_KEY_SETTING,
   INSTAGRAM_CREDENTIALS_SETTING,
   SALES_PROFILE_SETTING,
   actorOverrideKey,
@@ -258,15 +258,15 @@ export async function testGeminiConnection(_prevState: ActionState, _formData: F
   }
 }
 
-// ── Groq API key (Plans/migracion-fuera-de-anthropic.md, Etapa 1) ────────
+// ── Huawei Cloud MaaS API key ───────────────────────────────────────────
 
-const groqKeySchema = z.object({
+const huaweiMaasKeySchema = z.object({
   apiKey: z.string().trim().min(10, "La API key parece incompleta."),
 });
 
-export async function saveGroqKey(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+export async function saveHuaweiMaasKey(_prevState: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requireUser();
-  const parsed = groqKeySchema.safeParse({ apiKey: formData.get("apiKey") });
+  const parsed = huaweiMaasKeySchema.safeParse({ apiKey: formData.get("apiKey") });
   if (!parsed.success) {
     return { ok: false, message: firstIssue(parsed.error, "API key inválida.") };
   }
@@ -275,7 +275,7 @@ export async function saveGroqKey(_prevState: ActionState, formData: FormData): 
   const { error } = await supabase.from("settings").upsert(
     {
       owner_id: user.id,
-      key: GROQ_KEY_SETTING,
+      key: HUAWEI_MAAS_KEY_SETTING,
       value_encrypted: encrypt(parsed.data.apiKey),
     },
     { onConflict: "owner_id,key" },
@@ -287,18 +287,18 @@ export async function saveGroqKey(_prevState: ActionState, formData: FormData): 
   return { ok: true, message: "API key guardada." };
 }
 
-export async function deleteGroqKey() {
+export async function deleteHuaweiMaasKey() {
   const supabase = await createClient();
-  await supabase.from("settings").delete().eq("key", GROQ_KEY_SETTING);
+  await supabase.from("settings").delete().eq("key", HUAWEI_MAAS_KEY_SETTING);
   revalidatePath("/configuracion");
 }
 
-export async function testGroqConnection(_prevState: ActionState, _formData: FormData): Promise<ActionState> {
+export async function testHuaweiMaasConnection(_prevState: ActionState, _formData: FormData): Promise<ActionState> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("settings")
     .select("value_encrypted")
-    .eq("key", GROQ_KEY_SETTING)
+    .eq("key", HUAWEI_MAAS_KEY_SETTING)
     .maybeSingle();
 
   if (!data) return { ok: false, message: "Todavía no cargaste una API key." };
@@ -311,23 +311,18 @@ export async function testGroqConnection(_prevState: ActionState, _formData: For
   }
 
   try {
-    // La prueba más barata que existe: una respuesta de un token contra el
-    // mismo modelo que después decide. Confirma GROQ_MODEL de paso.
-    // maxTokens generoso a propósito: gpt-oss es un modelo de razonamiento y
-    // gasta parte del presupuesto en razonamiento oculto antes de responder
-    // (ver GroqJsonParams.reasoningEffort) — un valor bajo corta el JSON a
-    // mitad de camino y Groq lo reporta como "Failed to validate JSON".
-    await generateGroqJson({
+    // Prueba el modelo, el razonamiento high y el JSON Schema que usa la app.
+    await generateMaasJson({
       apiKey,
       system: "Respondé sólo con el JSON pedido.",
       prompt: 'Devolvé {"ok": true}.',
       schema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"], additionalProperties: false },
       schemaName: "connection_test",
-      maxTokens: 300,
+      maxTokens: 8192,
     });
     return { ok: true, message: "Conexión exitosa." };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No se pudo contactar a Groq." };
+    return { ok: false, message: error instanceof Error ? error.message : "No se pudo contactar a Huawei Cloud MaaS." };
   }
 }
 

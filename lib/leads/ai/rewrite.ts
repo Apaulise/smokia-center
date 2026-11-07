@@ -1,12 +1,12 @@
 import { resolveStructuredJson } from "@/lib/ai/structured-output";
-import { generateGroqJson } from "@/lib/groq/client";
+import { generateMaasJson } from "@/lib/huawei-maas/client";
 import type { RewriteTone } from "@/lib/leads/ai/rewrite-tones";
-import { REWRITE_GROQ_SCHEMA, RewriteSchema } from "@/lib/leads/ai/schemas";
+import { REWRITE_MAAS_SCHEMA, RewriteSchema } from "@/lib/leads/ai/schemas";
 import { getSalesOS } from "@/lib/leads/ai/sales-os";
 
 /**
  * Reescrituras de tono (Plan §1.15, SPA §24): `MÁS CORTO`, `MÁS INFORMAL`,
- * `MÁS DIRECTO`. Va a Groq (movido de Gemini el 2026-09-28: no necesita
+ * `MÁS DIRECTO`. Va a MaaS (separado de Gemini: no necesita
  * buscar nada, y compartía la key con el enriquecimiento — que sí consume el
  * saldo de facturación de Gemini vía `google_search`. Que se agote ese saldo
  * ya no debería frenar el rewrite. Ver Plans/migracion-fuera-de-anthropic.md).
@@ -30,13 +30,13 @@ export async function rewriteMessage(params: { apiKey: string; message: string; 
   const basePrompt = `Reescribí este mensaje. ${TONE_INSTRUCTION[params.tone]} No agregues información nueva ni cambies lo que pregunta o propone — sólo el tono y el largo.\n\nMensaje original:\n"""\n${params.message.trim()}\n"""`;
 
   const parsed = await resolveStructuredJson(RewriteSchema, (repairNote) =>
-    generateGroqJson({
+    generateMaasJson({
       apiKey: params.apiKey,
       system: getSalesOS(),
       prompt: repairNote ? `${basePrompt}\n\n${repairNote}` : basePrompt,
-      schema: REWRITE_GROQ_SCHEMA,
+      schema: REWRITE_MAAS_SCHEMA,
       schemaName: "rewrite",
-      maxTokens: 1000,
+      maxTokens: 8192,
     }),
   );
   return parsed.message;

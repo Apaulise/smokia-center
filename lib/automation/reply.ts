@@ -18,7 +18,7 @@ import { hasConfirmedPain, planSignalWrites, type SignalPatch } from "@/lib/lead
 import { nextStage } from "@/lib/leads/stage-engine";
 import type { LeadStatus } from "@/lib/leads/status";
 import { interestLevelOf, responseTypeOf } from "@/lib/weekly/compute";
-import { GROQ_KEY_SETTING, SALES_PROFILE_SETTING } from "@/lib/settings/constants";
+import { HUAWEI_MAAS_KEY_SETTING, SALES_PROFILE_SETTING } from "@/lib/settings/constants";
 import type { Json } from "@/lib/supabase/database.types";
 
 const LIVE_MS = 48 * 60 * 60 * 1000;
@@ -247,9 +247,13 @@ async function runAnalyzer(
   },
   responseText: string,
 ): Promise<AnalyzerRun | { ok: false; status: 422 | 500 | 502; message: string }> {
-  const apiKey = await readSetting(admin, ownerId, GROQ_KEY_SETTING);
+  const apiKey = await readSetting(admin, ownerId, HUAWEI_MAAS_KEY_SETTING);
   if (!apiKey) {
-    return { ok: false, status: 422, message: "Falta cargar la API key de Groq en Configuración (o no se pudo leer)." };
+    return {
+      ok: false,
+      status: 422,
+      message: "Falta cargar la API key de Huawei Cloud MaaS en Configuración (o no se pudo leer).",
+    };
   }
 
   const [salesProfile, intel, signals, notes, thread] = await Promise.all([

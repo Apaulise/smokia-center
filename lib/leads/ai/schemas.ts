@@ -1,13 +1,13 @@
 import { z } from "zod";
 
-import type { GroqJsonSchema } from "@/lib/groq/client";
+import type { MaasJsonSchema } from "@/lib/huawei-maas/client";
 
 /**
  * Esquemas de salida estructurada para las llamadas del copiloto de
  * prospección. Centralizados acá (Plan §1.9, archivos principales) para que
  * opening.ts, analyze.ts, follow-up.ts y rewrite.ts no repliquen cada uno el
  * suyo. Desde Plans/migracion-fuera-de-anthropic.md (Etapa 1), junto a cada
- * Zod schema va su equivalente de proveedor (`*_GROQ_SCHEMA` o
+ * Zod schema va su equivalente de proveedor (`*_MAAS_SCHEMA` o
  * `*_GEMINI_SCHEMA`) — no derivado del Zod, a mano, mismo criterio que
  * `GEMINI_SCHEMA` en enrich.ts.
  */
@@ -23,8 +23,8 @@ export const OpeningSchema = z.object({
 });
 export type OpeningOutput = z.infer<typeof OpeningSchema>;
 
-/** Groq, `strict: true`: TODO campo va en `required`, sin excepción. */
-export const OPENING_GROQ_SCHEMA: GroqJsonSchema = {
+/** MaaS, `strict: true`: TODO campo va en `required`, sin excepción. */
+export const OPENING_MAAS_SCHEMA: MaasJsonSchema = {
   type: "object",
   properties: {
     objective: { type: "string" },
@@ -51,8 +51,8 @@ export const SignalUpdateSchema = z.object({
   already_solved: z.boolean().default(false),
 });
 
-/** Nullable en Groq strict no es "opcional": queda en `required` igual, tipado `["string", "null"]`. */
-const SIGNAL_UPDATE_GROQ_SCHEMA: GroqJsonSchema = {
+/** Nullable en MaaS strict no es "opcional": queda en `required` igual, tipado `["string", "null"]`. */
+const SIGNAL_UPDATE_MAAS_SCHEMA: MaasJsonSchema = {
   type: "object",
   properties: {
     kind: { type: "string", enum: ["DOLOR", "OBJECION", "SENAL_COMPRA"] },
@@ -99,7 +99,7 @@ export const AnalyzeOutputSchema = z.object({
 export type AnalyzeOutput = z.infer<typeof AnalyzeOutputSchema>;
 
 /** El más profundo de los 4: 4 sub-objetos, uno con array de hasta 6 sub-objetos anidados. */
-export const ANALYZE_GROQ_SCHEMA: GroqJsonSchema = {
+export const ANALYZE_MAAS_SCHEMA: MaasJsonSchema = {
   type: "object",
   properties: {
     analysis: {
@@ -133,7 +133,7 @@ export const ANALYZE_GROQ_SCHEMA: GroqJsonSchema = {
     crm_update: {
       type: "object",
       properties: {
-        signals: { type: "array", items: SIGNAL_UPDATE_GROQ_SCHEMA },
+        signals: { type: "array", items: SIGNAL_UPDATE_MAAS_SCHEMA },
       },
       required: ["signals"],
       additionalProperties: false,
@@ -170,7 +170,7 @@ export const NextReplySchema = z.object({
 });
 export type NextReplyOutput = z.infer<typeof NextReplySchema>;
 
-export const NEXT_REPLY_GROQ_SCHEMA: GroqJsonSchema = {
+export const NEXT_REPLY_MAAS_SCHEMA: MaasJsonSchema = {
   type: "object",
   properties: {
     message: { type: "string" },
@@ -187,14 +187,14 @@ export const RewriteSchema = z.object({
 export type RewriteOutput = z.infer<typeof RewriteSchema>;
 
 /**
- * Movido de Gemini a Groq (2026-09-28): el enriquecimiento y el rewrite
+ * Separado de Gemini: el enriquecimiento y el rewrite
  * compartían la key de Gemini, y el grounding (`google_search`) del
  * enriquecimiento se cobra contra la facturación de ese proyecto — cuando el
  * prepago se agota, tira abajo también al rewrite aunque no necesite
  * grounding. Reescribir un texto que ya existe no exige buscar nada, así que
  * no hay motivo para que dependa del mismo saldo.
  */
-export const REWRITE_GROQ_SCHEMA: GroqJsonSchema = {
+export const REWRITE_MAAS_SCHEMA: MaasJsonSchema = {
   type: "object",
   properties: {
     message: { type: "string" },
@@ -212,7 +212,7 @@ export const FollowUpSchema = z.object({
 });
 export type FollowUpOutput = z.infer<typeof FollowUpSchema>;
 
-export const FOLLOWUP_GROQ_SCHEMA: GroqJsonSchema = {
+export const FOLLOWUP_MAAS_SCHEMA: MaasJsonSchema = {
   type: "object",
   properties: {
     message: { type: ["string", "null"] },

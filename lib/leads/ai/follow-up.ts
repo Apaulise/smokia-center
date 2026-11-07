@@ -1,8 +1,8 @@
 import { resolveStructuredJson } from "@/lib/ai/structured-output";
-import { generateGroqJson } from "@/lib/groq/client";
+import { generateMaasJson } from "@/lib/huawei-maas/client";
 import type { EnrichmentResult } from "@/lib/leads/ai/enrich";
 import { buildConversationBlock, buildLeadStateBlock, type ConversationMessage, type LeadContext, type LeadMemory } from "@/lib/leads/ai/prompts";
-import { FOLLOWUP_GROQ_SCHEMA, FollowUpSchema, type FollowUpOutput } from "@/lib/leads/ai/schemas";
+import { FOLLOWUP_MAAS_SCHEMA, FollowUpSchema, type FollowUpOutput } from "@/lib/leads/ai/schemas";
 import { getSalesOS } from "@/lib/leads/ai/sales-os";
 import { buildStyleBlock, type StyleExample } from "@/lib/leads/ai/style/examples";
 import type { LeadNoteRow, LeadSignalRow } from "@/lib/leads/queries";
@@ -106,13 +106,13 @@ ${lastLine}\n\n${stateBlock}${contactsBlock}\n\n${buildConversationBlock(params.
     : `Escribí el mensaje de seguimiento (SPA §17): se construye desde lo que ya se habló, nunca desde una plantilla genérica tipo "quería hacer seguimiento". Usá toda la información de abajo — la conversación, los contactos registrados, las notas del vendedor, la memoria y el enriquecimiento del negocio — y partí del último contacto. Citá algo concreto: lo último que se dijo, el motivo del "ahora no", un dolor u objeción, o algo puntual y verificado del negocio. Si hubo un contacto registrado pero sin detalle, no inventes qué se habló: referite a él de forma general y apoyate en algo verificado del negocio para aportar valor o hacer una pregunta. Aportá algo nuevo en vez de insistir con lo mismo. Sólo si no existe ningún contacto ni nota ni dato del negocio, no escribas el mensaje: dejá "message" en null y explicá qué falta en "cannot_generate_reason".\n\n${lastLine}\n\n${stateBlock}${contactsBlock}\n\n${buildConversationBlock(params.conversation)}${buildStyleBlock(params.styleExamples, params.leadId)}`;
 
   return resolveStructuredJson(FollowUpSchema, (repairNote) =>
-    generateGroqJson({
+    generateMaasJson({
       apiKey: params.apiKey,
       system: getSalesOS(),
       prompt: repairNote ? `${basePrompt}\n\n${repairNote}` : basePrompt,
-      schema: FOLLOWUP_GROQ_SCHEMA,
+      schema: FOLLOWUP_MAAS_SCHEMA,
       schemaName: "lead_followup",
-      maxTokens: 1500,
+      maxTokens: 8192,
     }),
   );
 }

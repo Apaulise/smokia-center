@@ -138,7 +138,7 @@ No hay migración nueva para el PATCH ni para el alta: usan columnas y la activi
 | POST | `/api/automation/leads` | Crea un lead en `NUEVO`. Pide agente. Ver abajo |
 | GET | `/api/automation/leads/:id` | Un lead (con `email`) + últimas 20 actividades y mensajes |
 | PATCH | `/api/automation/leads/:id` | Corrige `phone`, `notes` y/o `next_action_at` sin registrar un contacto. Pide agente. Ver abajo |
-| POST | `/api/automation/leads/:id/opening-message` | Apertura de la IA (Groq, la key de Configuración del owner). Si ya se envió una, devuelve esa salvo `?regenerate=true` |
+| POST | `/api/automation/leads/:id/opening-message` | Apertura de la IA (DeepSeek en Huawei Cloud MaaS, con la key del owner). Si ya se envió una, devuelve esa salvo `?regenerate=true` |
 | POST | `/api/automation/leads/:id/contact` | Registra el mensaje enviado (`lead_messages`) + el contacto (timeline, `last_contacted_at`, estado, próxima acción). No pide agente. Acepta `occurred_at`, `kind` / `part`, `type` y `variant` |
 | POST | `/api/automation/leads/:id/reply` | Registra una respuesta del lead. Pide agente. Ver abajo |
 | GET | `/api/automation/reconcile?date=YYYY-MM-DD` | Salientes y entrantes de ese día (Argentina), por lead. No pide agente |

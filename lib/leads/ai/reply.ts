@@ -1,9 +1,9 @@
 import { resolveStructuredJson } from "@/lib/ai/structured-output";
-import { generateGroqJson } from "@/lib/groq/client";
+import { generateMaasJson } from "@/lib/huawei-maas/client";
 import type { EnrichmentResult } from "@/lib/leads/ai/enrich";
 import type { NextBestAction } from "@/lib/leads/ai/next-action";
 import { buildConversationBlock, buildLeadStateBlock, type ConversationMessage, type LeadContext, type LeadMemory } from "@/lib/leads/ai/prompts";
-import { NEXT_REPLY_GROQ_SCHEMA, NextReplySchema, type NextReplyOutput } from "@/lib/leads/ai/schemas";
+import { NEXT_REPLY_MAAS_SCHEMA, NextReplySchema, type NextReplyOutput } from "@/lib/leads/ai/schemas";
 import { getSalesOS } from "@/lib/leads/ai/sales-os";
 import type { LeadNoteRow, LeadSignalRow } from "@/lib/leads/queries";
 
@@ -57,13 +57,13 @@ export async function generateNextReply(params: {
   const basePrompt = `El prospecto acaba de contestar: "${params.whatHappened}"\n\nLa próxima acción ya está decidida — ${params.nextAction.action}: ${params.nextAction.reason}\n\nEscribí el mensaje para esa acción puntual: ${instruction}\n\n${buildConversationBlock(params.conversation)}\n\n${stateBlock}`;
 
   return resolveStructuredJson(NextReplySchema, (repairNote) =>
-    generateGroqJson({
+    generateMaasJson({
       apiKey: params.apiKey,
       system: getSalesOS(),
       prompt: repairNote ? `${basePrompt}\n\n${repairNote}` : basePrompt,
-      schema: NEXT_REPLY_GROQ_SCHEMA,
+      schema: NEXT_REPLY_MAAS_SCHEMA,
       schemaName: "lead_next_reply",
-      maxTokens: 1500,
+      maxTokens: 8192,
     }),
   );
 }

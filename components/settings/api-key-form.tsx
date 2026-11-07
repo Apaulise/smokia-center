@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 type KeyServerAction = (prevState: ActionState, formData: FormData) => Promise<ActionState>;
 
 /**
- * Base compartida por las cards de API key de /configuracion (Apify, Groq,
+ * Base compartida por las cards de API key de /configuracion (Apify, MaaS,
  * Gemini, Anthropic): guardar, probar conexión y eliminar sobre la tabla `settings`.
  *
  * `saveState`/`testState` viven en su propio useActionState y no se enteran
