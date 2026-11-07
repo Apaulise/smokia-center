@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { confirmMessageSent } from "@/lib/leads/ai/actions";
+import type { LeadMessageChannel } from "@/lib/leads/message-limits";
 import { buildWhatsappLink } from "@/lib/leads/templates";
 import { Button } from "@/components/leads/ui/button";
 
@@ -19,6 +20,8 @@ export function SuggestedReplyConfirm({
   message,
   kind,
   generatedContent,
+  channel,
+  generatedBy = "IA",
   phone,
   onConfirmed,
 }: {
@@ -27,6 +30,8 @@ export function SuggestedReplyConfirm({
   kind?: "RESPUESTA" | "SEGUIMIENTO";
   /** El borrador de la IA, sólo cuando el humano lo editó a mano (Plan §1.20.1). */
   generatedContent?: string;
+  channel?: LeadMessageChannel;
+  generatedBy?: "IA" | "HUMANO";
   /** Si hay teléfono, suma un atajo para abrir WhatsApp con este texto ya cargado. */
   phone?: string | null;
   onConfirmed?: () => void;
@@ -49,7 +54,7 @@ export function SuggestedReplyConfirm({
     setError(null);
     const edited = Boolean(generatedContent);
     startTransition(async () => {
-      const result = await confirmMessageSent({ leadId, message, generatedBy: "IA", kind, generatedContent });
+      const result = await confirmMessageSent({ leadId, message, channel, generatedBy, kind, generatedContent });
       if (!result?.ok) {
         setError(result?.message ?? "No se pudo confirmar el envío.");
         return;

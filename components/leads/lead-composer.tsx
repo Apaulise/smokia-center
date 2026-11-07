@@ -148,16 +148,19 @@ export function LeadComposer({
 /**
  * Si el último mensaje del hilo es del lead, ya tiene análisis guardado y ese
  * análisis proponía una respuesta, esa respuesta sigue pendiente de
- * confirmar — todavía no se mandó nada después. Se usa para reconstruir el
- * panel al entrar a la ficha, así "Analizar otra respuesta" (que sólo
- * limpia la pantalla, nunca borra nada de la base) o un cierre accidental de
- * la pestaña no dejan a nadie sin forma de volver a ver ese mensaje.
+ * confirmar — todavía no se mandó nada después. Una autorespuesta también
+ * queda visible: puede ser un menú que espere una intervención del vendedor
+ * para derivarlo a una persona. Se usa para reconstruir el panel al entrar a
+ * la ficha, así "Analizar otra respuesta" (que sólo limpia la pantalla,
+ * nunca borra nada de la base) o un cierre accidental de la pestaña no dejan
+ * a nadie sin forma de volver a ver ese mensaje.
  */
 function findPendingReply(messages: LeadMessageRow[], nextActionReason: string | null): Analysis | null {
   const last = messages[messages.length - 1];
   if (!last || last.sender !== "LEAD" || !last.analysis) return null;
   const analysis = last.analysis as AnalyzeOutput;
-  if (!analysis.suggested_reply?.has_reply || !analysis.suggested_reply.message) return null;
+  const isAutoReply = analysis.analysis?.response_type === "AUTORESPUESTA";
+  if (!isAutoReply && (!analysis.suggested_reply?.has_reply || !analysis.suggested_reply.message)) return null;
   return { ok: true, analysis, nextActionReason: nextActionReason ?? "", messageId: last.id };
 }
 
@@ -501,15 +504,31 @@ function AnalizarComposer({
                 leadId={leadId}
                 phone={phone}
                 initialMessage={result.analysis.suggested_reply.message}
+                channel={channel}
                 onConfirmed={() => setResult(null)}
               />
             ) : (reviewedResponseType ?? result.analysis.analysis.response_type) === "HUMANA" ? (
               <div className="flex flex-col gap-2">
                 <p className="text-xs text-lm-ink-3">La respuesta quedó marcada como humana. Podés escribir el próximo mensaje manualmente.</p>
-                <SuggestedReplyBox leadId={leadId} phone={phone} initialMessage="" onConfirmed={() => setResult(null)} />
+                <SuggestedReplyBox leadId={leadId} phone={phone} initialMessage="" channel={channel} generatedBy="HUMANO" onConfirmed={() => setResult(null)} />
               </div>
             ) : (
-              <p className="text-xs text-lm-ink-3">Todavía no corresponde responder — esperá o revisá la próxima acción de arriba.</p>
+              <div className="flex flex-col gap-2">
+                <p className="text-xs text-lm-ink-3">
+                  Es una autorespuesta, así que todavía no cuenta como interés. Si el asistente te pide un dato para derivarte con una persona,
+                  podés contestarle y registrar ese nuevo contacto sin cambiar esta clasificación.
+                </p>
+                <SuggestedReplyBox
+                  leadId={leadId}
+                  phone={phone}
+                  initialMessage=""
+                  channel={channel}
+                  generatedBy="HUMANO"
+                  label="Respuesta al asistente — redactala manualmente"
+                  showRewrite={false}
+                  onConfirmed={() => setResult(null)}
+                />
+              </div>
             )}
           </div>
         ) : null}
@@ -561,25 +580,35 @@ function SuggestedReplyBox({
   leadId,
   phone,
   initialMessage,
+  channel = "WHATSAPP",
+  generatedBy = "IA",
+  label = "Mensaje sugerido — editable",
+  showRewrite = true,
   onConfirmed,
 }: {
   leadId: string;
   phone: string | null;
   initialMessage: string;
+  channel?: Channel;
+  generatedBy?: "IA" | "HUMANO";
+  label?: string;
+  showRewrite?: boolean;
   onConfirmed?: () => void;
 }) {
   const body = useAiDraft(initialMessage);
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs text-lm-ink-3">Mensaje sugerido — editable</p>
+      <p className="text-xs text-lm-ink-3">{label}</p>
       <Textarea value={body.text} onChange={(e) => body.fromHuman(e.target.value)} className="min-h-20" />
-      <RewriteButtons message={body.text} onRewrite={body.fromAi} />
+      {showRewrite ? <RewriteButtons message={body.text} onRewrite={body.fromAi} /> : null}
       <SuggestedReplyConfirm
         leadId={leadId}
         message={body.text}
+        channel={channel}
         kind="RESPUESTA"
-        generatedContent={body.generatedContent}
+        generatedBy={generatedBy}
+        generatedContent={generatedBy === "IA" ? body.generatedContent : undefined}
         phone={phone}
         onConfirmed={onConfirmed}
       />
