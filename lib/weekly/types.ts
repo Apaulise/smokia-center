@@ -6,6 +6,44 @@ export type WeeklyChangeStatus = (typeof WEEKLY_CHANGE_STATUSES)[number];
 export const REPORTED_UNITS = ["count", "percent", "days"] as const;
 export type ReportedUnit = (typeof REPORTED_UNITS)[number];
 
+export const CHANGE_MEASURE_DIRECTIONS = ["up", "down"] as const;
+export type ChangeMeasureDirection = (typeof CHANGE_MEASURE_DIRECTIONS)[number];
+
+export const CHANGE_MEASURE_SOURCES = ["crm", "marca", "x", "informado"] as const;
+export type ChangeMeasureSource = (typeof CHANGE_MEASURE_SOURCES)[number];
+
+export const WEEKLY_RESULT_SOURCES = ["agente", "manual"] as const;
+export type WeeklyResultSource = (typeof WEEKLY_RESULT_SOURCES)[number];
+
+/** Cómo se va a medir un cambio. Lo define quien lo propone. */
+export interface ChangeMeasure {
+  metric: string;
+  label: string;
+  unit: ReportedUnit;
+  direction: ChangeMeasureDirection;
+  target?: string;
+  baseline: number | null;
+  baselineWeek: string;
+  baselineN?: number;
+  startWeek: string;
+  weeks: number;
+  source: ChangeMeasureSource;
+  segment?: string;
+}
+
+/** Antes/después que escribió el agente al medir. No reemplaza el texto. */
+export interface ChangeResultMetric {
+  metric: string;
+  label: string;
+  unit: ReportedUnit;
+  before: number | null;
+  after: number | null;
+  weekBefore: string;
+  weekAfter: string;
+  nBefore?: number;
+  nAfter?: number;
+}
+
 /** Por debajo de esto la tasa se muestra con el aviso de muestra chica. */
 export const SMALL_SAMPLE_N = 8;
 
@@ -44,6 +82,15 @@ export interface WeeklyChange {
   detail: string;
   status: WeeklyChangeStatus;
   result: string | null;
+  /** Ausente en los reportes publicados antes de medir en automático. */
+  measure?: ChangeMeasure;
+  resultSource?: WeeklyResultSource;
+  resultAgent?: string;
+  /** ISO 8601. */
+  resultAt?: string;
+  resultMetrics?: ChangeResultMetric[];
+  /** El agente lo sugiere. El estado cambia recién cuando alguien guarda. */
+  suggestedStatus?: WeeklyChangeStatus | null;
 }
 
 export interface StoredWeeklyReport {
@@ -135,6 +182,15 @@ export interface WeeklyPageModel {
   /** Métricas que informó el agente, aparte de las del CRM. */
   reportedKpis: WeeklyKpi[];
   report: StoredWeeklyReport | null;
+  /**
+   * Cambios de la semana anterior que ya se pueden leer: aprobados, en prueba
+   * o medidos, y con resultado. La página de la semana nueva los muestra.
+   */
+  priorResults: {
+    weekStart: string;
+    weekLabel: string;
+    changes: WeeklyChange[];
+  } | null;
   /** No hay números medidos ni texto publicado. */
   empty: boolean;
 }

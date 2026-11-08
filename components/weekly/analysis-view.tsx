@@ -1,17 +1,21 @@
+import Link from "next/link";
+
 import { ChartLegend, BrandLineChart, type LineChartPoint } from "@/components/brand/dashboard/line-chart";
 import { OpsFrame } from "@/components/ops/frame";
+import { ChangeResultDetails } from "@/components/weekly/change-result";
 import { ChangeList, ConclusionReview } from "@/components/weekly/review-form";
 import { WeekSelect } from "@/components/weekly/week-select";
 import { EmptyLine, EmptyState } from "@/components/leads/ui/feedback";
 import { Kpi, KpiRow } from "@/components/leads/ui/kpi-row";
 import { PageHeading } from "@/components/leads/ui/page-header";
-import { Section } from "@/components/leads/ui/section";
-import { Chip } from "@/components/leads/ui/status-badge";
+import { Panel, Section } from "@/components/leads/ui/section";
+import { Chip, StatusBadge } from "@/components/leads/ui/status-badge";
 import { Table, Td, TdSub, Th, Tr } from "@/components/leads/ui/table";
 import { TabLink } from "@/components/leads/ui/tabs";
 import { WEEKLY_AREAS } from "@/lib/weekly/areas";
+import { WEEKLY_STATUS_GROUP, WEEKLY_STATUS_LABEL } from "@/lib/weekly/labels";
 import { formatUpdatedAt } from "@/lib/ops/format";
-import type { WeeklyChart, WeeklyKpi, WeeklyPageModel, WeeklyTable as WeeklyTableModel } from "@/lib/weekly/types";
+import type { WeeklyChange, WeeklyChart, WeeklyKpi, WeeklyPageModel, WeeklyTable as WeeklyTableModel } from "@/lib/weekly/types";
 
 export function WeeklyAnalysis({ model }: { model: WeeklyPageModel }) {
   const updatedAt = formatUpdatedAt(model.report ? new Date(model.report.publishedAt) : new Date());
@@ -117,6 +121,28 @@ export function WeeklyAnalysis({ model }: { model: WeeklyPageModel }) {
         </>
       )}
 
+      {model.priorResults ? (
+        <Section
+          eyebrow="Semana anterior"
+          title="Resultados de los cambios de la semana anterior"
+          description="Aprobados, en prueba o medidos, con el resultado que ya se escribió. Acá no se editan."
+          action={
+            <Link
+              href={`/operaciones/analisis?area=${model.area}&week=${model.priorResults.weekStart}`}
+              className="text-[13px] text-lm-signal-text hover:underline focus-visible:lm-focus"
+            >
+              Ver la semana del {model.priorResults.weekLabel}
+            </Link>
+          }
+        >
+          <div className="flex flex-col gap-3">
+            {model.priorResults.changes.map((change) => (
+              <PriorChangeCard key={change.key} change={change} />
+            ))}
+          </div>
+        </Section>
+      ) : null}
+
       {!model.empty ? (
       <>
       <Section eyebrow="Del agente" title="Conclusiones" description="El texto es de quien publicó el análisis. El estado y el resultado los marcás vos.">
@@ -136,7 +162,10 @@ export function WeeklyAnalysis({ model }: { model: WeeklyPageModel }) {
         )}
       </Section>
 
-      <Section title="Cambios propuestos" description="Pendiente, aprobado, en prueba, descartado o medido. Guardar el estado no manda ningún mensaje.">
+      <Section
+        title="Cambios propuestos"
+        description="Pendiente, aprobado, en prueba, descartado o medido. El resultado lo puede escribir el agente. Guardar el estado no manda ningún mensaje."
+      >
         {model.report && model.report.changes.length > 0 ? (
           <ChangeList reportId={model.report.id} changes={model.report.changes} />
         ) : (
@@ -150,6 +179,22 @@ export function WeeklyAnalysis({ model }: { model: WeeklyPageModel }) {
       </>
       ) : null}
     </OpsFrame>
+  );
+}
+
+function PriorChangeCard({ change }: { change: WeeklyChange }) {
+  return (
+    <Panel>
+      <div className="flex flex-col gap-3 px-5 py-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="m-0 text-[15px] font-medium text-lm-ink">{change.title}</h3>
+          <StatusBadge group={WEEKLY_STATUS_GROUP[change.status]}>{WEEKLY_STATUS_LABEL[change.status]}</StatusBadge>
+        </div>
+        {change.detail ? <p className="m-0 text-[13.5px] leading-relaxed text-lm-ink-2">{change.detail}</p> : null}
+        {change.result ? <p className="m-0 text-[14px] leading-relaxed whitespace-pre-wrap text-lm-ink">{change.result}</p> : null}
+        <ChangeResultDetails change={change} />
+      </div>
+    </Panel>
   );
 }
 

@@ -8,8 +8,11 @@ import { isMissingSchema } from "@/lib/ops/schema";
 import { createClient, requireUser } from "@/lib/supabase/server";
 
 import { asWeekly } from "./db";
+import { applyManualReview, isSameManualReview } from "./merge";
 import { parseChanges } from "./parse";
 import { WEEKLY_CHANGE_STATUSES } from "./types";
+
+const CONFLICT = "El análisis cambió en otro lado. Recargá la página y volvé a guardar.";
 
 export type WeeklyActionState = { ok: true } | { ok: false; message: string };
 
@@ -42,7 +45,7 @@ export async function updateWeeklyReview(input: {
   const supabase = asWeekly(await createClient());
   const { data: row, error } = await supabase
     .from("weekly_reports")
-    .select("id, conclusion_status, conclusion_result, changes")
+    .select("id, conclusion_status, conclusion_result, changes, updated_at")
     .eq("id", parsed.data.id)
     .maybeSingle();
 
@@ -56,28 +59,35 @@ export async function updateWeeklyReview(input: {
   const result = parsed.data.result.trim() ? parsed.data.result.trim() : null;
   if (parsed.data.target === "conclusion") {
     if (row.conclusion_status === parsed.data.status && (row.conclusion_result ?? null) === result) return { ok: true };
-    const { error: updateError } = await supabase
+    const { data: saved, error: updateError } = await supabase
       .from("weekly_reports")
       .update({ conclusion_status: parsed.data.status, conclusion_result: result })
-      .eq("id", row.id);
+      .eq("id", row.id)
+      .eq("updated_at", row.updated_at)
+      .select("id");
     if (updateError) {
       console.error("weekly_reports: no se pudo guardar la conclusión", updateError.code);
       return { ok: false, message: "No se pudo guardar el estado." };
     }
+    if (!saved || saved.length === 0) return { ok: false, message: CONFLICT };
   } else {
     const changes = parseChanges(row.changes);
     const index = changes.findIndex((change) => change.key === parsed.data.changeKey);
     if (index < 0) return { ok: false, message: "Ese cambio no está en el análisis." };
-    if (changes[index].status === parsed.data.status && changes[index].result === result) return { ok: true };
-    changes[index] = { ...changes[index], status: parsed.data.status, result };
-    const { error: updateError } = await supabase
+    const applied = applyManualReview(changes[index], { status: parsed.data.status, result, at: new Date().toISOString() });
+    if (isSameManualReview(changes[index], applied)) return { ok: true };
+    changes[index] = applied;
+    const { data: saved, error: updateError } = await supabase
       .from("weekly_reports")
       .update({ changes: JSON.parse(JSON.stringify(changes)) as Json })
-      .eq("id", row.id);
+      .eq("id", row.id)
+      .eq("updated_at", row.updated_at)
+      .select("id");
     if (updateError) {
       console.error("weekly_reports: no se pudo guardar el cambio", updateError.code);
       return { ok: false, message: "No se pudo guardar el estado." };
     }
+    if (!saved || saved.length === 0) return { ok: false, message: CONFLICT };
   }
 
   revalidatePath("/operaciones/analisis");
