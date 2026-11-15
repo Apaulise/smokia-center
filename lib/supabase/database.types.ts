@@ -89,6 +89,60 @@ export type Database = {
           },
         ]
       }
+      automation_runs: {
+        Row: {
+          automation_id: string
+          conversation_id: string | null
+          created_at: string
+          finished_at: string | null
+          id: string
+          owner_id: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          zernio_execution_id: string
+        }
+        Insert: {
+          automation_id: string
+          conversation_id?: string | null
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          owner_id: string
+          started_at?: string | null
+          status: string
+          updated_at?: string
+          zernio_execution_id: string
+        }
+        Update: {
+          automation_id?: string
+          conversation_id?: string | null
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          owner_id?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          zernio_execution_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_runs_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "content_automations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_runs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_account_metrics: {
         Row: {
           account_id: string
@@ -1123,6 +1177,428 @@ export type Database = {
         }
         Relationships: []
       }
+      channel_accounts: {
+        Row: {
+          channel: string
+          created_at: string
+          display_name: string | null
+          handle: string | null
+          id: string
+          last_synced_at: string | null
+          login_method: string | null
+          owner_id: string
+          status: string
+          status_detail: string | null
+          team_id: string | null
+          updated_at: string
+          zernio_account_id: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          display_name?: string | null
+          handle?: string | null
+          id?: string
+          last_synced_at?: string | null
+          login_method?: string | null
+          owner_id: string
+          status?: string
+          status_detail?: string | null
+          team_id?: string | null
+          updated_at?: string
+          zernio_account_id: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          display_name?: string | null
+          handle?: string | null
+          id?: string
+          last_synced_at?: string | null
+          login_method?: string | null
+          owner_id?: string
+          status?: string
+          status_detail?: string | null
+          team_id?: string | null
+          updated_at?: string
+          zernio_account_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_accounts_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      channel_secrets: {
+        Row: {
+          api_key_encrypted: string
+          channel_account_id: string
+          created_at: string
+          id: string
+          owner_id: string
+          updated_at: string
+          webhook_id: string | null
+          webhook_secret_encrypted: string
+        }
+        Insert: {
+          api_key_encrypted: string
+          channel_account_id: string
+          created_at?: string
+          id?: string
+          owner_id: string
+          updated_at?: string
+          webhook_id?: string | null
+          webhook_secret_encrypted: string
+        }
+        Update: {
+          api_key_encrypted?: string
+          channel_account_id?: string
+          created_at?: string
+          id?: string
+          owner_id?: string
+          updated_at?: string
+          webhook_id?: string | null
+          webhook_secret_encrypted?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_secrets_channel_account_id_fkey"
+            columns: ["channel_account_id"]
+            isOneToOne: false
+            referencedRelation: "channel_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_automation_templates: {
+        Row: {
+          channel_account_id: string
+          confirm_message: string | null
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          stage: string
+          tags: string[]
+          updated_at: string
+          zernio_comment_automation_id: string | null
+          zernio_workflow_id: string | null
+        }
+        Insert: {
+          channel_account_id: string
+          confirm_message?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          stage: string
+          tags?: string[]
+          updated_at?: string
+          zernio_comment_automation_id?: string | null
+          zernio_workflow_id?: string | null
+        }
+        Update: {
+          channel_account_id?: string
+          confirm_message?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          stage?: string
+          tags?: string[]
+          updated_at?: string
+          zernio_comment_automation_id?: string | null
+          zernio_workflow_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_automation_templates_channel_account_id_fkey"
+            columns: ["channel_account_id"]
+            isOneToOne: false
+            referencedRelation: "channel_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_quick_replies: {
+        Row: {
+          audio_duration_ms: number | null
+          audio_mime: string | null
+          audio_path: string | null
+          body: string | null
+          created_at: string
+          id: string
+          kind: string
+          owner_id: string
+          sort_order: number
+          title: string
+          updated_at: string
+          use_count: number
+        }
+        Insert: {
+          audio_duration_ms?: number | null
+          audio_mime?: string | null
+          audio_path?: string | null
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          owner_id: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+          use_count?: number
+        }
+        Update: {
+          audio_duration_ms?: number | null
+          audio_mime?: string | null
+          audio_path?: string | null
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          owner_id?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          use_count?: number
+        }
+        Relationships: []
+      }
+      chat_tag_labels: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          label: string | null
+          owner_id: string
+          sort_order: number
+          stage: string | null
+          tag: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          label?: string | null
+          owner_id: string
+          sort_order?: number
+          stage?: string | null
+          tag: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          label?: string | null
+          owner_id?: string
+          sort_order?: number
+          stage?: string | null
+          tag?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      content_automations: {
+        Row: {
+          channel_account_id: string
+          created_at: string
+          error: string | null
+          id: string
+          keywords: string[]
+          owner_id: string
+          permalink: string | null
+          platform_post_id: string
+          post_caption: string | null
+          resource_title: string
+          resource_url: string
+          stage: string
+          status: string
+          template_id: string | null
+          updated_at: string
+          zernio_comment_automation_id: string | null
+          zernio_workflow_id: string | null
+        }
+        Insert: {
+          channel_account_id: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          keywords: string[]
+          owner_id: string
+          permalink?: string | null
+          platform_post_id: string
+          post_caption?: string | null
+          resource_title: string
+          resource_url: string
+          stage: string
+          status?: string
+          template_id?: string | null
+          updated_at?: string
+          zernio_comment_automation_id?: string | null
+          zernio_workflow_id?: string | null
+        }
+        Update: {
+          channel_account_id?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          keywords?: string[]
+          owner_id?: string
+          permalink?: string | null
+          platform_post_id?: string
+          post_caption?: string | null
+          resource_title?: string
+          resource_url?: string
+          stage?: string
+          status?: string
+          template_id?: string | null
+          updated_at?: string
+          zernio_comment_automation_id?: string | null
+          zernio_workflow_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_automations_channel_account_id_fkey"
+            columns: ["channel_account_id"]
+            isOneToOne: false
+            referencedRelation: "channel_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_automations_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "chat_automation_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          channel: string
+          channel_account_id: string
+          created_at: string
+          follow_up_at: string | null
+          follow_up_note: string | null
+          history_synced_at: string | null
+          id: string
+          last_inbound_at: string | null
+          last_message_at: string | null
+          last_message_preview: string | null
+          lead_id: string | null
+          owner_id: string
+          participant_external_id: string | null
+          participant_handle: string | null
+          participant_name: string | null
+          participant_picture: string | null
+          participant_profile: Json | null
+          source_automation_id: string | null
+          status: string
+          tags: string[]
+          tags_synced_at: string | null
+          team_id: string | null
+          thread_owner: string | null
+          unread_count: number
+          updated_at: string
+          zernio_contact_id: string | null
+          zernio_conversation_id: string
+        }
+        Insert: {
+          channel: string
+          channel_account_id: string
+          created_at?: string
+          follow_up_at?: string | null
+          follow_up_note?: string | null
+          history_synced_at?: string | null
+          id?: string
+          last_inbound_at?: string | null
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          lead_id?: string | null
+          owner_id: string
+          participant_external_id?: string | null
+          participant_handle?: string | null
+          participant_name?: string | null
+          participant_picture?: string | null
+          participant_profile?: Json | null
+          source_automation_id?: string | null
+          status?: string
+          tags?: string[]
+          tags_synced_at?: string | null
+          team_id?: string | null
+          thread_owner?: string | null
+          unread_count?: number
+          updated_at?: string
+          zernio_contact_id?: string | null
+          zernio_conversation_id: string
+        }
+        Update: {
+          channel?: string
+          channel_account_id?: string
+          created_at?: string
+          follow_up_at?: string | null
+          follow_up_note?: string | null
+          history_synced_at?: string | null
+          id?: string
+          last_inbound_at?: string | null
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          lead_id?: string | null
+          owner_id?: string
+          participant_external_id?: string | null
+          participant_handle?: string | null
+          participant_name?: string | null
+          participant_picture?: string | null
+          participant_profile?: Json | null
+          source_automation_id?: string | null
+          status?: string
+          tags?: string[]
+          tags_synced_at?: string | null
+          team_id?: string | null
+          thread_owner?: string | null
+          unread_count?: number
+          updated_at?: string
+          zernio_contact_id?: string | null
+          zernio_conversation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_channel_account_id_fkey"
+            columns: ["channel_account_id"]
+            isOneToOne: false
+            referencedRelation: "channel_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_source_automation_id_fkey"
+            columns: ["source_automation_id"]
+            isOneToOne: false
+            referencedRelation: "content_automations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       industries: {
         Row: {
           color: string
@@ -1582,6 +2058,81 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      messages: {
+        Row: {
+          attachments: Json
+          body: string | null
+          conversation_id: string
+          created_at: string
+          deleted: boolean
+          delivery_status: string | null
+          direction: string
+          edited: boolean
+          id: string
+          occurred_at: string
+          origin: string
+          owner_id: string
+          platform_message_id: string
+          sent_by: string | null
+          standby: boolean
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          attachments?: Json
+          body?: string | null
+          conversation_id: string
+          created_at?: string
+          deleted?: boolean
+          delivery_status?: string | null
+          direction: string
+          edited?: boolean
+          id?: string
+          occurred_at: string
+          origin: string
+          owner_id: string
+          platform_message_id: string
+          sent_by?: string | null
+          standby?: boolean
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attachments?: Json
+          body?: string | null
+          conversation_id?: string
+          created_at?: string
+          deleted?: boolean
+          delivery_status?: string | null
+          direction?: string
+          edited?: boolean
+          id?: string
+          occurred_at?: string
+          origin?: string
+          owner_id?: string
+          platform_message_id?: string
+          sent_by?: string | null
+          standby?: boolean
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ops_approvals: {
         Row: {
@@ -2213,6 +2764,10 @@ export type Database = {
           reach: number
           total_interactions: number
         }[]
+      }
+      chats_set_sharing: {
+        Args: { p_account: string; p_share: boolean }
+        Returns: undefined
       }
       lead_angle_counts_30d: {
         Args: never

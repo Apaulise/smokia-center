@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache, type ReactNode } from "react";
 
+import { LeadChatCard } from "@/components/leads/chats/lead-chat-card";
 import { ContactActions } from "@/components/leads/contact-actions";
 import { MessageThread } from "@/components/leads/conversation/message-thread";
 import { SignalsList } from "@/components/leads/copilot/signals-list";
@@ -25,6 +26,7 @@ import {
   listLeadSignals,
   listUpcomingAppointmentsForLead,
 } from "@/lib/leads/queries";
+import { getLeadChatPreview } from "@/lib/chats/queries";
 import { formatAddress } from "@/lib/leads/address";
 import { externalWebUrl } from "@/lib/leads/external-url";
 import { readInstagramIntake } from "@/lib/leads/instagram-intake-view";
@@ -73,12 +75,13 @@ export default async function LeadFichaPage({ params, searchParams }: PageProps<
   const navSort = NAV_SORT_FIELDS.includes(sortParam as LeadsSortField) ? (sortParam as LeadsSortField) : "created_at";
   const navQuery = navQueryString({ get: (key) => first(query[key]) ?? null });
 
-  const [activities, messages, signals, appointments, intel, navIds] = await Promise.all([
+  const [activities, messages, signals, appointments, intel, chatPreview, navIds] = await Promise.all([
     listLeadActivities(id),
     listLeadMessages(id),
     listLeadSignals(id),
     listUpcomingAppointmentsForLead(id),
     getLeadIntel(id),
+    getLeadChatPreview(id),
     lead.lead_lists ? listLeadIdsForNav(navFilters, navSort, first(query.dir) === "asc") : Promise.resolve([id]),
   ]);
   // Al contactar, el lead cambia de estado y sale del filtro con el que se abrió (ej. "Listo para contactar"):
@@ -222,6 +225,12 @@ export default async function LeadFichaPage({ params, searchParams }: PageProps<
                   value ? <InfoRow key={label} label={label} value={label === "Keyword" || label === "Pieza de origen" ? <span className="font-mono">{value}</span> : value} /> : null,
                 )}
               </dl>
+            </InfoSection>
+          ) : null}
+
+          {chatPreview ? (
+            <InfoSection eyebrow="Chat de Instagram" divider>
+              <LeadChatCard conversation={chatPreview.conversation} messages={chatPreview.messages} />
             </InfoSection>
           ) : null}
 

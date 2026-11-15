@@ -333,6 +333,17 @@ where u.email in ('paggustintomas@gmail.com', 'matiassanblas@gmail.com');
 
 Verificar con `select * from public.team_members;` (dos filas, el mismo `team_id`). Para sacar a alguien del equipo basta borrar su fila de `team_members`: sus datos no se pierden, sólo dejan de contar en el global. Sin esta siembra la app sigue funcionando como antes (cada uno con su meta y su dashboard).
 
+## Inbox de Instagram vía Zernio (Plan §1.25)
+
+Los mensajes directos de Instagram entran por Zernio y se leen en **Gestor de Leads → Chats**. No hace falta ninguna variable de entorno nueva: la API key de Zernio y el secreto del webhook se guardan **cifrados** en la base (con `APP_ENCRYPTION_KEY`), por cuenta.
+
+1. **Migraciones:** `npm run db:push` (aplica `20261113120000_chats.sql` y `20261113130000_chats_team.sql`) y `npm run db:types`. Después se puede borrar `lib/chats/db.ts`, que existe sólo para tipar las tablas nuevas hasta regenerar `database.types.ts`.
+2. **Zernio:** tener Instagram conectado en el dashboard de Zernio con el permiso de mensajes (`instagram_business_manage_messages`) y el add-on Inbox. Si Meta invalida el token (cambio de contraseña o sesión), reconectar ahí: Zernio devuelve el listado vacío hasta entonces.
+3. **Variables en Vercel:** `NEXT_PUBLIC_APP_URL` con la URL pública (de ahí sale la del webhook) y `CRON_SECRET` (ya usado por los otros crons; protege `/api/jobs/chats-sync`).
+4. **Conectar:** Configuración → "Inbox de Instagram (Zernio)" → pegar la API key de Zernio. La app valida la key, registra su propio webhook firmado en Zernio y trae el historial (hasta 100 conversaciones; si hay más pendiente, "Sincronizar" lo completa). En localhost no se registra el webhook y los mensajes entran sólo al sincronizar.
+5. **Compartir con el socio** (opcional): requiere el equipo sembrado (sección anterior). En Configuración, "Compartir con mi socio" en la cuenta; "Dejar de compartir" lo revierte.
+6. **Agente:** `GET /api/automation/chats?unread=1&limit=30` y `GET /api/automation/leads/:id/chat` (sólo lectura, mismo `Authorization: Bearer $AUTOMATION_API_SECRET`). Para responder, el agente deja un borrador con `POST /api/automation/ops` (`type: "approval"`, `channel: "instagram"`, `leadId`) y una persona lo envía desde Chats.
+
 ---
 
 ## Notas

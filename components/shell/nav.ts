@@ -39,6 +39,7 @@ export const MODULES: NavModule[] = [
       { href: "/leads/lista", label: "Listas" },
       { href: "/leads/generar", label: "Generar lista" },
       { href: "/leads/seguimiento", label: "Seguimiento" },
+      { href: "/leads/chats", label: "Chats" },
       { href: "/leads/agenda", label: "Agenda" },
       { href: "/leads/conocimiento", label: "Memoria de ventas" },
     ],

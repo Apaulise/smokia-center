@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import type { SalesGoal, ExecutionMetrics, DailyContacts } from "@/lib/leads/execution/queries";
 import type { ProspectingFunnel } from "@/lib/leads/queries";
 import type { Database } from "@/lib/supabase/database.types";
@@ -17,12 +19,13 @@ export interface TeamMember {
 }
 
 /** El equipo del usuario, o `[]` si no pertenece a ninguno (todavía no se sembró). */
-export async function getTeamDirectory(): Promise<TeamMember[]> {
+// Con `cache()`: la bandeja y el hilo lo piden en el mismo request y alcanza con una llamada.
+export const getTeamDirectory = cache(async function getTeamDirectory(): Promise<TeamMember[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("team_directory");
   if (error) throw error;
   return (data ?? []).map((row) => ({ ownerId: row.owner_id, name: row.name, avatarUrl: row.avatar_url }));
-}
+});
 
 export type TeamAppointment = Database["public"]["Tables"]["appointments"]["Row"] & {
   leads: Pick<Database["public"]["Tables"]["leads"]["Row"], "id" | "name" | "status"> | null;

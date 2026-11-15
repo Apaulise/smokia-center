@@ -673,13 +673,23 @@ Los dos socios operan como un solo negocio: **una meta en común**, un dashboard
 10. Cuenta sin equipo (o sin sembrar): `/leads/equipo` muestra el estado vacío y `/leads/objetivo` sigue con la meta personal.
 11. Un `select` directo desde el cliente a `leads` o `lead_messages` del socio sigue devolviendo 0 filas, y `team_execution_metrics` con un id ajeno al equipo devuelve vacío.
 
-### 1.24 Chats de WhatsApp dentro del CRM
+### 1.24 Chats de WhatsApp dentro del CRM (Evolution API)
 
-> **Estado (2026-10-27): plan aprobado, sin código.** Detalle completo, sub-pasos y riesgos abiertos en [01-chats-de-whatsapp.md](01-chats-de-whatsapp.md).
+> **Estado (2026-10-30): plan reescrito para Evolution API, sin código.** Detalle completo, sub-pasos y riesgos abiertos en [01-chats-de-whatsapp.md](01-chats-de-whatsapp.md).
 
-Ver, dentro del CRM, los chats del WhatsApp del usuario para leer, hacer seguimiento y responder, y darle ese contexto al agente. Va por la Cloud API de Meta con **Coexistence** (el mismo número sigue andando en la app WhatsApp Business del celular). No se prospecta en frío por la API: se recibe, se lee y se responde dentro de la ventana de 24 h.
+Ver, dentro del CRM, los chats del WhatsApp del usuario para leer, hacer seguimiento y responder, y darle ese contexto al agente. Se descartó la Cloud API oficial con Coexistence (exige un proveedor de pago) y se eligió **Evolution API autoalojada** (Baileys, vinculación por QR): gratis, con el número real, pero **no oficial, con riesgo de baneo** asumido por el usuario. Se empieza con un número secundario y sin prospección en frío.
 
-Seis sub-pasos, cada uno con su checklist manual: 0) alta en Meta y conexión (sin código; cierra dos riesgos abiertos), 1) migración + webhook de recepción, 2) inbox `/leads/chats` en solo lectura, 3) envío y eco del celular, 4) enlace con leads, 5) lectura para el agente y borradores a la cola de aprobaciones, 6) historial de 6 meses. El webhook es la tercera excepción de service role y se documenta en `CLAUDE.md` §4 cuando se escriba.
+Siete sub-pasos, cada uno con su checklist manual: 0) levantar Evolution, vincular y capturar un payload real (sin código de la app; cierra cuatro riesgos abiertos), 1) migración + webhook, 2) inbox `/leads/chats`, 3) envío, 4) enlace con leads, 5) lectura para el agente y borradores a la cola de aprobaciones, 6) historial. El webhook es la tercera excepción de service role y se documenta en `CLAUDE.md` §4 cuando se escriba.
+
+### 1.25 Inbox de Instagram vía Zernio (primer canal del inbox omnicanal)
+
+> **Estado (2026-11-14): cerrado.** Las migraciones están aplicadas y el checklist manual se dio por OK por decisión del dueño. Detalle, desvíos del plan y el checklist de 20 ítems en [01-inbox-omnicanal-zernio.md](01-inbox-omnicanal-zernio.md).
+
+Ver y responder, dentro del CRM, los DMs de Instagram del usuario y de su socio. Zernio es la única puerta a los canales; los mensajes se espejan en Supabase con un esquema omnicanal (`channel_accounts`, `conversations`, `messages`) y se enlazan a `leads`. ZernFlow (MIT) no se despliega: es sólo referencia. Primera entrega sólo Instagram; Email, WhatsApp y TikTok van después, de a uno. El webhook de Zernio es una nueva excepción de service role, y el inbox compartido entre socios (RLS por equipo, sub-paso 6) se discute y documenta en `CLAUDE.md` §4 antes de implementarse. **Choca con §1.24 en WhatsApp** (Evolution vs la vía oficial de Zernio): decidir antes de tocar ese canal.
+
+### 1.26 Chats para hacer seguimiento: fluidez, respuestas rápidas, etiquetas de Zernio y workflows TOFU/MOFU por pieza
+
+> **Estado (2026-11-14): en construcción.** Plan aprobado en [01-chats-seguimiento-y-workflows.md](01-chats-seguimiento-y-workflows.md). Tiene cinco partes: la bandeja fluida (una isla de cliente con envío optimista), respuestas rápidas de texto y audio, etiquetas de Zernio espejadas y editables con filtros y seguimiento, y workflows modelo TOFU/MOFU que SmokIA clona en Zernio para cada pieza (palabra clave + recurso por DM + etiqueta). Esto último reemplaza a ManyChat pieza por pieza, sin doble respuesta.
 
 ---
 

@@ -234,7 +234,10 @@ async function fetchMedia(credentials: MetaCredentials): Promise<NormalizedPost[
       permalink: firstString(row, ["permalink"]),
       caption: firstString(row, ["caption"]),
       mediaUrl: firstString(row, ["media_url"]),
-      thumbnailUrl: firstString(row, ["thumbnail_url"]),
+      // La Graph API sólo manda `thumbnail_url` en videos/reels. En carruseles y fotos la
+      // imagen viene en `media_url` (en un carrusel, la de la primera lámina).
+      thumbnailUrl:
+        firstString(row, ["thumbnail_url"]) ?? (kind === "REEL" || kind === "VIDEO" || kind === "SHORT" ? null : firstString(row, ["media_url"])),
       publishedAt: firstString(row, ["timestamp"]),
     };
 
