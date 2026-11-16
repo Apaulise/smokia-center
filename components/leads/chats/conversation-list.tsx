@@ -102,7 +102,9 @@ export function ConversationList({
           )}
         </div>
 
-        <div className="-mx-3 flex gap-1 overflow-x-auto px-3 pb-0.5 [scrollbar-width:none]" role="tablist" aria-label="Filtrar conversaciones">
+        {/* flex-wrap, no scroll horizontal: con la barra oculta no había ninguna señal de que
+            quedaban filtros a la derecha, y si el deslizar no respondía quedaban inalcanzables. */}
+        <div className="flex flex-wrap gap-1" role="tablist" aria-label="Filtrar conversaciones">
           {FILTER_OPTIONS.map((option) => {
             const active = filter === option.value;
             const count = counts[option.value];
@@ -127,7 +129,7 @@ export function ConversationList({
         </div>
 
         {tags.length > 0 ? (
-          <div className="-mx-3 flex items-center gap-1 overflow-x-auto px-3 [scrollbar-width:none]" aria-label="Filtrar por etiqueta">
+          <div className="flex flex-wrap items-center gap-1" aria-label="Filtrar por etiqueta">
             {tag ? (
               <button
                 type="button"
