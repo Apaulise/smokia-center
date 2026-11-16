@@ -4,8 +4,15 @@ import { useEffect, useRef } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 
-/** Red de seguridad por si Realtime no está habilitado o se cortó: el webhook igual escribe en la base. */
-const SAFETY_POLL_MS = 45_000;
+/**
+ * Cada cuánto se llama a `onResync` mientras la pestaña está visible. Desde
+ * §1.26, `onResync` (en `InboxClient`) no sólo relee la base: primero le pide
+ * a Zernio lo nuevo (`pollInboxNow`), así que este intervalo es lo que
+ * mantiene la bandeja al día sin tocar "Sincronizar" — en desarrollo es la
+ * única vía (Zernio no alcanza `localhost`), en producción es la red de
+ * seguridad si algún webhook se perdió.
+ */
+const SAFETY_POLL_MS = 20_000;
 
 type Handlers = {
   /** Una fila de `conversations` nueva o cambiada. */

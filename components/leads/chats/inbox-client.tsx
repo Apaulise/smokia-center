@@ -9,7 +9,7 @@ import { ContactPanel, type AutomationSummary } from "@/components/leads/chats/c
 import { ConversationList } from "@/components/leads/chats/conversation-list";
 import type { ComposerQuickReplies } from "@/components/leads/chats/message-composer";
 import { useInboxRealtime } from "@/components/leads/chats/use-inbox-realtime";
-import { loadConversation, loadConversationList, loadOlderMessages, markConversationRead, sendChatAudio, sendChatText, setConversationArchived } from "@/lib/chats/actions";
+import { loadConversation, loadConversationList, loadOlderMessages, markConversationRead, pollInboxNow, sendChatAudio, sendChatText, setConversationArchived } from "@/lib/chats/actions";
 import type { TagLabelRow } from "@/lib/chats/db";
 import { previewOf } from "@/lib/chats/format";
 import { applyConversationChange, filterCounts, filterItems, sortItems, tagsInUse, upsertThreadMessage, type ThreadMessage } from "@/lib/chats/inbox";
@@ -339,14 +339,28 @@ export function InboxClient({
   // ── Realtime ───────────────────────────────────────────────────────────────
 
   const resyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /**
+   * Antes de releer lo que ya tenemos en la base, le pide a Zernio lo nuevo
+   * (`pollInboxNow`). Es lo que mantiene la bandeja al día sin que nadie
+   * toque "Sincronizar": en development es la única vía (Zernio no llega a
+   * localhost), y en producción es la red de seguridad del webhook.
+   */
   const scheduleResync = useCallback(() => {
     if (resyncTimer.current) clearTimeout(resyncTimer.current);
     resyncTimer.current = setTimeout(() => {
-      reloadList("activas");
-      if (archivedItems !== null) reloadList("archivadas");
-      if (selectedId) void fetchThread(selectedId);
+      void pollInboxNow().finally(() => {
+        reloadList("activas");
+        if (archivedItems !== null) reloadList("archivadas");
+        if (selectedId) void fetchThread(selectedId);
+      });
     }, 400);
   }, [reloadList, archivedItems, selectedId, fetchThread]);
+
+  // Al abrir la pantalla, una sincronización inmediata: no hay que esperar el primer sondeo.
+  useEffect(() => {
+    scheduleResync();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useInboxRealtime({
     onConversation(row) {

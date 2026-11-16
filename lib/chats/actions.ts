@@ -687,3 +687,40 @@ export async function loadOlderMessages(conversationId: string, before: string):
   if (!idSchema.safeParse(conversationId).success || Number.isNaN(Date.parse(before))) return { messages: [], hasOlder: false };
   return listOlderMessages(conversationId, new Date(before).toISOString());
 }
+
+// ── Sincronización automática (cliente) ──────────────────────────────────────
+// Mientras la bandeja está abierta, la isla de cliente pide esto cada tanto
+// (components/leads/chats/use-inbox-realtime.ts) para traer de Zernio lo que
+// el webhook no haya avisado todavía: en desarrollo (Zernio no alcanza
+// `localhost`, CLAUDE.md §11) es la única vía para que entren mensajes sin
+// tocar "Sincronizar" a mano; en producción es la red de seguridad si algún
+// webhook se perdió. A propósito liviano (maxFetches chico, sin etiquetas ni
+// refresco del webhook — eso lo siguen haciendo el botón manual y el cron)
+// para poder correr cada 20 s sin pasarse con la API de Zernio.
+
+const POLL_MAX_FETCHES = 15;
+
+export async function pollInboxNow(): Promise<{ ok: boolean }> {
+  await requireUser();
+  const chats = asChats(await createClient());
+  // RLS: sólo las cuentas propias y las que el socio compartió.
+  const { data: accounts } = await chats
+    .from("channel_accounts")
+    .select("id, owner_id, team_id, channel, zernio_account_id, status")
+    .eq("channel", "INSTAGRAM")
+    .eq("status", "ACTIVA");
+  if (!accounts || accounts.length === 0) return { ok: true };
+
+  let ok = true;
+  for (const account of accounts) {
+    try {
+      const apiKey = await readApiKey(chats, account.id);
+      if (!apiKey) continue;
+      const result = await syncChannelAccount(chats, contextOf(account), apiKey, { maxFetches: POLL_MAX_FETCHES });
+      if (result.error) ok = false;
+    } catch {
+      ok = false;
+    }
+  }
+  return { ok };
+}
