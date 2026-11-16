@@ -1,4 +1,4 @@
-import { Bot, KeyRound, Sparkles, Tags, UserRound } from "lucide-react";
+import { Bot, KeyRound, MessageSquare, Sparkles, Tags, UserRound } from "lucide-react";
 
 import { ActorOverridesForm } from "@/components/settings/actor-overrides-form";
 import { ApifyKeyForm } from "@/components/settings/apify-key-form";
@@ -7,6 +7,8 @@ import { HuaweiMaasKeyForm } from "@/components/settings/huawei-maas-key-form";
 import { IndustriesManager } from "@/components/settings/industries-manager";
 import { SalesProfileForm } from "@/components/settings/sales-profile-form";
 import { InstagramConnection } from "@/components/settings/instagram-connection";
+import { ZernioConnection } from "@/components/settings/zernio-connection";
+import { listChannelAccounts } from "@/lib/chats/queries";
 import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
 import { Panel, Section } from "@/components/leads/ui/section";
 import {
@@ -22,7 +24,7 @@ import {
 export const metadata = { title: "Configuración · SmokIA" };
 
 export default async function ConfiguracionPage() {
-  const [apifyStatus, geminiStatus, huaweiMaasStatus, salesProfile, industries, actorOverrides, instagramStatus] =
+  const [apifyStatus, geminiStatus, huaweiMaasStatus, salesProfile, industries, actorOverrides, instagramStatus, chatsStatus] =
     await Promise.all([
       getApifyKeyStatus(),
       getGeminiKeyStatus(),
@@ -31,7 +33,10 @@ export default async function ConfiguracionPage() {
       listIndustries(),
       getActorOverrides(),
       getInstagramConnectionStatus(),
+      listChannelAccounts(),
     ]);
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const webhookReachable = Boolean(appUrl) && !/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(appUrl);
 
   return (
     // bg-lm-bg propio: esta pantalla no cuelga de app/(app)/leads/layout.tsx (que ya
@@ -76,6 +81,25 @@ export default async function ConfiguracionPage() {
           >
             <Panel className="p-4">
               <ActorOverridesForm overrides={actorOverrides} />
+            </Panel>
+          </Section>
+
+          <Section
+            title={
+              <span className="flex items-center gap-2">
+                <MessageSquare className="size-4 text-lm-ink-2" strokeWidth={1.5} />
+                Inbox de Instagram (Zernio)
+              </span>
+            }
+            description="Los mensajes directos de Instagram entran por Zernio y aparecen en Chats, para vos y, si lo activás, para tu socio. La API key se guarda cifrada y SmokIA registra su propio webhook firmado."
+          >
+            <Panel className="p-4">
+              <ZernioConnection
+                ready={chatsStatus.ready}
+                accounts={chatsStatus.accounts}
+                hasTeam={chatsStatus.hasTeam}
+                webhookReachable={webhookReachable}
+              />
             </Panel>
           </Section>
 

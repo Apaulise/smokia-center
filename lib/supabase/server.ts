@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 import type { Database } from "./database.types";
 
@@ -39,8 +40,11 @@ export async function createClient() {
  * Usar SIEMPRE esto en el servidor, nunca getSession(): getSession() lee la
  * cookie sin garantizar que el token siga siendo válido, así que no sirve
  * para autorizar.
+ *
+ * Con `cache()` de React: dentro de un mismo request (una pantalla o una
+ * Server Action) se valida una sola vez aunque lo pidan varias lecturas.
  */
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async function getCurrentUser() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
   if (error || !data?.claims) return null;
@@ -49,7 +53,7 @@ export async function getCurrentUser() {
     id: data.claims.sub as string,
     email: data.claims.email as string | undefined,
   };
-}
+});
 
 /** Igual que getCurrentUser pero lanza si no hay sesión. Para Server Actions. */
 export async function requireUser() {

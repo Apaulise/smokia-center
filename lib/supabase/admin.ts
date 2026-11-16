@@ -5,6 +5,8 @@
 // sincronización con Instagram, Plans/03 §3.2 — pull sin webhook, pero un cron
 // tampoco tiene sesión), y la API de automatización (app/api/automation/*,
 // lib/automation/*: bearer secret + un solo owner, AUTOMATION_OWNER_ID).
+// También el webhook de Zernio y su cron (app/api/zernio/webhook, app/api/jobs/chats-sync,
+// lib/chats/ingest.ts: firma HMAC por cuenta, el owner sale de channel_accounts).
 // reconcile y sync se llaman también desde una Server Action luego de
 // verificar con el cliente normal que el recurso es del usuario logueado.
 // Nunca desde un Server Component ni cerca del cliente.

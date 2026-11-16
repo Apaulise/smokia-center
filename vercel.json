@@ -7,6 +7,10 @@
     {
       "path": "/api/jobs/sync-marca",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/jobs/chats-sync",
+      "schedule": "30 6 * * *"
     }
   ]
 }

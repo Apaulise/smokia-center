@@ -70,7 +70,10 @@ export function EmailSignInForm({
 
   return (
     <div>
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      {/* method="post" es defensa en profundidad: si el JS todavía no se enganchó (hidratación lenta,
+          error), el navegador manda el submit nativo, y sin esto el default es GET — la contraseña
+          quedaría en la URL, en el historial y en los logs del servidor. */}
+      <form onSubmit={onSubmit} method="post" className="flex flex-col gap-4">
         <Field label="Email" htmlFor="email">
           <Input id="email" name="email" type="email" autoComplete="email" required className="h-10 sm:h-12" />
         </Field>

@@ -106,8 +106,10 @@ export function ResetFlow() {
 
   return (
     <AuthShell title={copy.title} description={description} quote={copy.quote}>
+      {/* method="post" en los dos formularios: si el JS no se enganchó todavía, que el navegador no
+          mande esto por GET (la contraseña nueva, sobre todo, no puede terminar en la URL). */}
       {step === "email" ? (
-        <form onSubmit={onEmailSubmit} className="flex flex-col gap-4">
+        <form onSubmit={onEmailSubmit} method="post" className="flex flex-col gap-4">
           <Field label="Email" htmlFor="email">
             <Input id="email" name="email" type="email" autoComplete="email" required autoFocus className="h-10 sm:h-12" />
           </Field>
@@ -144,7 +146,7 @@ export function ResetFlow() {
       ) : null}
 
       {step === "password" ? (
-        <form onSubmit={onPasswordSubmit} className="flex flex-col gap-4">
+        <form onSubmit={onPasswordSubmit} method="post" className="flex flex-col gap-4">
           <Field label="Contraseña nueva" htmlFor="password">
             <Input
               id="password"
