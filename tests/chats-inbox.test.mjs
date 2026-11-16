@@ -105,6 +105,8 @@ test("etiquetas: etapa desde el catálogo o el texto, y normalización", () => {
   assert.equal(describeTag("kw-fable", labels).label, "Palabra: fable");
   assert.equal(stageOf(["tofu", "manos-respondio"], labels), "MOFU");
   assert.equal(stageOf(["tofu", "lead-calificado"], labels), "BOFU");
+  // "agenda" (la que ponen los workflows modelo TOFU/MOFU al calificar) también es BOFU.
+  assert.equal(stageOf(["mofu", "agenda"], labels), "BOFU");
   assert.equal(normalizeTag("  Lead Calificado ñ "), "lead-calificado-n");
 });
 

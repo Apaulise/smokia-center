@@ -20,8 +20,8 @@ function humanize(tag: string): string {
 function stageFromText(tag: string): FunnelStage | null {
   const match = /^(tofu|mofu|bofu)(\b|[-_])/i.exec(tag);
   if (match) return match[1].toUpperCase() as FunnelStage;
-  // Las de calificación que ya usa el embudo: un lead calificado está en el fondo.
-  if (/^lead[-_]calificado$/i.test(tag)) return "BOFU";
+  // Las de calificación que ya usa el embudo: un lead calificado, o listo para agendar, está en el fondo.
+  if (/^lead[-_]calificado$/i.test(tag) || /^agenda$/i.test(tag)) return "BOFU";
   return null;
 }
 
