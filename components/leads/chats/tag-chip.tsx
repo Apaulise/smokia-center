@@ -13,13 +13,15 @@ import { cn } from "@/lib/utils";
  * códigos de color no compitan en la misma fila.
  */
 export const TAG_TONE: Record<TagColor, string> = {
-  green: "border-transparent bg-lm-tag-green/15 text-lm-tag-green",
-  blue: "border-transparent bg-lm-tag-blue/15 text-lm-tag-blue",
-  red: "border-transparent bg-lm-tag-red/15 text-lm-tag-red",
-  yellow: "border-transparent bg-lm-signal-soft text-lm-signal-text",
+  // Relleno lleno (decisión del dueño, 2026-11-17). El texto es `lm-bg`: oscuro sobre
+  // los tonos claros del tema oscuro y claro sobre los tonos fuertes del tema claro.
+  green: "border-transparent bg-lm-tag-green text-lm-bg",
+  blue: "border-transparent bg-lm-tag-blue text-lm-bg",
+  red: "border-transparent bg-lm-tag-red text-lm-bg",
+  yellow: "border-transparent bg-lm-signal text-lm-on-signal",
 };
 
-/** El punto de color que acompaña al nombre: el color nunca va solo. */
+/** El punto de color de un filtro o botón sin elegir (elegido, va relleno). */
 export const TAG_DOT: Record<TagColor, string> = {
   green: "bg-lm-tag-green",
   blue: "bg-lm-tag-blue",
@@ -39,7 +41,6 @@ export function TagChip({ view, onRemove, className }: { view: TagView; onRemove
         className,
       )}
     >
-      {view.color ? <span className={cn("size-1.5 shrink-0 rounded-full", TAG_DOT[view.color])} aria-hidden /> : null}
       <span className="truncate">{view.label}</span>
       {onRemove ? (
         <button

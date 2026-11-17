@@ -198,7 +198,7 @@ export function ContactPanel({
                     applied ? cn(TAG_TONE[preset.color], "font-medium") : "border-lm-line text-lm-ink-2 hover:border-lm-line-strong hover:text-lm-ink",
                   )}
                 >
-                  <span className={cn("size-2 shrink-0 rounded-full", TAG_DOT[preset.color], !applied && "opacity-70")} aria-hidden />
+                  {applied ? null : <span className={cn("size-2 shrink-0 rounded-full opacity-70", TAG_DOT[preset.color])} aria-hidden />}
                   <span className="min-w-0 flex-1 truncate text-left">{preset.label}</span>
                   {applied ? <Check className="size-3.5 shrink-0" strokeWidth={2} aria-hidden /> : null}
                 </button>

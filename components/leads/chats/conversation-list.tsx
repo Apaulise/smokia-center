@@ -151,7 +151,7 @@ export function ConversationList({
                   tag && !active && "opacity-55 hover:opacity-100",
                 )}
               >
-                {view.color ? <span className={cn("size-1.5 shrink-0 rounded-full", TAG_DOT[view.color])} aria-hidden /> : null}
+                {view.color && !active ? <span className={cn("size-1.5 shrink-0 rounded-full", TAG_DOT[view.color])} aria-hidden /> : null}
                 {view.label}
                 <span className={cn("font-mono text-[10.5px]", active ? "opacity-80" : "text-lm-ink-3")}>{count}</span>
                 {active ? <X className="size-3" strokeWidth={1.5} aria-hidden /> : null}
