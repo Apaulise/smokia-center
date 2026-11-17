@@ -1,3 +1,27 @@
+import {
+  Activity,
+  AlarmClock,
+  BookOpen,
+  Boxes,
+  CalendarDays,
+  CalendarRange,
+  ChartColumn,
+  ChartNoAxesCombined,
+  ClipboardCheck,
+  Gauge,
+  LayoutDashboard,
+  Library,
+  ListChecks,
+  ListPlus,
+  MessageSquare,
+  Radar,
+  ShieldCheck,
+  Target,
+  Users,
+  WandSparkles,
+  type LucideIcon,
+} from "lucide-react";
+
 /**
  * Las patas del negocio, Operaciones (el estado de los agentes) y el panel que las agrega.
  *
@@ -8,6 +32,8 @@
 export interface NavChild {
   href: string;
   label: string;
+  /** Con la barra colapsada es lo único que se ve de la pantalla: tiene que distinguirse de las demás del módulo. */
+  icon: LucideIcon;
   /** Sólo marca activo con match exacto. Para el índice de un módulo. */
   exact?: boolean;
 }
@@ -33,15 +59,15 @@ export const MODULES: NavModule[] = [
     icon: "leads",
     available: true,
     children: [
-      { href: "/leads", label: "Dashboard", exact: true },
-      { href: "/leads/equipo", label: "Equipo" },
-      { href: "/leads/objetivo", label: "Objetivo" },
-      { href: "/leads/lista", label: "Listas" },
-      { href: "/leads/generar", label: "Generar lista" },
-      { href: "/leads/seguimiento", label: "Seguimiento" },
-      { href: "/leads/chats", label: "Chats" },
-      { href: "/leads/agenda", label: "Agenda" },
-      { href: "/leads/conocimiento", label: "Memoria de ventas" },
+      { href: "/leads", label: "Dashboard", icon: LayoutDashboard, exact: true },
+      { href: "/leads/equipo", label: "Equipo", icon: Users },
+      { href: "/leads/objetivo", label: "Objetivo", icon: Target },
+      { href: "/leads/lista", label: "Listas", icon: ListChecks },
+      { href: "/leads/generar", label: "Generar lista", icon: ListPlus },
+      { href: "/leads/seguimiento", label: "Seguimiento", icon: AlarmClock },
+      { href: "/leads/chats", label: "Chats", icon: MessageSquare },
+      { href: "/leads/agenda", label: "Agenda", icon: CalendarDays },
+      { href: "/leads/conocimiento", label: "Memoria de ventas", icon: BookOpen },
     ],
   },
   {
@@ -50,11 +76,11 @@ export const MODULES: NavModule[] = [
     icon: "operaciones",
     available: true,
     children: [
-      { href: "/operaciones", label: "Resumen", exact: true },
-      { href: "/operaciones/aprobaciones", label: "Aprobaciones" },
-      { href: "/operaciones/areas", label: "Áreas" },
-      { href: "/operaciones/analisis", label: "Análisis semanal" },
-      { href: "/operaciones/auditor", label: "Auditor" },
+      { href: "/operaciones", label: "Resumen", icon: Activity, exact: true },
+      { href: "/operaciones/aprobaciones", label: "Aprobaciones", icon: ClipboardCheck },
+      { href: "/operaciones/areas", label: "Áreas", icon: Boxes },
+      { href: "/operaciones/analisis", label: "Análisis semanal", icon: ChartNoAxesCombined },
+      { href: "/operaciones/auditor", label: "Auditor", icon: ShieldCheck },
     ],
   },
   {
@@ -63,13 +89,13 @@ export const MODULES: NavModule[] = [
     icon: "marca",
     available: true,
     children: [
-      { href: "/marca", label: "Resumen", exact: true },
-      { href: "/marca/contenido", label: "Biblioteca" },
-      { href: "/marca/analisis", label: "Análisis" },
-      { href: "/marca/planificador", label: "Planificador" },
-      { href: "/marca/competencia", label: "Competencia" },
-      { href: "/marca/conocimiento", label: "Base de conocimiento" },
-      { href: "/marca/generar", label: "Generar contenido" },
+      { href: "/marca", label: "Resumen", icon: Gauge, exact: true },
+      { href: "/marca/contenido", label: "Biblioteca", icon: Library },
+      { href: "/marca/analisis", label: "Análisis", icon: ChartColumn },
+      { href: "/marca/planificador", label: "Planificador", icon: CalendarRange },
+      { href: "/marca/competencia", label: "Competencia", icon: Radar },
+      { href: "/marca/conocimiento", label: "Base de conocimiento", icon: BookOpen },
+      { href: "/marca/generar", label: "Generar contenido", icon: WandSparkles },
     ],
   },
   {

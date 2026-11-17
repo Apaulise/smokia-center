@@ -40,7 +40,7 @@ export default async function ConocimientoPage({ searchParams }: { searchParams:
         <Tabs>
           {KNOWLEDGE_COLLECTIONS.map((c) => (
             <TabLink key={c} href={`/leads/conocimiento?c=${c}`} active={c === collection}>
-              {COLLECTION_LABEL[c]} <span className="ml-1 font-mono text-xs text-lm-ink-3">{counts[c]}</span>
+              {COLLECTION_LABEL[c]} <span className="ml-1 font-mono text-xs opacity-60">{counts[c]}</span>
             </TabLink>
           ))}
         </Tabs>

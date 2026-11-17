@@ -77,7 +77,7 @@ const Bubble = memo(function Bubble({
       <div
         className={cn(
           "max-w-[min(34rem,85%)] rounded-lm-md px-3 py-2 text-[13.5px] leading-[1.45] break-words whitespace-pre-wrap",
-          outgoing ? "bg-lm-signal-soft text-lm-ink" : "bg-lm-raised text-lm-ink",
+          outgoing ? "rounded-br-lm-xs bg-lm-signal-soft text-lm-ink" : "rounded-bl-lm-xs bg-lm-ink/8 text-lm-ink",
           message.local === "failed" && "ring-1 ring-lm-danger",
         )}
       >
@@ -104,10 +104,10 @@ const Bubble = memo(function Bubble({
                   <Paperclip className="size-3.5 shrink-0 text-lm-ink-3" strokeWidth={1.5} />
                   {attachment.url ? (
                     <a href={attachment.url} target="_blank" rel="noopener noreferrer" className="text-lm-signal-text underline-offset-2 hover:underline">
-                      {attachment.label}
+                      {attachment.name ?? attachment.label}
                     </a>
                   ) : (
-                    <span>{attachment.label}</span>
+                    <span>{attachment.name ? `${attachment.label} · ${attachment.name}` : attachment.label}</span>
                   )}
                 </p>
               );
@@ -243,7 +243,7 @@ export function ChatThread({
       </header>
 
       {conversation.thread_owner === "other" ? (
-        <p className="flex items-start gap-2 border-b border-lm-line bg-lm-surface px-4 py-2 text-xs text-lm-ink-2" role="status">
+        <p className="flex items-start gap-2 border-b border-lm-line bg-lm-ink/5 px-4 py-2 text-xs text-lm-ink-2" role="status">
           <AlertTriangle className="mt-px size-3.5 shrink-0 text-lm-signal-text" strokeWidth={1.5} />
           Otra app (ManyChat o el Inbox de Instagram) es dueña de este hilo: ves los mensajes, pero Instagram no deja responder desde acá hasta que lo devuelva.
         </p>

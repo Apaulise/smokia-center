@@ -18,7 +18,7 @@ export function EmptyLine({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center justify-between gap-4 border-y border-dashed border-lm-line-strong py-4",
+        "flex flex-wrap items-center justify-between gap-4 rounded-lm-md border border-dashed border-lm-line-strong px-4 py-4",
         className,
       )}
     >
@@ -41,7 +41,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-1 border-y border-dashed border-lm-line-strong px-6 py-16 text-center">
+    <div className="lm-tint flex flex-col items-center gap-1 rounded-lm-lg border border-dashed border-lm-line-strong px-6 py-16 text-center">
       {icon ? (
         <div className="mb-3 flex size-11 items-center justify-center rounded-full border border-lm-line text-lm-ink-3">
           {icon}

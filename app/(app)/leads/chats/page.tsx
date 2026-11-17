@@ -99,9 +99,9 @@ export default async function ChatsPage({
           />
         </div>
       ) : (
-        <div className="flex h-[calc(100dvh-3.5rem)] min-h-0 flex-col">
+        <div className="flex h-[calc(100dvh-3.5rem-var(--lm-shell-y))] min-h-0 flex-col">
           {brokenAccounts.length > 0 ? (
-            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-lm-line bg-lm-surface px-6 py-2 text-[13px] text-lm-ink-2" role="status">
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-lm-line bg-lm-ink/5 px-6 py-2 text-[13px] text-lm-ink-2" role="status">
               <AlertTriangle className="size-4 shrink-0 text-lm-signal-text" strokeWidth={1.5} />
               {brokenAccounts.map((account) => `@${account.handle ?? "instagram"}`).join(", ")}: {brokenAccounts[0]?.status_detail ?? "la cuenta necesita reconectarse en Zernio"}.
               <Link href="/configuracion" className="text-lm-signal-text hover:underline">

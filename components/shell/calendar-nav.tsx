@@ -52,20 +52,20 @@ export function PeriodNav({
         <Link
           href={calendarHref(basePath, { view, date: prev }, extraParams)}
           aria-label="Período anterior"
-          className="flex size-7 items-center justify-center rounded-[3px] text-lm-ink-2 hover:bg-lm-raised hover:text-lm-ink"
+          className="flex size-7 items-center justify-center rounded-[6px] text-lm-ink-2 hover:bg-lm-raised hover:text-lm-ink"
         >
           <ChevronLeft className="size-4" strokeWidth={1.5} />
         </Link>
         <Link
           href={calendarHref(basePath, { view, date: today }, extraParams)}
-          className="rounded-[3px] px-2.5 py-1 font-lm-sans text-[13px] text-lm-ink-2 hover:bg-lm-raised hover:text-lm-ink"
+          className="rounded-[6px] px-2.5 py-1 font-lm-sans text-[13px] text-lm-ink-2 hover:bg-lm-raised hover:text-lm-ink"
         >
           Hoy
         </Link>
         <Link
           href={calendarHref(basePath, { view, date: next }, extraParams)}
           aria-label="Período siguiente"
-          className="flex size-7 items-center justify-center rounded-[3px] text-lm-ink-2 hover:bg-lm-raised hover:text-lm-ink"
+          className="flex size-7 items-center justify-center rounded-[6px] text-lm-ink-2 hover:bg-lm-raised hover:text-lm-ink"
         >
           <ChevronRight className="size-4" strokeWidth={1.5} />
         </Link>

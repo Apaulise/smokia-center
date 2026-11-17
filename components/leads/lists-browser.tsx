@@ -9,7 +9,7 @@ import { LeadListCard } from "@/components/leads/lead-list-card";
 import { ListsTable } from "@/components/leads/lists-table";
 import { Button, ButtonLink } from "@/components/leads/ui/button";
 import { Input } from "@/components/leads/ui/field";
-import { SegmentedLink } from "@/components/leads/ui/tabs";
+import { Segmented, SegmentedLink } from "@/components/leads/ui/tabs";
 import type { LeadListOverviewRow } from "@/lib/leads/queries";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -53,7 +53,7 @@ export function ListsBrowser({
             className="h-8 pl-8 text-[13px]"
           />
         </div>
-        <div className="inline-flex gap-0.5 rounded-lm-sm border border-lm-line bg-lm-surface p-0.5">
+        <Segmented>
           <SegmentedLink href="/leads/lista?view=tabla" active={view === "tabla"}>
             <TableProperties className="mr-1.5 inline size-3.5" strokeWidth={1.5} />
             Tabla
@@ -62,7 +62,7 @@ export function ListsBrowser({
             <LayoutGrid className="mr-1.5 inline size-3.5" strokeWidth={1.5} />
             Grilla
           </SegmentedLink>
-        </div>
+        </Segmented>
         <Button type="button" variant="secondary" onClick={() => setCreatingList(true)}>
           <Plus className="size-3.5" strokeWidth={1.5} />
           Nueva lista

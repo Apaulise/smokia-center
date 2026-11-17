@@ -1,14 +1,14 @@
 "use client";
 
-import { AlarmClock, ExternalLink, Loader2, Megaphone, Plus, RefreshCw, Tag, X } from "lucide-react";
+import { AlarmClock, Check, ExternalLink, Loader2, Megaphone, Plus, RefreshCw, Tag, X } from "lucide-react";
 import { useState, useTransition, type ReactNode } from "react";
 
 import { LeadLink } from "@/components/leads/chats/conversation-actions";
-import { StageMark, TagChip } from "@/components/leads/chats/tag-chip";
+import { StageMark, TAG_DOT, TAG_TONE, TagChip } from "@/components/leads/chats/tag-chip";
 import type { TagLabelRow } from "@/lib/chats/db";
 import { changeConversationTags, refreshConversationTags, setConversationFollowUp } from "@/lib/chats/inbox-actions";
 import type { ConversationListItem } from "@/lib/chats/queries";
-import { normalizeTag, orderTags, stageOf } from "@/lib/chats/tag-view";
+import { normalizeTag, orderTags, PRESET_TAGS, presetOf, stageOf } from "@/lib/chats/tag-view";
 import { cn } from "@/lib/utils";
 
 export type AutomationSummary = { id: string; stage: "TOFU" | "MOFU"; keywords: string[]; permalink: string | null; resourceTitle: string };
@@ -99,7 +99,11 @@ export function ContactPanel({
   const tags = conversation.tags ?? [];
   const views = orderTags(tags, labels);
   const stage = stageOf(tags, labels);
-  const suggestions = [...new Set([...allTags, ...labels.keys()])].filter((tag) => !tags.includes(tag) && (!draft || tag.includes(normalizeTag(draft) ?? "\u0000"))).slice(0, 6);
+  // Las predefinidas tienen sus propios botones: acá sólo se sugieren las otras.
+  const suggestions = [...new Set([...allTags, ...labels.keys()])]
+    .filter((tag) => !presetOf(tag) && !tags.includes(tag) && (!draft || tag.includes(normalizeTag(draft) ?? "\u0000")))
+    .slice(0, 6);
+  const otherViews = views.filter((view) => !view.color);
 
   function changeTags(add: string[], remove: string[]) {
     const previous = tags;
@@ -177,12 +181,37 @@ export function ContactPanel({
               {stage === "TOFU" ? "Llegó por contenido de alcance" : stage === "MOFU" ? "Ya mostró interés" : "Calificado para vender"}
             </div>
           ) : null}
-          <div className="flex flex-wrap gap-1">
-            {views.length === 0 ? <span className="text-[12.5px] text-lm-ink-3">Sin etiquetas. Las ponen los workflows de Zernio, o agregalas acá.</span> : null}
-            {views.map((view) => (
-              <TagChip key={view.tag} view={view} onRemove={extrasReady ? () => changeTags([], [view.tag]) : undefined} />
-            ))}
+          {/* Las cuatro predefinidas: un toque la pone, otro la saca. */}
+          <div className="grid grid-cols-2 gap-1.5" role="group" aria-label="Etiquetas predefinidas">
+            {PRESET_TAGS.map((preset) => {
+              const applied = tags.includes(preset.tag);
+              return (
+                <button
+                  key={preset.tag}
+                  type="button"
+                  aria-pressed={applied}
+                  title={preset.hint}
+                  disabled={!extrasReady || tagPending}
+                  onClick={() => (applied ? changeTags([], [preset.tag]) : changeTags([preset.tag], []))}
+                  className={cn(
+                    "inline-flex h-8 items-center gap-2 rounded-lm-sm border px-2.5 font-lm-sans text-[12.5px] transition-colors duration-150 ease-out focus-visible:lm-focus disabled:opacity-55",
+                    applied ? cn(TAG_TONE[preset.color], "font-medium") : "border-lm-line text-lm-ink-2 hover:border-lm-line-strong hover:text-lm-ink",
+                  )}
+                >
+                  <span className={cn("size-2 shrink-0 rounded-full", TAG_DOT[preset.color], !applied && "opacity-70")} aria-hidden />
+                  <span className="min-w-0 flex-1 truncate text-left">{preset.label}</span>
+                  {applied ? <Check className="size-3.5 shrink-0" strokeWidth={2} aria-hidden /> : null}
+                </button>
+              );
+            })}
           </div>
+          {otherViews.length > 0 ? (
+            <div className="flex flex-wrap gap-1">
+              {otherViews.map((view) => (
+                <TagChip key={view.tag} view={view} onRemove={extrasReady ? () => changeTags([], [view.tag]) : undefined} />
+              ))}
+            </div>
+          ) : null}
           {extrasReady ? (
             <>
               <form
@@ -196,8 +225,8 @@ export function ContactPanel({
                 <input
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
-                  placeholder="Agregar etiqueta"
-                  aria-label="Agregar etiqueta"
+                  placeholder="Otra etiqueta"
+                  aria-label="Agregar otra etiqueta"
                   maxLength={48}
                   className="h-7 min-w-0 flex-1 rounded-lm-sm border border-lm-line-strong bg-lm-raised px-2 font-lm-sans text-[12.5px] text-lm-ink placeholder:text-lm-ink-3 focus:border-lm-signal focus:outline-none"
                 />

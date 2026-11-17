@@ -10,7 +10,7 @@ import { SuggestedReplyConfirm } from "@/components/leads/suggested-reply-confir
 import { Button, Kbd } from "@/components/leads/ui/button";
 import { Composer, ComposerBody, ComposerFoot, ComposerHead } from "@/components/leads/ui/composer";
 import { Textarea } from "@/components/leads/ui/field";
-import { SegmentedButton } from "@/components/leads/ui/tabs";
+import { Segmented, SegmentedButton } from "@/components/leads/ui/tabs";
 import { ANGLE_LABEL, type SalesAngle } from "@/lib/leads/ai/angles";
 import {
   analyzeLeadResponseAction,
@@ -78,13 +78,13 @@ function useAiDraft(initial = "") {
 
 function ChannelSegmented({ channel, onChange }: { channel: Channel; onChange: (c: Channel) => void }) {
   return (
-    <div className="inline-flex gap-0.5 rounded-lm-sm border border-lm-line bg-lm-surface p-0.5">
+    <Segmented>
       {(["WHATSAPP", "INSTAGRAM", "EMAIL"] as const).map((c) => (
         <SegmentedButton key={c} active={channel === c} onClick={() => onChange(c)} className="h-6 px-2 text-xs">
           {CHANNEL_LABEL[c]}
         </SegmentedButton>
       ))}
-    </div>
+    </Segmented>
   );
 }
 
@@ -128,14 +128,14 @@ export function LeadComposer({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="inline-flex gap-0.5 self-start rounded-lm-sm border border-lm-line bg-lm-surface p-0.5">
+      <Segmented className="self-start">
         <SegmentedButton active={mode === "analizar"} onClick={() => setOverride("analizar")} className="h-6 px-2 text-xs">
           Analizar respuesta
         </SegmentedButton>
         <SegmentedButton active={mode === "seguimiento"} onClick={() => setOverride("seguimiento")} className="h-6 px-2 text-xs">
           Seguimiento
         </SegmentedButton>
-      </div>
+      </Segmented>
       {mode === "seguimiento" ? (
         <SeguimientoComposer leadId={leadId} phone={phone} />
       ) : (

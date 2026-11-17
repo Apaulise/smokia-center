@@ -19,7 +19,7 @@ export function attachmentLabel(type: string, originalType?: string | null): str
     case "audio":
       return "Audio";
     case "file":
-      return "Archivo";
+      return "Documento";
     case "sticker":
       return "Sticker";
     case "share":
@@ -29,7 +29,7 @@ export function attachmentLabel(type: string, originalType?: string | null): str
   }
 }
 
-export type AttachmentView = { type: string; originalType: string | null; url: string | null; label: string };
+export type AttachmentView = { type: string; originalType: string | null; url: string | null; label: string; /** Nombre del archivo, si vino. */ name: string | null };
 
 /** Lee `messages.attachments` (jsonb) sin confiar en su forma. */
 export function readAttachments(value: Json | null | undefined): AttachmentView[] {
@@ -40,7 +40,8 @@ export function readAttachments(value: Json | null | undefined): AttachmentView[
     const type = typeof item.type === "string" ? item.type : "file";
     const originalType = typeof item.originalType === "string" ? item.originalType : null;
     const url = typeof item.url === "string" && /^https:\/\//.test(item.url) ? item.url : null;
-    views.push({ type, originalType, url, label: attachmentLabel(type, originalType) });
+    const name = typeof item.filename === "string" && item.filename.trim() ? item.filename.trim().slice(0, 120) : null;
+    views.push({ type, originalType, url, label: attachmentLabel(type, originalType), name });
   }
   return views;
 }

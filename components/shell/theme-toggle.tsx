@@ -65,7 +65,7 @@ export function ThemeToggle({ variant = "segmented", className }: { variant?: "s
         title={next === "light" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
         aria-label={next === "light" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
         className={cn(
-          "flex h-8 w-full cursor-pointer items-center justify-center rounded-lm-sm text-lm-ink-2 transition-colors hover:bg-lm-raised hover:text-lm-ink",
+          "mx-auto flex size-9 cursor-pointer items-center justify-center rounded-full text-lm-ink-2 transition-colors hover:bg-lm-ink/8 hover:text-lm-ink focus-visible:lm-focus",
           className,
         )}
       >
@@ -75,7 +75,7 @@ export function ThemeToggle({ variant = "segmented", className }: { variant?: "s
   }
 
   return (
-    <div role="radiogroup" aria-label="Tema" className={cn("flex rounded-lm-md border border-lm-line bg-lm-bg p-0.5", className)}>
+    <div role="radiogroup" aria-label="Tema" className={cn("flex gap-0.5 rounded-lm-sm bg-lm-ink/6 p-[3px]", className)}>
       {OPTIONS.map(({ value, label, Icon }) => {
         const active = theme === value;
         return (
@@ -86,8 +86,8 @@ export function ThemeToggle({ variant = "segmented", className }: { variant?: "s
             aria-checked={active}
             onClick={() => applyTheme(value)}
             className={cn(
-              "flex h-7 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lm-sm text-xs transition-colors",
-              active ? "bg-lm-raised text-lm-ink" : "text-lm-ink-3 hover:text-lm-ink-2",
+              "flex h-7 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[6px] text-xs transition-colors focus-visible:lm-focus",
+              active ? "bg-lm-overlay text-lm-ink shadow-[0_2px_4px_rgb(0_0_0/0.12)]" : "text-lm-ink-3 hover:text-lm-ink-2",
             )}
           >
             <Icon className="size-3.5" strokeWidth={1.5} />

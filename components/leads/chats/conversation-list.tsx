@@ -3,12 +3,12 @@
 import { AlarmClock, CornerDownLeft, Link2, Loader2, Search, X } from "lucide-react";
 import { memo, type RefObject } from "react";
 
-import { StageMark, TagChip } from "@/components/leads/chats/tag-chip";
+import { StageMark, TAG_DOT, TAG_TONE, TagChip } from "@/components/leads/chats/tag-chip";
 import type { TagLabelRow } from "@/lib/chats/db";
 import { formatChatTime, initialsOf } from "@/lib/chats/format";
 import { awaitingReply, followUpDue, openWindowLeft, WINDOW_WARNING_MS } from "@/lib/chats/inbox";
 import type { ConversationFilter, ConversationListItem } from "@/lib/chats/queries";
-import { orderTags, stageOf } from "@/lib/chats/tag-view";
+import { describeTag, orderTags, stageOf } from "@/lib/chats/tag-view";
 import { formatWindowLeft } from "@/lib/chats/window";
 import { cn } from "@/lib/utils";
 
@@ -128,32 +128,37 @@ export function ConversationList({
           })}
         </div>
 
-        {tags.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-1" aria-label="Filtrar por etiqueta">
-            {tag ? (
+        {/* Las cuatro predefinidas están siempre (con su color); después, las demás que haya en la bandeja.
+            Tocar la elegida la saca: no hace falta buscar una X. */}
+        <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Filtrar por etiqueta">
+          {tags.slice(0, 12).map(({ tag: value, count }) => {
+            const view = describeTag(value, labels);
+            const active = tag === value;
+            return (
               <button
+                key={value}
                 type="button"
-                onClick={() => onTagChange(null)}
-                className="inline-flex h-6 shrink-0 items-center gap-1 rounded-lm-xs border border-lm-signal px-1.5 font-lm-sans text-[11.5px] text-lm-ink focus-visible:lm-focus"
+                aria-pressed={active}
+                title={active ? "Quitar el filtro" : `Ver sólo «${view.label}»`}
+                onClick={() => onTagChange(active ? null : value)}
+                className={cn(
+                  "inline-flex h-6 shrink-0 items-center gap-1.5 rounded-lm-xs border px-1.5 font-lm-sans text-[11.5px] transition-colors duration-150 ease-out focus-visible:lm-focus",
+                  active
+                    ? view.color
+                      ? cn(TAG_TONE[view.color], "font-medium")
+                      : "border-lm-line-strong bg-lm-ink/10 font-medium text-lm-ink"
+                    : "border-lm-line text-lm-ink-2 hover:border-lm-line-strong hover:text-lm-ink",
+                  tag && !active && "opacity-55 hover:opacity-100",
+                )}
               >
-                {orderTags([tag], labels)[0]?.label ?? tag}
-                <X className="size-3" strokeWidth={1.5} aria-label="Quitar el filtro de etiqueta" />
+                {view.color ? <span className={cn("size-1.5 shrink-0 rounded-full", TAG_DOT[view.color])} aria-hidden /> : null}
+                {view.label}
+                <span className={cn("font-mono text-[10.5px]", active ? "opacity-80" : "text-lm-ink-3")}>{count}</span>
+                {active ? <X className="size-3" strokeWidth={1.5} aria-hidden /> : null}
               </button>
-            ) : (
-              tags.slice(0, 12).map(({ tag: value, count }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => onTagChange(value)}
-                  className="inline-flex h-6 shrink-0 items-center gap-1 rounded-lm-xs border border-lm-line px-1.5 font-lm-sans text-[11.5px] text-lm-ink-2 hover:border-lm-line-strong hover:text-lm-ink focus-visible:lm-focus"
-                >
-                  {orderTags([value], labels)[0]?.label ?? value}
-                  <span className="font-mono text-[10.5px] text-lm-ink-3">{count}</span>
-                </button>
-              ))
-            )}
-          </div>
-        ) : null}
+            );
+          })}
+        </div>
       </div>
 
       {items.length === 0 ? (
@@ -196,7 +201,8 @@ const ConversationRow = memo(function ConversationRow({
   const title = item.participant_name || (item.participant_handle ? `@${item.participant_handle}` : "Sin nombre");
   const waiting = awaitingReply(item);
   const left = waiting ? openWindowLeft(item.last_inbound_at, now) : 0;
-  const tags = orderTags(item.tags ?? [], labels).filter((view) => !view.stage);
+  // Las de etapa pura (tofu, lead-calificado…) ya se leen en la marca de etapa; las predefinidas se muestran siempre.
+  const tags = orderTags(item.tags ?? [], labels).filter((view) => view.color || !view.stage);
   const stage = stageOf(item.tags ?? [], labels);
   const due = followUpDue(item.follow_up_at, now);
 

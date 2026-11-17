@@ -61,6 +61,18 @@ Comportamiento:
 - **Grabar**: el componente nuevo `audio-recorder.tsx` graba en **WAV mono de 22 kHz** con `AudioWorklet` y un codificador PCM chico (`lib/chats/wav.ts`, testeable). WAV es un formato que Instagram acepta en todos los navegadores; webm y opus no siempre. Tope de 60 s y unos 2,6 MB. Subir un archivo acepta m4a, mp3, aac y wav, de hasta 8 MB.
 - **Dónde se gestionan**: en una sección "Respuestas rápidas" de Configuración (crear, ordenar, renombrar y borrar) y con "Guardar como respuesta rápida" desde el compositor.
 
+### Ajuste del 2026-11-16 — tres secciones y gestión desde el compositor
+
+Pedido del dueño. Migración `20261116120000_chat_quick_reply_files.sql`, aplicada el 2026-11-17.
+
+- **Tres secciones**: Textos, Audios y Archivos (documentos e imágenes). El panel del compositor (`components/leads/chats/quick-replies-panel.tsx`) las muestra como pestañas con su contador. Con `/algo` escrito, si la sección elegida no tiene coincidencias, salta a la primera que sí.
+- **Tipo nuevo `ARCHIVO`** en `chat_quick_replies`, con las columnas `file_path`, `file_mime`, `file_name` y `file_size`. Acepta imágenes png, jpeg y gif de hasta 8 MB, y PDF de hasta 25 MB: es lo que Instagram admite por DM. El archivo vive en el bucket **privado** `chat-files` (`<owner_id>/<uuid>.<ext>`), con las mismas cuatro políticas por carpeta que `chat-audio`. Se manda con un toque y 4 s para deshacer, como un audio. `sendChatAttachment` (antes `sendChatAudio`) firma una URL de 1 h y la manda a Zernio como `image` o `file`.
+- **Gestión en el mismo panel**: los textos se crean, editan (nombre y mensaje) y borran. Los audios y los archivos se renombran y se borran, y el borrado se confirma en la misma fila, sin `window.confirm`. Al borrar se elimina la fila y después el archivo de Storage.
+
+## Etiquetas predefinidas (ajuste del 2026-11-16)
+
+Hay cuatro etiquetas fijas con color: **Agenda** (verde), **Negocio** (azul), **Curioso** (rojo) y **Seguimiento** (amarillo). Están en `PRESET_TAGS`, en `lib/chats/tag-view.ts`, y el texto es el mismo que escriben los workflows modelo TOFU/MOFU. Siempre aparecen en el filtro de la bandeja, aunque estén en 0, y en el panel del contacto como cuatro botones que ponen o sacan la etiqueta. Son el único código de color de la bandeja: la etapa del embudo pasa a ir en mono, sin color.
+
 ## Sub-paso 3 — Etiquetas de Zernio en SmokIA, y la bandeja que se lee de un vistazo
 **Migración `<ts>_chat_tags.sql`**:
 - `conversations` suma tres columnas: `zernio_contact_id text`, `tags text[] not null default '{}'` (con índice GIN) y `tags_synced_at`, más `follow_up_at timestamptz` y `follow_up_note text` (índice en `(owner_id, follow_up_at)`). Las políticas de equipo de §1.25 ya las cubren, así que no se abre nada nuevo.

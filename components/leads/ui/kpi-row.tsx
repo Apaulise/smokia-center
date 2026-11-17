@@ -3,15 +3,18 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Fila de métricas del sistema "Señal y humo" (Design System KpiRow):
- * separadas por líneas finas, no cards. Un único KPI por fila va en amarillo
- * — el que importa en esta etapa del negocio.
+ * Fila de métricas: un solo panel de vidrio con las métricas separadas por
+ * líneas finas adentro (no una card por número). Un único KPI por fila va en
+ * amarillo — el que importa en esta etapa del negocio.
  */
 export function KpiRow({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div
       className={cn(
-        "grid auto-cols-fr grid-flow-col divide-x divide-lm-line border-y border-lm-line overflow-x-auto",
+        "lm-glass-soft grid overflow-hidden rounded-lm-lg border",
+        // Mobile: dos por fila (en una sola fila los números se cortaban). Desde sm, todas en una fila.
+        "grid-cols-2 max-sm:[&>*]:border-lm-line max-sm:[&>*:nth-child(even)]:border-l max-sm:[&>*:nth-child(n+3)]:border-t",
+        "sm:auto-cols-fr sm:grid-flow-col sm:grid-cols-none sm:divide-x sm:divide-lm-line",
         className,
       )}
     >
@@ -43,14 +46,14 @@ export function Kpi({
   className?: string;
 }) {
   return (
-    <div className={cn("relative flex min-w-0 flex-col gap-2 px-4 py-4 first:pl-0 last:pr-0", muted && "opacity-50", className)}>
-      {mark ? <span className="absolute -top-px left-4 h-0.5 w-6 bg-lm-signal" aria-hidden="true" /> : null}
+    <div className={cn("relative flex min-w-0 flex-col gap-2 px-5 py-4", muted && "opacity-50", className)}>
+      {mark ? <span className="absolute top-0 left-5 h-0.5 w-6 rounded-b-full bg-lm-signal" aria-hidden="true" /> : null}
       <span className="truncate font-lm-sans text-[11px] leading-[14px] font-semibold tracking-[0.1em] text-lm-ink-3 uppercase">
         {label}
       </span>
       <span
         className={cn(
-          "font-mono text-[32px] leading-9 font-medium tracking-[-0.02em] tabular-nums",
+          "font-mono text-[32px] leading-9 font-medium tracking-[-0.04em] tabular-nums",
           signal ? "text-lm-signal-text" : "text-lm-ink",
         )}
       >

@@ -1,8 +1,8 @@
 "use server";
 
-// Acciones de la bandeja de §1.26: respuestas rápidas (texto y audio),
-// etiquetas (se escriben primero en Zernio, que es la fuente de verdad) y
-// seguimiento. Todas con el cliente con RLS del que las usa.
+// Acciones de la bandeja de §1.26: respuestas rápidas (texto, audio y
+// documentos/imágenes), etiquetas (se escriben primero en Zernio, que es la
+// fuente de verdad) y seguimiento. Todas con el cliente con RLS del que las usa.
 
 import { randomUUID } from "node:crypto";
 
@@ -10,7 +10,20 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { asChats, type ChatsClient, type QuickReplyRow, type TagLabelRow } from "@/lib/chats/db";
-import { AUDIO_MAX_BYTES, AUDIO_MAX_MS, audioMimeOf, BODY_MAX, extensionFor, TITLE_MAX, type QuickReplyView } from "@/lib/chats/quick-replies";
+import {
+  AUDIO_MAX_BYTES,
+  AUDIO_MAX_MS,
+  audioMimeOf,
+  BODY_MAX,
+  extensionFor,
+  FILE_NAME_MAX,
+  fileExtensionFor,
+  fileKindOf,
+  fileMimeOf,
+  fileSizeLimit,
+  TITLE_MAX,
+  type QuickReplyView,
+} from "@/lib/chats/quick-replies";
 import { normalizeTag } from "@/lib/chats/tag-view";
 import { describeZernioError, getContact, listContacts, setContactTags } from "@/lib/chats/zernio";
 import { decrypt } from "@/lib/crypto";
@@ -22,6 +35,14 @@ export type InboxActionResult = { ok: boolean; message: string };
 const idSchema = z.uuid();
 const PREVIEW_TTL_S = 60 * 60;
 const BUCKET = "chat-audio";
+/** Documentos e imágenes (migración 20261116120000_chat_quick_reply_files.sql). */
+const FILE_BUCKET = "chat-files";
+const MISSING_FILES_MIGRATION = "Falta aplicar la migración de documentos e imágenes (`npm run db:push`).";
+
+/** Columna, check o bucket que todavía no existen: la migración de archivos no se aplicó. */
+function missingFilesSupport(error: { code?: string; message?: string } | null): boolean {
+  return Boolean(error && (error.code === "PGRST204" || error.code === "42703" || error.code === "23514" || /bucket|file_(path|mime|name|size)/i.test(error.message ?? "")));
+}
 
 function missingTable(error: { code?: string; message?: string } | null): boolean {
   return Boolean(error && (error.code === "PGRST205" || error.code === "42P01" || /Could not find the table|does not exist/i.test(error.message ?? "")));
@@ -37,11 +58,14 @@ function toView(row: QuickReplyRow, previewUrl: string | null): QuickReplyView {
     body: row.body,
     previewUrl,
     durationMs: row.audio_duration_ms,
+    mime: row.kind === "ARCHIVO" ? (row.file_mime ?? null) : row.audio_mime,
+    fileName: row.file_name ?? null,
+    fileSize: row.file_size ?? null,
     useCount: row.use_count,
   };
 }
 
-/** Las respuestas rápidas del usuario, con una URL firmada para escuchar cada audio. */
+/** Las respuestas rápidas del usuario, con una URL firmada para escuchar cada audio y ver cada archivo. */
 export async function listQuickReplies(): Promise<{ ready: boolean; items: QuickReplyView[] }> {
   const user = await requireUser();
   const supabase = await createClient();
@@ -54,13 +78,23 @@ export async function listQuickReplies(): Promise<{ ready: boolean; items: Quick
   if (error) return { ready: !missingTable(error), items: [] };
   const rows = (data ?? []) as QuickReplyRow[];
 
-  const paths = rows.map((row) => row.audio_path).filter((path): path is string => Boolean(path));
-  const signed = new Map<string, string>();
-  if (paths.length > 0) {
-    const { data: urls } = await supabase.storage.from(BUCKET).createSignedUrls(paths, PREVIEW_TTL_S);
+  // Un pedido por bucket, los dos a la vez: son independientes.
+  const sign = async (bucket: string, paths: string[]) => {
+    const signed = new Map<string, string>();
+    if (paths.length === 0) return signed;
+    const { data: urls } = await supabase.storage.from(bucket).createSignedUrls(paths, PREVIEW_TTL_S);
     for (const entry of urls ?? []) if (entry.path && entry.signedUrl) signed.set(entry.path, entry.signedUrl);
-  }
-  return { ready: true, items: rows.map((row) => toView(row, row.audio_path ? (signed.get(row.audio_path) ?? null) : null)) };
+    return signed;
+  };
+  const present = (path: string | null | undefined): path is string => Boolean(path);
+  const [audioUrls, fileUrls] = await Promise.all([
+    sign(BUCKET, rows.map((row) => row.audio_path).filter(present)),
+    sign(FILE_BUCKET, rows.map((row) => row.file_path).filter(present)),
+  ]);
+  return {
+    ready: true,
+    items: rows.map((row) => toView(row, (row.file_path ? fileUrls.get(row.file_path) : row.audio_path ? audioUrls.get(row.audio_path) : null) ?? null)),
+  };
 }
 
 const textSchema = z.object({
@@ -142,6 +176,70 @@ export async function createAudioQuickReply(input: { title: string; path: string
   return { ok: true, message: "Audio guardado: ya lo podés mandar con un toque.", item: toView(data as QuickReplyRow, signed.signedUrl) };
 }
 
+/**
+ * La ruta donde el navegador sube un documento o una imagen nuevos. Igual que
+ * los audios: directo del navegador al bucket privado, a la carpeta del usuario.
+ */
+export async function prepareFileUpload(input: { mime: string; name: string; size: number }): Promise<{ ok: true; path: string; mime: string } | { ok: false; message: string }> {
+  const user = await requireUser();
+  const mime = fileMimeOf(input.mime, input.name);
+  if (!mime) return { ok: false, message: "Instagram sólo acepta imágenes (png, jpg, gif) y PDF por mensaje directo." };
+  if (!Number.isFinite(input.size) || input.size <= 0) return { ok: false, message: "El archivo está vacío." };
+  if (input.size > fileSizeLimit(mime)) {
+    return { ok: false, message: fileKindOf(mime) === "image" ? "La imagen puede pesar hasta 8 MB." : "El PDF puede pesar hasta 25 MB." };
+  }
+  return { ok: true, path: `${user.id}/${randomUUID()}.${fileExtensionFor(mime)}`, mime };
+}
+
+const fileSchema = z.object({
+  title: z.string().trim().min(1, "Ponele un nombre.").max(TITLE_MAX, `Hasta ${TITLE_MAX} caracteres.`),
+  path: z.string().regex(/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(png|jpg|gif|pdf)$/i, "Ruta inválida."),
+  mime: z.enum(["image/png", "image/jpeg", "image/gif", "application/pdf"]),
+  name: z.string().trim().max(FILE_NAME_MAX).nullable(),
+  size: z.number().int().min(1).max(26_214_400),
+});
+
+/** Registra un documento o una imagen que el navegador ya subió a Storage. */
+export async function createFileQuickReply(input: { title: string; path: string; mime: string; name: string | null; size: number }): Promise<InboxActionResult & { item?: QuickReplyView }> {
+  const user = await requireUser();
+  const parsed = fileSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+  if (!parsed.data.path.startsWith(`${user.id}/`)) return { ok: false, message: "Ruta inválida." };
+  if (parsed.data.size > fileSizeLimit(parsed.data.mime)) return { ok: false, message: "El archivo pesa más de lo que acepta Instagram." };
+
+  const supabase = await createClient();
+  // Que el archivo exista de verdad (y sea del usuario: RLS de Storage) antes de guardar la fila.
+  const { data: signed, error: signError } = await supabase.storage.from(FILE_BUCKET).createSignedUrl(parsed.data.path, PREVIEW_TTL_S);
+  if (signError || !signed?.signedUrl) return { ok: false, message: "No se encontró el archivo subido. Probá de nuevo." };
+
+  const chats = asChats(supabase);
+  const { data, error } = await chats
+    .from("chat_quick_replies")
+    .insert({
+      owner_id: user.id,
+      kind: "ARCHIVO",
+      title: parsed.data.title,
+      file_path: parsed.data.path,
+      file_mime: parsed.data.mime,
+      file_name: parsed.data.name || null,
+      file_size: parsed.data.size,
+      sort_order: await nextSortOrder(chats, user.id),
+    })
+    .select("*")
+    .single();
+  if (error || !data) {
+    await supabase.storage.from(FILE_BUCKET).remove([parsed.data.path]);
+    return { ok: false, message: missingFilesSupport(error) || missingTable(error) ? MISSING_FILES_MIGRATION : "No se pudo guardar el archivo." };
+  }
+  revalidatePath("/configuracion");
+  return {
+    ok: true,
+    message: fileKindOf(parsed.data.mime) === "image" ? "Imagen guardada: ya la podés mandar con un toque." : "Documento guardado: ya lo podés mandar con un toque.",
+    item: toView(data as QuickReplyRow, signed.signedUrl),
+  };
+}
+
+/** Cambia el nombre de una respuesta rápida y, si es de texto, también su mensaje. */
 export async function renameQuickReply(id: string, input: { title: string; body?: string }): Promise<InboxActionResult> {
   const user = await requireUser();
   if (!idSchema.safeParse(id).success) return { ok: false, message: "Respuesta inválida." };
@@ -153,8 +251,16 @@ export async function renameQuickReply(id: string, input: { title: string; body?
     if (!body.success) return { ok: false, message: "El mensaje no puede quedar vacío." };
     patch.body = body.data;
   }
-  const { error } = await asChats(await createClient()).from("chat_quick_replies").update(patch).eq("id", id).eq("owner_id", user.id);
+  const chats = asChats(await createClient());
+  // El mensaje sólo existe en las de texto: en un audio o un archivo el check de la tabla lo deja pasar, pero no se usa.
+  if (patch.body !== undefined) {
+    const { data: current } = await chats.from("chat_quick_replies").select("kind").eq("id", id).eq("owner_id", user.id).maybeSingle();
+    if (!current) return { ok: false, message: "No se encontró esa respuesta." };
+    if (current.kind !== "TEXTO") delete patch.body;
+  }
+  const { data, error } = await chats.from("chat_quick_replies").update(patch).eq("id", id).eq("owner_id", user.id).select("id");
   if (error) return { ok: false, message: "No se pudo guardar." };
+  if (!data || data.length === 0) return { ok: false, message: "No se encontró esa respuesta." };
   revalidatePath("/configuracion");
   return { ok: true, message: "Guardado." };
 }
@@ -182,12 +288,17 @@ export async function deleteQuickReply(id: string): Promise<InboxActionResult> {
   if (!idSchema.safeParse(id).success) return { ok: false, message: "Respuesta inválida." };
   const supabase = await createClient();
   const chats = asChats(supabase);
-  const { data } = await chats.from("chat_quick_replies").select("audio_path").eq("id", id).eq("owner_id", user.id).maybeSingle();
+  // `*` y no las columnas por nombre: las de archivo no existen si falta su migración.
+  const { data } = await chats.from("chat_quick_replies").select("*").eq("id", id).eq("owner_id", user.id).maybeSingle();
+  const row = data as QuickReplyRow | null;
   const { error } = await chats.from("chat_quick_replies").delete().eq("id", id).eq("owner_id", user.id);
   if (error) return { ok: false, message: "No se pudo borrar." };
-  if (data?.audio_path) await supabase.storage.from(BUCKET).remove([data.audio_path]);
+  // Primero la fila, después el archivo: si el segundo paso falla queda un archivo suelto en
+  // Storage (que nadie ve), nunca una respuesta que apunta a un archivo que ya no está.
+  if (row?.audio_path) await supabase.storage.from(BUCKET).remove([row.audio_path]);
+  if (row?.file_path) await supabase.storage.from(FILE_BUCKET).remove([row.file_path]);
   revalidatePath("/configuracion");
-  return { ok: true, message: "Respuesta borrada." };
+  return { ok: true, message: row?.kind === "AUDIO" ? "Audio borrado." : row?.kind === "ARCHIVO" ? "Archivo borrado." : "Respuesta borrada." };
 }
 
 export async function markQuickReplyUsed(id: string): Promise<void> {
@@ -195,8 +306,8 @@ export async function markQuickReplyUsed(id: string): Promise<void> {
   if (!idSchema.safeParse(id).success) return;
   const chats = asChats(await createClient());
   const { data } = await chats.from("chat_quick_replies").select("use_count, kind").eq("id", id).eq("owner_id", user.id).maybeSingle();
-  // Los audios suben su contador al mandarse de verdad (sendChatAudio), no al elegirlos.
-  if (!data || data.kind === "AUDIO") return;
+  // Los audios y los archivos suben su contador al mandarse de verdad (sendChatAttachment), no al elegirlos.
+  if (!data || data.kind !== "TEXTO") return;
   await chats.from("chat_quick_replies").update({ use_count: (data.use_count as number) + 1 }).eq("id", id).eq("owner_id", user.id);
 }
 

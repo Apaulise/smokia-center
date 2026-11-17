@@ -16,11 +16,12 @@ const VARIANTS: Record<Variant, string> = {
     "lm-btn-liquid border-lm-signal bg-lm-signal text-lm-on-signal font-semibold",
     "hover:border-lm-signal-hover",
   ),
+  // Translúcido: sobre el vidrio un relleno opaco se lee como un parche.
   secondary: cn(
-    "border-lm-line-strong bg-lm-surface text-lm-ink",
-    "hover:bg-lm-raised",
+    "border-lm-line-strong bg-lm-ink/5 text-lm-ink",
+    "hover:bg-lm-ink/10",
   ),
-  ghost: cn("border-transparent bg-transparent text-lm-ink-2", "hover:bg-lm-raised hover:text-lm-ink"),
+  ghost: cn("border-transparent bg-transparent text-lm-ink-2", "hover:bg-lm-ink/8 hover:text-lm-ink"),
   danger: cn("border-transparent bg-transparent text-lm-danger", "hover:bg-lm-danger-soft"),
 };
 
@@ -65,7 +66,7 @@ export function ButtonExternalLink({
   return <a className={cn(BASE, VARIANTS[variant], SIZES[size], className)} {...props} target="_blank" rel="noopener noreferrer" />;
 }
 
-/** Botón cuadrado sólo-ícono, 32×32. Siempre con aria-label. */
+/** Botón redondo sólo-ícono, 32×32 (como los de la referencia de vidrio). Siempre con aria-label. */
 export function IconButton({
   className,
   size = "md",
@@ -75,7 +76,7 @@ export function IconButton({
     <button
       className={cn(
         BASE,
-        "border-lm-line-strong bg-lm-surface text-lm-ink-2 hover:bg-lm-raised hover:text-lm-ink",
+        "rounded-full border-transparent bg-lm-ink/6 text-lm-ink-2 hover:bg-lm-ink/12 hover:text-lm-ink",
         size === "sm" ? "size-7" : "size-8",
         className,
       )}

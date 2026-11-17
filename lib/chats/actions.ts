@@ -6,9 +6,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { upsertInstagramLead } from "@/lib/automation/instagram-intake";
-import { asChats, type ChannelAccountRow, type ChatsClient, type ConversationRow } from "@/lib/chats/db";
+import { asChats, type ChannelAccountRow, type ChatsClient, type ConversationRow, type QuickReplyRow } from "@/lib/chats/db";
 import { syncChannelAccount, type AccountContext, type SyncResult } from "@/lib/chats/ingest";
 import { previewOf } from "@/lib/chats/format";
+import { fileKindOf } from "@/lib/chats/quick-replies";
 import {
   getConversationDetail,
   listConversations,
@@ -384,14 +385,17 @@ export type SendResult = { ok: boolean; message: string; sent?: ChatMessageView 
 
 type Outgoing =
   | { kind: "text"; text: string }
-  | { kind: "audio"; url: string; mime: string; label: string };
+  /** Un guardado de las respuestas rápidas: audio, imagen o documento. */
+  | { kind: "media"; type: "audio" | "image" | "file"; url: string; mime: string; label: string; filename: string | null };
+
+const MEDIA_NOUN: Record<"audio" | "image" | "file", string> = { audio: "audio", image: "imagen", file: "documento" };
 
 /**
  * Responde desde el CRM. Corre con el cliente con RLS del que escribe: si es el
  * socio, sólo puede hacerlo en una conversación que el dueño le compartió. La
  * ventana de 24 h / 7 días se calcula acá con la misma función que usa la UI, y
  * una respuesta fuera de la de 24 h lleva `HUMAN_AGENT` (sólo se permite porque
- * la manda una persona: también un audio guardado, que se envía con un toque).
+ * la manda una persona: también un audio, una imagen o un documento guardados, que se envían con un toque).
  */
 async function deliver(conversationId: string, clientId: string, outgoing: Outgoing): Promise<SendResult> {
   const user = await requireUser();
@@ -418,7 +422,7 @@ async function deliver(conversationId: string, clientId: string, outgoing: Outgo
     const sent = await sendMessage(apiKey, conversation.zernio_conversation_id, {
       accountId: account.zernio_account_id,
       message: outgoing.kind === "text" ? outgoing.text : "",
-      ...(outgoing.kind === "audio" ? { attachmentUrl: outgoing.url, attachmentType: "audio" as const } : {}),
+      ...(outgoing.kind === "media" ? { attachmentUrl: outgoing.url, attachmentType: outgoing.type } : {}),
       idempotencyKey: `smokia-${clientId}`,
       ...sendTagFields(window),
     });
@@ -429,8 +433,9 @@ async function deliver(conversationId: string, clientId: string, outgoing: Outgo
 
   const now = new Date().toISOString();
   const body = outgoing.kind === "text" ? outgoing.text : null;
-  // El audio se guarda sin la URL firmada (vence en una hora): el hilo lo muestra como "Audio".
-  const attachments = outgoing.kind === "audio" ? [{ type: "audio", mimeType: outgoing.mime }] : [];
+  // El adjunto se guarda sin la URL firmada (vence en una hora): el hilo lo muestra por su tipo y su nombre.
+  const attachments =
+    outgoing.kind === "media" ? [{ type: outgoing.type, mimeType: outgoing.mime, ...(outgoing.filename ? { filename: outgoing.filename } : {}) }] : [];
   const row = {
     owner_id: conversation.owner_id,
     team_id: conversation.team_id,
@@ -472,7 +477,8 @@ async function deliver(conversationId: string, clientId: string, outgoing: Outgo
 
   // Sólo el dueño de la cuenta puede escribir sobre SUS leads (RLS): si respondió el socio, no se espeja.
   if (conversation.lead_id && conversation.owner_id === user.id) {
-    await mirrorReplyToLead(chats, user.id, conversation.lead_id, body ?? "[audio]", now);
+    const mirrored = outgoing.kind === "media" ? `[${MEDIA_NOUN[outgoing.type]}] ${outgoing.label}` : outgoing.text;
+    await mirrorReplyToLead(chats, user.id, conversation.lead_id, mirrored, now);
     // La ficha del lead muestra el contacto nuevo; la bandeja no se revalida: se actualiza sola.
     revalidatePath(`/leads/${conversation.lead_id}`);
   }
@@ -491,39 +497,52 @@ export async function sendChatText(input: { conversationId: string; text: string
   return deliver(parsed.data.conversationId, parsed.data.clientId, { kind: "text", text: parsed.data.text });
 }
 
-const sendAudioSchema = z.object({ conversationId: z.uuid(), quickReplyId: z.uuid(), clientId: clientIdSchema });
+const sendSavedSchema = z.object({ conversationId: z.uuid(), quickReplyId: z.uuid(), clientId: clientIdSchema });
 
 /** La URL firmada vive lo justo para que Zernio la descargue y se la pase a Instagram. */
-const AUDIO_URL_TTL_S = 60 * 60;
+const MEDIA_URL_TTL_S = 60 * 60;
 
 /**
- * Manda un audio guardado (respuesta rápida) con un toque. El archivo está en
- * el bucket privado `chat-audio`: se firma una URL de una hora con el cliente
- * del que manda (RLS de Storage: sólo su carpeta) y se le pasa a Zernio.
+ * Manda un guardado de las respuestas rápidas (audio, imagen o documento) con
+ * un toque. El archivo está en un bucket privado (`chat-audio` o `chat-files`):
+ * se firma una URL de una hora con el cliente del que manda (RLS de Storage:
+ * sólo su carpeta) y se le pasa a Zernio. Una imagen sale como imagen (se ve en
+ * el chat) y un PDF como documento.
  */
-export async function sendChatAudio(input: { conversationId: string; quickReplyId: string; clientId: string }): Promise<SendResult> {
-  const parsed = sendAudioSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, message: "Audio inválido." };
+export async function sendChatAttachment(input: { conversationId: string; quickReplyId: string; clientId: string }): Promise<SendResult> {
+  const parsed = sendSavedSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "Respuesta guardada inválida." };
   const user = await requireUser();
   const supabase = await createClient();
   const chats = asChats(supabase);
 
-  const { data: reply } = await chats
-    .from("chat_quick_replies")
-    .select("id, kind, title, audio_path, audio_mime, use_count")
-    .eq("id", parsed.data.quickReplyId)
-    .eq("owner_id", user.id)
-    .maybeSingle();
-  if (!reply || reply.kind !== "AUDIO" || !reply.audio_path) return { ok: false, message: "No se encontró ese audio guardado." };
+  // `*`: las columnas de archivo no existen si falta su migración.
+  const { data } = await chats.from("chat_quick_replies").select("*").eq("id", parsed.data.quickReplyId).eq("owner_id", user.id).maybeSingle();
+  const reply = data as QuickReplyRow | null;
+  const media =
+    reply?.kind === "AUDIO" && reply.audio_path
+      ? { bucket: "chat-audio", path: reply.audio_path, mime: reply.audio_mime ?? "audio/mp4", type: "audio" as const, filename: null }
+      : reply?.kind === "ARCHIVO" && reply.file_path
+        ? {
+            bucket: "chat-files",
+            path: reply.file_path,
+            mime: reply.file_mime ?? "application/pdf",
+            type: fileKindOf(reply.file_mime) === "image" ? ("image" as const) : ("file" as const),
+            filename: reply.file_name ?? null,
+          }
+        : null;
+  if (!reply || !media) return { ok: false, message: "No se encontró ese guardado: puede que lo hayas borrado." };
 
-  const { data: signed, error } = await supabase.storage.from("chat-audio").createSignedUrl(reply.audio_path, AUDIO_URL_TTL_S);
-  if (error || !signed?.signedUrl) return { ok: false, message: "No se pudo preparar el audio para mandarlo." };
+  const { data: signed, error } = await supabase.storage.from(media.bucket).createSignedUrl(media.path, MEDIA_URL_TTL_S);
+  if (error || !signed?.signedUrl) return { ok: false, message: `No se pudo preparar ${media.type === "audio" ? "el audio" : "el archivo"} para mandarlo.` };
 
   const result = await deliver(parsed.data.conversationId, parsed.data.clientId, {
-    kind: "audio",
+    kind: "media",
+    type: media.type,
     url: signed.signedUrl,
-    mime: reply.audio_mime ?? "audio/mp4",
+    mime: media.mime,
     label: reply.title,
+    filename: media.filename,
   });
   if (result.ok) {
     await chats.from("chat_quick_replies").update({ use_count: reply.use_count + 1 }).eq("id", reply.id).eq("owner_id", user.id);

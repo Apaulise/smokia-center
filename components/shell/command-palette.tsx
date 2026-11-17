@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * ⌘K (Design System §01.B): modal centrado a 96px del top, grupos LEADS /
- * LISTAS / ACCIONES con eyebrow, resultado activo con barra amarilla.
+ * LISTAS / ACCIONES con eyebrow, resultado activo en `signal-soft` con el ícono amarillo.
  * ESC cierra; ↑↓ navega; ↵ abre.
  *
  * `CommandPalette` sólo monta `Palette` mientras `open` es true: así cada
@@ -160,7 +160,7 @@ function Palette({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex justify-center pt-24" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-lm-scrim backdrop-blur-[3px]" onClick={onClose} aria-hidden />
-      <div className="lm-shadow-pop relative flex h-max max-h-[70vh] w-full max-w-[600px] flex-col overflow-hidden rounded-lm-lg border border-lm-line-strong lm-glass-pop font-lm-sans">
+      <div className="lm-shadow-pop lm-rise relative mx-4 flex h-max max-h-[70vh] w-full max-w-[600px] flex-col overflow-hidden rounded-lm-xl border border-lm-line-strong lm-glass-pop font-lm-sans">
         <div className="flex h-[52px] shrink-0 items-center gap-2.5 border-b border-lm-line px-4">
           <Search className="size-4 shrink-0 text-lm-ink-3" strokeWidth={1.5} />
           <input
@@ -198,13 +198,11 @@ function Palette({ onClose }: { onClose: () => void }) {
                         onMouseEnter={() => setActiveIndex(flatIndex)}
                         onClick={() => go(item.href)}
                         className={cn(
-                          "relative flex w-full items-center gap-2.5 rounded-lm-sm px-2.5 py-2 text-left text-[13px] transition-colors",
+                          "relative flex w-full items-center gap-2.5 rounded-lm-md px-2.5 py-2 text-left text-[13px] transition-colors",
                           active ? "bg-lm-signal-soft text-lm-ink" : "text-lm-ink-2",
-                          active &&
-                            "before:absolute before:top-1.5 before:bottom-1.5 before:left-0 before:w-0.5 before:rounded-lm-xs before:bg-lm-signal",
                         )}
                       >
-                        <Icon className="size-3.5 shrink-0 text-lm-ink-3" strokeWidth={1.5} />
+                        <Icon className={cn("size-3.5 shrink-0", active ? "text-lm-signal-text" : "text-lm-ink-3")} strokeWidth={1.5} />
                         <span className="flex-1 truncate">{item.label}</span>
                         {item.meta ? <span className="text-xs text-lm-ink-3">{item.meta}</span> : null}
                         {item.shortcut ? (

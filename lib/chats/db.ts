@@ -107,7 +107,8 @@ export type MessageRow = {
 
 // ── §1.26 ───────────────────────────────────────────────────────────────────
 
-export type QuickReplyKind = "TEXTO" | "AUDIO";
+/** `ARCHIVO` = documento (PDF) o imagen (migración 20261116120000_chat_quick_reply_files.sql). */
+export type QuickReplyKind = "TEXTO" | "AUDIO" | "ARCHIVO";
 
 export type QuickReplyRow = {
   id: string;
@@ -118,6 +119,11 @@ export type QuickReplyRow = {
   audio_path: string | null;
   audio_mime: string | null;
   audio_duration_ms: number | null;
+  // Sólo en ARCHIVO (migración 20261116120000, aplicada el 2026-11-17).
+  file_path: string | null;
+  file_mime: string | null;
+  file_name: string | null;
+  file_size: number | null;
   sort_order: number;
   use_count: number;
   created_at: string;
