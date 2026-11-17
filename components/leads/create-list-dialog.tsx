@@ -4,9 +4,9 @@ import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Dialog } from "@/components/leads/ui/dialog";
-import { Field, Input, Select } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { Field, Input, Select } from "@/components/ui/field";
 import { createEmptyLeadList } from "@/lib/leads/actions";
 import type { Database } from "@/lib/supabase/database.types";
 

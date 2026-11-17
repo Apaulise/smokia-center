@@ -25,6 +25,7 @@ import { MODULES, type NavModule } from "@/components/shell/nav";
 import { usePendingPath } from "@/components/shell/navigation-state";
 import { ProfileAvatar } from "@/components/shell/profile-avatar";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
+import { useCommandShortcuts } from "@/components/shell/use-command-shortcuts";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -92,6 +93,8 @@ export function Sidebar({
   const activeModule = MODULES.find((module) => module.available && isModuleActive(currentPathname, module));
   const ActiveIcon = activeModule ? ICONS[activeModule.icon] : LayoutGrid;
   const collapsed = useSyncExternalStore(subscribeCollapsed, readCollapsed, () => false);
+  // G D, G C, N T…: los atajos de toda la app (commands.ts). Con ⌘K abierto manda la paleta.
+  useCommandShortcuts(!paletteOpen);
 
   // Cerrar el menú mobile al navegar: se ajusta durante el render, no en un
   // efecto, para no pagar un render extra con el menú todavía abierto.
@@ -136,15 +139,26 @@ export function Sidebar({
           <Image src="/logo-mark.png" alt="" width={13} height={22} className="h-[22px] w-auto shrink-0" />
           SmokIA
         </Link>
-        <button
-          type="button"
-          onClick={() => setOpen((value) => !value)}
-          className="grid size-9 place-items-center rounded-full bg-lm-ink/5 text-lm-ink-2 transition-colors hover:bg-lm-ink/10 hover:text-lm-ink focus-visible:lm-focus"
-          aria-label={open ? "Cerrar menú" : "Abrir menú"}
-          aria-expanded={open}
-        >
-          {open ? <X className="size-4" strokeWidth={1.5} /> : <Menu className="size-4" strokeWidth={1.5} />}
-        </button>
+        <div className="flex items-center gap-1.5">
+          {/* En el celular no hay ⌘K: la búsqueda tiene que estar a un toque, sin abrir el menú. */}
+          <button
+            type="button"
+            onClick={() => setPaletteOpen(true)}
+            className="grid size-9 place-items-center rounded-full bg-lm-ink/5 text-lm-ink-2 transition-colors hover:bg-lm-ink/10 hover:text-lm-ink focus-visible:lm-focus"
+            aria-label="Buscar un lead, una lista o una pantalla"
+          >
+            <Search className="size-4" strokeWidth={1.5} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setOpen((value) => !value)}
+            className="grid size-9 place-items-center rounded-full bg-lm-ink/5 text-lm-ink-2 transition-colors hover:bg-lm-ink/10 hover:text-lm-ink focus-visible:lm-focus"
+            aria-label={open ? "Cerrar menú" : "Abrir menú"}
+            aria-expanded={open}
+          >
+            {open ? <X className="size-4" strokeWidth={1.5} /> : <Menu className="size-4" strokeWidth={1.5} />}
+          </button>
+        </div>
       </header>
 
       <aside

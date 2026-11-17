@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { KnowledgeDialog } from "@/components/leads/knowledge/knowledge-dialog";
-import { Button } from "@/components/leads/ui/button";
-import { EmptyState } from "@/components/leads/ui/feedback";
-import { Chip } from "@/components/leads/ui/status-badge";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/feedback";
+import { Chip } from "@/components/ui/status-badge";
 import { deleteKnowledgeNote } from "@/lib/leads/knowledge/actions";
 import type { KnowledgeRow } from "@/lib/leads/knowledge/queries";
 import { COLLECTION_HINT, COLLECTION_LABEL, ORIGIN_LABEL, type KnowledgeCollection, type KnowledgeOrigin } from "@/lib/leads/knowledge/schema";

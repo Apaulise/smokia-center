@@ -7,12 +7,12 @@ import { BrandLineChart, ChartLegend, type LineChartSeries } from "@/components/
 import { GoalCard } from "@/components/brand/goals/goal-card";
 import { NextStepsCard } from "@/components/brand/goals/next-steps-card";
 import { ReelCard } from "@/components/brand/reel-card";
-import { CountUp } from "@/components/brand/ui/count-up";
+import { CountUp } from "@/components/ui/count-up";
 import { BrandSyncProvider, SyncButton, SyncStatus } from "@/components/brand/sync-panel";
-import { Card, CardBody, CardHeader, Crumbs, KpiStrip } from "@/components/brand/ui/card";
-import { ButtonLink } from "@/components/leads/ui/button";
-import { EmptyState } from "@/components/leads/ui/feedback";
-import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
+import { Card, CardBody, CardHeader, Crumbs, KpiStrip } from "@/components/ui/card";
+import { ButtonLink } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/feedback";
+import { HeaderBar, PageHeading } from "@/components/ui/page-header";
 import { buildNextSteps, countMatureReels } from "@/lib/brand/goals/next-steps";
 import { computeGoalProgress } from "@/lib/brand/goals/progress";
 import {

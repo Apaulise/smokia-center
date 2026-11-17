@@ -3,9 +3,9 @@ import Link from "next/link";
 
 import type { AutomationSummary } from "@/components/leads/chats/contact-panel";
 import { InboxClient } from "@/components/leads/chats/inbox-client";
-import { ButtonLink } from "@/components/leads/ui/button";
-import { EmptyState } from "@/components/leads/ui/feedback";
-import { HeaderBar } from "@/components/leads/ui/page-header";
+import { ButtonLink } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/feedback";
+import { HeaderBar } from "@/components/ui/page-header";
 import { asChats } from "@/lib/chats/db";
 import { listQuickReplies } from "@/lib/chats/inbox-actions";
 import { getConversationDetail, listChannelAccounts, listConversations, listTagLabels, type ConversationFilter } from "@/lib/chats/queries";

@@ -4,10 +4,10 @@ import { CalendarPlus, CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Dialog } from "@/components/leads/ui/dialog";
-import { EmptyLine } from "@/components/leads/ui/feedback";
-import { Field, Input, Select, Textarea } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { EmptyLine } from "@/components/ui/feedback";
+import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { createAppointmentForLead } from "@/lib/leads/actions";
 import type { Database } from "@/lib/supabase/database.types";
 

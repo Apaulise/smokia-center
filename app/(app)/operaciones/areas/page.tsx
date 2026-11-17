@@ -1,9 +1,9 @@
 import { OpsFrame } from "@/components/ops/frame";
 import { OpsStatusTable } from "@/components/ops/status-table";
-import { ButtonLink } from "@/components/leads/ui/button";
-import { EmptyLine, EmptyState } from "@/components/leads/ui/feedback";
-import { PageHeading } from "@/components/leads/ui/page-header";
-import { Segmented, SegmentedLink, TabLink, Tabs } from "@/components/leads/ui/tabs";
+import { ButtonLink } from "@/components/ui/button";
+import { EmptyLine, EmptyState } from "@/components/ui/feedback";
+import { PageHeading } from "@/components/ui/page-header";
+import { Segmented, SegmentedLink, TabLink, Tabs } from "@/components/ui/tabs";
 import { formatUpdatedAt } from "@/lib/ops/format";
 import { AREA_LABEL, ESTADO_LABEL } from "@/lib/ops/schema";
 import { getOpsRecords } from "@/lib/ops/queries";

@@ -8,8 +8,8 @@ import { BrandLineChart, type LineChartPoint, type LineChartSeries } from "@/com
 import { FollowerGainCard } from "@/components/brand/goals/follower-gain-card";
 import { Markdown } from "@/components/brand/markdown";
 import { PostThumb } from "@/components/brand/post-thumb";
-import { Card, CardBody, CardHeader, Crumbs, Eyebrow, Tag } from "@/components/brand/ui/card";
-import { HeaderBar } from "@/components/leads/ui/page-header";
+import { Card, CardBody, CardHeader, Crumbs, Eyebrow, Tag } from "@/components/ui/card";
+import { HeaderBar } from "@/components/ui/page-header";
 import { extractHashtags } from "@/lib/brand/insights";
 import { getKnowledgeForPost } from "@/lib/brand/knowledge/queries";
 import { COLLECTION_LABEL, ORIGIN_LABEL } from "@/lib/brand/knowledge/schema";

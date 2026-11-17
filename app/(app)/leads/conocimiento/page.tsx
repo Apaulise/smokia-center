@@ -1,7 +1,7 @@
-import { Button, ButtonLink } from "@/components/leads/ui/button";
-import { Field, Input } from "@/components/leads/ui/field";
-import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
-import { Tabs, TabLink } from "@/components/leads/ui/tabs";
+import { Button, ButtonLink } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/field";
+import { HeaderBar, PageHeading } from "@/components/ui/page-header";
+import { Tabs, TabLink } from "@/components/ui/tabs";
 import { KnowledgeList } from "@/components/leads/knowledge/knowledge-list";
 import { getKnowledgeCounts, searchKnowledge } from "@/lib/leads/knowledge/queries";
 import { COLLECTION_LABEL, isKnowledgeCollection, KNOWLEDGE_COLLECTIONS } from "@/lib/leads/knowledge/schema";

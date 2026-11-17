@@ -9,7 +9,7 @@ import { AppointmentsList } from "@/components/leads/agenda/appointments-list";
 import { CalendarGrid, type CalendarMove } from "@/components/leads/agenda/calendar-grid";
 import { IcsExportButton } from "@/components/leads/agenda/ics-export-button";
 import { appointmentMember, memberColor } from "@/components/leads/agenda/member-visual";
-import { Button } from "@/components/leads/ui/button";
+import { Button } from "@/components/ui/button";
 import { moveAppointment } from "@/lib/leads/actions";
 import type { AppointmentStatus } from "@/lib/leads/appointments";
 import { isoDateOf, timeOfDay } from "@/lib/leads/calendar";
@@ -122,7 +122,6 @@ export function AgendaView({
         />
       ) : (
         <CalendarGrid
-          variant="signal"
           mode={view}
           days={days}
           items={appointments}

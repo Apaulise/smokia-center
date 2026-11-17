@@ -3,10 +3,10 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 
-import { Button } from "@/components/leads/ui/button";
-import { EmptyLine } from "@/components/leads/ui/feedback";
-import { Panel } from "@/components/leads/ui/section";
-import { Chip, StatusBadge } from "@/components/leads/ui/status-badge";
+import { Button } from "@/components/ui/button";
+import { EmptyLine } from "@/components/ui/feedback";
+import { Panel } from "@/components/ui/section";
+import { Chip, StatusBadge } from "@/components/ui/status-badge";
 import { decideApproval } from "@/lib/ops/actions";
 import type { OpsApprovalView } from "@/lib/ops/types";
 

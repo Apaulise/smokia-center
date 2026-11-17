@@ -2,7 +2,7 @@ import { Search } from "lucide-react";
 import Link from "next/link";
 
 import { Markdown } from "@/components/brand/markdown";
-import { Tag } from "@/components/brand/ui/card";
+import { Tag } from "@/components/ui/card";
 import type { BrandChatWireTurn } from "@/lib/brand/ai/chat-types";
 import type { Database } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";

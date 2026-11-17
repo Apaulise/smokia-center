@@ -6,7 +6,7 @@ import { Fragment, memo } from "react";
 import { Avatar } from "@/components/leads/chats/conversation-list";
 import { MessageComposer, type ComposerQuickReplies } from "@/components/leads/chats/message-composer";
 import { ThreadScroller } from "@/components/leads/chats/thread-scroller";
-import { IconButton } from "@/components/leads/ui/button";
+import { IconButton } from "@/components/ui/button";
 import { chatDayKey, formatChatClock, formatChatDay, readAttachments } from "@/lib/chats/format";
 import type { ThreadMessage } from "@/lib/chats/inbox";
 import type { ConversationDetail } from "@/lib/chats/queries";

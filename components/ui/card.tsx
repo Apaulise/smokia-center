@@ -4,7 +4,7 @@ import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Card del Gestor de Marca Personal: panel de vidrio (`.lm-glass-soft`, radio
+ * Card (nació en el Gestor de Marca Personal, la usa cualquier gestor): panel de vidrio (`.lm-glass-soft`, radio
  * 17). La cabecera lleva título 15px + subtítulo 12.5px y se separa del cuerpo
  * con una línea (handoff MARCA_PERSONAL.md, "Card").
  */

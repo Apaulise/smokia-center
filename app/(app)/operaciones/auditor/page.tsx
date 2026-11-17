@@ -1,8 +1,8 @@
 import { AuditorList } from "@/components/ops/auditor-list";
 import { OpsFrame } from "@/components/ops/frame";
-import { EmptyLine, EmptyState } from "@/components/leads/ui/feedback";
-import { PageHeading } from "@/components/leads/ui/page-header";
-import { Section } from "@/components/leads/ui/section";
+import { EmptyLine, EmptyState } from "@/components/ui/feedback";
+import { PageHeading } from "@/components/ui/page-header";
+import { Section } from "@/components/ui/section";
 import { formatUpdatedAt } from "@/lib/ops/format";
 import { getOpsRecords } from "@/lib/ops/queries";
 

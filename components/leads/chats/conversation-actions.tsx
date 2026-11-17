@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 
-import { Button } from "@/components/leads/ui/button";
+import { Button } from "@/components/ui/button";
 import { createLeadFromConversation, linkConversationToLead, searchLeadsForLink } from "@/lib/chats/actions";
 import { STATUS_LABEL, type LeadStatus } from "@/lib/leads/status";
 

@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { ChatMessage } from "./chat-message";
 import { SaveIdeaDialog } from "./save-idea-dialog";
 import { ChatThreadList } from "./thread-list";
-import { Button } from "@/components/leads/ui/button";
+import { Button } from "@/components/ui/button";
 import { deleteBrandChatThread, sendBrandChatMessage } from "@/lib/brand/actions";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
 import { createClient } from "@/lib/supabase/client";

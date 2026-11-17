@@ -7,7 +7,7 @@ import { useState, useTransition } from "react";
 import { confirmMessageSent } from "@/lib/leads/ai/actions";
 import type { LeadMessageChannel } from "@/lib/leads/message-limits";
 import { buildWhatsappLink } from "@/lib/leads/templates";
-import { Button } from "@/components/leads/ui/button";
+import { Button } from "@/components/ui/button";
 
 /**
  * Copiar / "Ya lo mandé" para cualquier mensaje del vendedor que no sea la

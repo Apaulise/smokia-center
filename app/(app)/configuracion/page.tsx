@@ -9,8 +9,8 @@ import { SalesProfileForm } from "@/components/settings/sales-profile-form";
 import { InstagramConnection } from "@/components/settings/instagram-connection";
 import { ZernioConnection } from "@/components/settings/zernio-connection";
 import { listChannelAccounts } from "@/lib/chats/queries";
-import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
-import { Panel, Section } from "@/components/leads/ui/section";
+import { HeaderBar, PageHeading } from "@/components/ui/page-header";
+import { Panel, Section } from "@/components/ui/section";
 import {
   getActorOverrides,
   getApifyKeyStatus,

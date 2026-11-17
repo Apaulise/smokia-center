@@ -1,7 +1,7 @@
 import { CalendarClock, Clock } from "lucide-react";
 import Link from "next/link";
 
-import { EmptyLine } from "@/components/leads/ui/feedback";
+import { EmptyLine } from "@/components/ui/feedback";
 import type { listStaleLeads, listUpcomingAppointments } from "@/lib/leads/queries";
 
 type Appointments = Awaited<ReturnType<typeof listUpcomingAppointments>>;

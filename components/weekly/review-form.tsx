@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Field, Select, Textarea } from "@/components/leads/ui/field";
-import { Panel } from "@/components/leads/ui/section";
-import { StatusBadge } from "@/components/leads/ui/status-badge";
+import { Button } from "@/components/ui/button";
+import { Field, Select, Textarea } from "@/components/ui/field";
+import { Panel } from "@/components/ui/section";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { updateWeeklyReview } from "@/lib/weekly/actions";
 import { WEEKLY_STATUS_GROUP, WEEKLY_STATUS_LABEL } from "@/lib/weekly/labels";
 import { WEEKLY_CHANGE_STATUSES, type WeeklyChange, type WeeklyChangeStatus } from "@/lib/weekly/types";

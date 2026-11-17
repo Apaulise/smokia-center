@@ -2,7 +2,7 @@
 
 import { Search, X } from "lucide-react";
 
-import { Input, Select } from "@/components/leads/ui/field";
+import { Input, Select } from "@/components/ui/field";
 import { LEAD_STATUSES, STATUS_LABEL, type LeadStatus } from "@/lib/leads/status";
 import type { Database } from "@/lib/supabase/database.types";
 

@@ -4,7 +4,7 @@ import { BookmarkPlus, Loader2, Send, Zap } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { QuickRepliesPanel, type QuickReplyActions } from "@/components/leads/chats/quick-replies-panel";
-import { Button } from "@/components/leads/ui/button";
+import { Button } from "@/components/ui/button";
 import type { QuickReplyKind } from "@/lib/chats/db";
 import { fillQuickReply } from "@/lib/chats/inbox";
 import { matchQuickReplies, QUICK_REPLY_SECTIONS, sendableNoun, type QuickReplyView } from "@/lib/chats/quick-replies";
@@ -24,6 +24,8 @@ export type ComposerQuickReplies = QuickReplyActions & {
   onSendAttachment: (reply: QuickReplyView) => void;
   /** Se usó una respuesta (para ordenar por uso). */
   onUsed: (reply: QuickReplyView) => void;
+  /** Se abrió el panel: renueva las vistas previas si están por vencer. */
+  onOpen: () => void;
 };
 
 /**
@@ -92,6 +94,12 @@ export function MessageComposer({
     },
     [],
   );
+
+  // Cada vez que se abre el panel (botón o «/»), las vistas previas se renuevan si hace falta.
+  const { onOpen } = quickReplies;
+  useEffect(() => {
+    if (showPicker) onOpen();
+  }, [showPicker, onOpen]);
 
   if (disabledReason) {
     return (

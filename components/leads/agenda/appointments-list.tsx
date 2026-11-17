@@ -5,8 +5,8 @@ import Link from "next/link";
 
 import { AppointmentStatusSelect } from "@/components/leads/agenda/appointment-status-select";
 import { appointmentMember, memberColor } from "@/components/leads/agenda/member-visual";
-import { IconButton } from "@/components/leads/ui/button";
-import { EmptyState } from "@/components/leads/ui/feedback";
+import { IconButton } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/feedback";
 import type { AppointmentWithLead } from "@/lib/leads/queries";
 import { APPOINTMENT_STATUS_LABEL } from "@/lib/leads/appointments";
 import type { TeamMember } from "@/lib/leads/team/queries";

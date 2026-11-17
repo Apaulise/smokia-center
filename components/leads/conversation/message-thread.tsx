@@ -4,11 +4,11 @@ import { Check, Loader2, Pencil, X } from "lucide-react";
 import { useState, useTransition } from "react";
 
 import { ResponseTypeReview } from "@/components/leads/conversation/response-type-review";
-import { Button } from "@/components/leads/ui/button";
-import { Textarea } from "@/components/leads/ui/field";
-import { Tabs, TabButton } from "@/components/leads/ui/tabs";
-import { Timeline, TimelineEvent, TimelineMessage } from "@/components/leads/ui/timeline";
-import { EmptyLine } from "@/components/leads/ui/feedback";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/field";
+import { Tabs, TabButton } from "@/components/ui/tabs";
+import { Timeline, TimelineEvent, TimelineMessage } from "@/components/ui/timeline";
+import { EmptyLine } from "@/components/ui/feedback";
 import { ANGLE_LABEL, type SalesAngle } from "@/lib/leads/ai/angles";
 import { mergeConversation, type ThreadItem } from "@/lib/leads/conversation";
 import { updateLeadMessageContent } from "@/lib/leads/message-actions";

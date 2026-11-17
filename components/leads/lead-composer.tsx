@@ -7,10 +7,10 @@ import { useEffect, useState, useTransition } from "react";
 import { RewriteButtons } from "@/components/leads/rewrite-buttons";
 import { ResponseTypeReview } from "@/components/leads/conversation/response-type-review";
 import { SuggestedReplyConfirm } from "@/components/leads/suggested-reply-confirm";
-import { Button, Kbd } from "@/components/leads/ui/button";
-import { Composer, ComposerBody, ComposerFoot, ComposerHead } from "@/components/leads/ui/composer";
-import { Textarea } from "@/components/leads/ui/field";
-import { Segmented, SegmentedButton } from "@/components/leads/ui/tabs";
+import { Button, Kbd } from "@/components/ui/button";
+import { Composer, ComposerBody, ComposerFoot, ComposerHead } from "@/components/ui/composer";
+import { Textarea } from "@/components/ui/field";
+import { Segmented, SegmentedButton } from "@/components/ui/tabs";
 import { ANGLE_LABEL, type SalesAngle } from "@/lib/leads/ai/angles";
 import {
   analyzeLeadResponseAction,

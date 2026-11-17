@@ -7,8 +7,8 @@ import { useTransition } from "react";
 
 import { parseEvidence, type EvidencePost } from "./evidence";
 import { PostThumb } from "@/components/brand/post-thumb";
-import { Card, Eyebrow, Tag } from "@/components/brand/ui/card";
-import { Button } from "@/components/leads/ui/button";
+import { Card, Eyebrow, Tag } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { updateBrandRecommendationStatus } from "@/lib/brand/actions";
 import type { Database } from "@/lib/supabase/database.types";
 

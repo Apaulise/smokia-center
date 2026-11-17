@@ -3,7 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { useState, useTransition } from "react";
 
-import { Button } from "@/components/leads/ui/button";
+import { Button } from "@/components/ui/button";
 import { rewriteLeadMessage } from "@/lib/leads/ai/actions";
 import { REWRITE_TONES, type RewriteTone } from "@/lib/leads/ai/rewrite-tones";
 

@@ -1,5 +1,5 @@
 import { FollowUpQueue } from "@/components/leads/follow-up-queue";
-import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
+import { HeaderBar, PageHeading } from "@/components/ui/page-header";
 import { FollowUpMetricsPanel } from "@/components/leads/follow-up-metrics-panel";
 import { getFollowUpMetrics } from "@/lib/leads/follow-up-metrics";
 import { listFollowUpQueue } from "@/lib/leads/queries";

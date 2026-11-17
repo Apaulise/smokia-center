@@ -4,9 +4,9 @@ import { Loader2, Target } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Dialog } from "@/components/leads/ui/dialog";
-import { Field, Input } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { Field, Input } from "@/components/ui/field";
 import { defineBrandGoal } from "@/lib/brand/goals/actions";
 import { formatCount } from "@/lib/brand/goals/progress";
 import type { BrandPlatform } from "@/lib/brand/sources/types";

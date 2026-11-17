@@ -13,7 +13,7 @@ import { loadConversation, loadConversationList, loadOlderMessages, markConversa
 import type { TagLabelRow } from "@/lib/chats/db";
 import { previewOf } from "@/lib/chats/format";
 import { applyConversationChange, filterCounts, filterItems, sortItems, tagsInUse, upsertThreadMessage, type ThreadMessage } from "@/lib/chats/inbox";
-import { createTextQuickReply, deleteQuickReply, markQuickReplyUsed, renameQuickReply } from "@/lib/chats/inbox-actions";
+import { createTextQuickReply, deleteQuickReply, listQuickReplies, markQuickReplyUsed, renameQuickReply } from "@/lib/chats/inbox-actions";
 import type { ChatMessageView, ConversationDetail, ConversationFilter, ConversationListItem, ConversationScope, InboxList } from "@/lib/chats/queries";
 import { uploadFileQuickReply } from "@/lib/chats/quick-reply-upload";
 import { fileKindOf, type QuickReplyView } from "@/lib/chats/quick-replies";
@@ -23,6 +23,13 @@ import { cn } from "@/lib/utils";
 
 const FILTER_VALUES: ConversationFilter[] = ["todas", "sin_leer", "por_responder", "ventana", "seguimiento", "archivadas"];
 const PANEL_KEY = "smokia.chats.panel";
+/**
+ * Las vistas previas de audios y archivos guardados son URLs firmadas que
+ * vencen a la hora (`PREVIEW_TTL_S`, inbox-actions.ts). Pasado este tiempo, al
+ * abrir el panel se piden de nuevo: con Chats abierto toda la tarde, escuchar
+ * un audio o ver una miniatura sigue funcionando.
+ */
+const PREVIEW_REFRESH_MS = 45 * 60_000;
 const MESSAGE_KEYS: Array<keyof ChatMessageView> = ["id", "direction", "origin", "sent_by", "body", "attachments", "delivery_status", "standby", "edited", "deleted", "occurred_at"];
 
 type UrlState = { c: string | null; f: ConversationFilter; q: string; t: string | null };
@@ -123,6 +130,9 @@ export function InboxClient({
   const [missing, setMissing] = useState<Set<string>>(() => new Set(initialSelectedId && !initialDetail ? [initialSelectedId] : []));
   const [panelOpen, setPanelOpen] = useState(true);
   const [quickReplies, setQuickReplies] = useState(initialQuickReplies.items);
+  // Cuándo se firmaron las URLs de las vistas previas: al cargar la pantalla (lo marca un efecto al montar).
+  const previewsSignedAt = useRef(0);
+  const refreshingPreviews = useRef(false);
   const [recorderOpen, setRecorderOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [listLoading, startListLoading] = useTransition();
@@ -594,6 +604,29 @@ export function InboxClient({
 
   // ── Respuestas rápidas ─────────────────────────────────────────────────────
 
+  useEffect(() => {
+    previewsSignedAt.current = Date.now();
+  }, []);
+
+  const refreshPreviews = useCallback(() => {
+    if (refreshingPreviews.current || Date.now() - previewsSignedAt.current < PREVIEW_REFRESH_MS) return;
+    refreshingPreviews.current = true;
+    void listQuickReplies()
+      .then((result) => {
+        if (!result.ready) return;
+        previewsSignedAt.current = Date.now();
+        // Sólo las URLs: si mientras tanto se agregó o borró algo acá, eso se respeta.
+        const fresh = new Map(result.items.map((item) => [item.id, item.previewUrl]));
+        setQuickReplies((items) => items.map((item) => (fresh.has(item.id) ? { ...item, previewUrl: fresh.get(item.id) ?? null } : item)));
+      })
+      .catch(() => {
+        // Sin red: se reintenta la próxima vez que se abra el panel.
+      })
+      .finally(() => {
+        refreshingPreviews.current = false;
+      });
+  }, []);
+
   const composerQuickReplies: ComposerQuickReplies = {
     ready: initialQuickReplies.ready,
     items: quickReplies,
@@ -625,6 +658,7 @@ export function InboxClient({
       setQuickReplies((items) => items.map((item) => (item.id === reply.id ? { ...item, useCount: item.useCount + 1 } : item)));
       if (reply.kind === "TEXTO") void markQuickReplyUsed(reply.id);
     },
+    onOpen: refreshPreviews,
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────

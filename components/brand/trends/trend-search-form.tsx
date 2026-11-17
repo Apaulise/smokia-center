@@ -4,9 +4,9 @@ import { Loader2, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Dialog } from "@/components/leads/ui/dialog";
-import { Input } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/field";
 import { searchTrends, searchTrendsMeta } from "@/lib/brand/trends/actions";
 import { estimateRunCostUsd, MAX_RESULTS_LIMIT } from "@/lib/brand/competitors/schema";
 import { TREND_MIN_LIKES, TREND_MIN_VIEWS } from "@/lib/brand/competitors/insights";

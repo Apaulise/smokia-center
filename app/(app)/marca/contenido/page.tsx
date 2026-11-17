@@ -1,7 +1,7 @@
 import { ContentFilters } from "@/components/brand/content/content-filters";
 import { ContentLibraryGrid } from "@/components/brand/content/content-library-grid";
-import { Crumbs } from "@/components/brand/ui/card";
-import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
+import { Crumbs } from "@/components/ui/card";
+import { HeaderBar, PageHeading } from "@/components/ui/page-header";
 import { formatObjectiveValue } from "@/lib/brand/insights";
 import { classifyPosts, computeCurrentBaselines } from "@/lib/brand/insights/baseline";
 import { getBrandContentLibrary, getBrandPostsForAnalysis, type ContentSortField } from "@/lib/brand/queries";

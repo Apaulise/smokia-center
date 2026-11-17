@@ -1,7 +1,7 @@
 import { PlannerView } from "@/components/brand/planner/planner-view";
 import { WeekSummaryStrip } from "@/components/brand/planner/week-summary";
-import { Crumbs } from "@/components/brand/ui/card";
-import { HeaderBar } from "@/components/leads/ui/page-header";
+import { Crumbs } from "@/components/ui/card";
+import { HeaderBar } from "@/components/ui/page-header";
 import { PeriodNav, ViewToggle, type CalendarView } from "@/components/shell/calendar-nav";
 import { getLinkablePosts } from "@/lib/brand/goals/queries";
 import { getImportAnalysisCounts, getPlannerItemsInRange, getItemChoices, getUnscheduledItems } from "@/lib/brand/planner/queries";
@@ -88,7 +88,6 @@ export default async function PlanificadorPage({ searchParams }: { searchParams:
         eyebrow={eyebrow}
         nav={
           <PeriodNav
-            variant="signal"
             basePath={BASE_PATH}
             view={view}
             prev={isWeek ? addDaysIso(weekStart, -7) : addMonthsIso(monthStart, -1)}
@@ -96,7 +95,7 @@ export default async function PlanificadorPage({ searchParams }: { searchParams:
             today={today}
           />
         }
-        toggle={<ViewToggle variant="signal" basePath={BASE_PATH} view={view} date={anchor} views={VIEWS} />}
+        toggle={<ViewToggle basePath={BASE_PATH} view={view} date={anchor} views={VIEWS} />}
         strip={<WeekSummaryStrip summary={summary} weekLabel={weekLabel(summaryDays)} hasWinners={hasWinners} />}
       />
     </>

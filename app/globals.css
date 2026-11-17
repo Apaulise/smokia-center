@@ -26,8 +26,9 @@
   --color-warning: var(--color-lm-signal-text);
   --color-danger: var(--color-lm-danger);
 
-  --font-display: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* `font-display` y `font-sans` quedan como alias de la tipografía de la UI: sólo hay dos familias (Host Grotesk y JetBrains Mono). */
+  --font-display: var(--font-host-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-host-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 
   /* §6: radios 16–24px en contenedores */
@@ -157,10 +158,8 @@
 
   /*
    * Titulares: heredan la tipografía de la UI (Host Grotesk). Antes tomaban
-   * Sora (`--font-display`, manual viejo) y cualquier h1–h3 sin `font-lm-sans`
-   * explícito —el título de un diálogo, por ejemplo— salía en otra fuente que
-   * el resto de la pantalla. Las pantallas sin migrar que quieren Sora lo piden
-   * con `font-display`.
+   * Sora (manual viejo) y cualquier h1–h3 sin `font-lm-sans` explícito —el
+   * título de un diálogo, por ejemplo— salía en otra fuente que el resto.
    */
   h1,
   h2,
@@ -437,6 +436,35 @@
     opacity: 0;
     transform: translate3d(0, 8px, 0);
   }
+}
+
+/*
+ * Cambio de tema. Con View Transition API (clase `lm-theme-wave`, la pone
+ * theme-toggle.tsx) la foto nueva se revela con un círculo animado por JS: acá
+ * sólo se apaga el cruce por defecto. Sin soporte (`lm-theme-fade`) se funden
+ * los colores con CSS, y sólo durante el cambio para no frenar el resto del uso.
+ */
+html.lm-theme-wave::view-transition-old(root),
+html.lm-theme-wave::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html.lm-theme-wave::view-transition-old(root) {
+  z-index: 1;
+}
+html.lm-theme-wave::view-transition-new(root) {
+  z-index: 2;
+}
+html.lm-theme-fade,
+html.lm-theme-fade *,
+html.lm-theme-fade *::before,
+html.lm-theme-fade *::after {
+  transition:
+    background-color 0.4s ease,
+    color 0.4s ease,
+    border-color 0.4s ease,
+    fill 0.4s ease,
+    stroke 0.4s ease !important;
 }
 
 /* Barra de progreso de navegación (components/shell/navigation-progress.tsx). */

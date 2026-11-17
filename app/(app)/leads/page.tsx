@@ -7,13 +7,13 @@ import { StaleLeadsList, UpcomingAppointments } from "@/components/leads/dashboa
 import { IndustryDistributionChart } from "@/components/leads/dashboard/industry-distribution";
 import { ListPerformanceTable } from "@/components/leads/dashboard/list-performance";
 import { StyleLoopTile } from "@/components/leads/dashboard/style-loop";
-import { ButtonLink } from "@/components/leads/ui/button";
-import { EmptyState } from "@/components/leads/ui/feedback";
-import { Kpi, KpiRow } from "@/components/leads/ui/kpi-row";
-import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
-import { Pipeline, PipelineExits } from "@/components/leads/ui/pipeline";
-import { Section } from "@/components/leads/ui/section";
-import { Segmented, SegmentedLink } from "@/components/leads/ui/tabs";
+import { ButtonLink } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/feedback";
+import { Kpi, KpiRow } from "@/components/ui/kpi-row";
+import { HeaderBar, PageHeading } from "@/components/ui/page-header";
+import { Pipeline, PipelineExits } from "@/components/ui/pipeline";
+import { Section } from "@/components/ui/section";
+import { Segmented, SegmentedLink } from "@/components/ui/tabs";
 import {
   getActivityTimeline,
   getAngleVariantPerformance,

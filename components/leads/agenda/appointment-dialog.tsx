@@ -4,9 +4,10 @@ import { CheckCircle2, Loader2, Trash2, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Dialog } from "@/components/leads/ui/dialog";
-import { Field, Input, Select, Textarea } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm";
+import { Dialog } from "@/components/ui/dialog";
+import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { createAppointment, deleteAppointment, updateAppointment } from "@/lib/leads/actions";
 import { APPOINTMENT_STATUSES, APPOINTMENT_STATUS_LABEL, type AppointmentStatus } from "@/lib/leads/appointments";
 import type { AppointmentWithLead } from "@/lib/leads/queries";
@@ -47,6 +48,7 @@ export function AppointmentDialog({
   defaultLeadId?: string;
   onClose: () => void;
 }) {
+  const { confirm, confirmDialog } = useConfirm();
   const router = useRouter();
   const [state, formAction, pending] = useActionState(mode === "edit" ? updateAppointment : createAppointment, null);
   const [deleting, setDeleting] = useState(false);
@@ -74,7 +76,7 @@ export function AppointmentDialog({
 
   async function handleDelete() {
     if (!appointment) return;
-    if (!window.confirm("¿Eliminar este turno? No se puede deshacer.")) return;
+    if (!(await confirm({ title: "¿Eliminar este turno?", description: "No se puede deshacer.", confirmLabel: "Eliminar", tone: "danger" }))) return;
     setDeleting(true);
     await deleteAppointment(appointment.id);
     router.refresh();
@@ -82,106 +84,109 @@ export function AppointmentDialog({
   }
 
   return (
-    <Dialog open onClose={onClose} title={mode === "edit" ? "Editar turno" : "Nuevo turno"} description={appointment?.leads?.name}>
-      <form action={formAction} className="flex flex-col gap-4">
-        {appointment ? <input type="hidden" name="id" value={appointment.id} /> : null}
+    <>
+      <Dialog open onClose={onClose} title={mode === "edit" ? "Editar turno" : "Nuevo turno"} description={appointment?.leads?.name}>
+        <form action={formAction} className="flex flex-col gap-4">
+          {appointment ? <input type="hidden" name="id" value={appointment.id} /> : null}
 
-        <Field label="Título" htmlFor="title">
-          <Input id="title" name="title" defaultValue={appointment?.title} required />
-        </Field>
-
-        <Field label="Lead (opcional)" htmlFor="leadId">
-          <Select id="leadId" name="leadId" value={leadId} onChange={(event) => setLeadId(event.target.value)}>
-            <option value="">Sin lead</option>
-            {leads.map((lead) => (
-              <option key={lead.id} value={lead.id}>
-                {lead.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Fecha y hora" htmlFor="startsAt">
-            <Input id="startsAt" name="startsAt" type="datetime-local" defaultValue={startsAtDefault} required mono />
+          <Field label="Título" htmlFor="title">
+            <Input id="title" name="title" defaultValue={appointment?.title} required />
           </Field>
-          <Field label="Duración" htmlFor="durationMinutes">
-            <Select id="durationMinutes" name="durationMinutes" defaultValue={durationDefault}>
-              {DURATIONS.map((d) => (
-                <option key={d.value} value={d.value}>
-                  {d.label}
+
+          <Field label="Lead (opcional)" htmlFor="leadId">
+            <Select id="leadId" name="leadId" value={leadId} onChange={(event) => setLeadId(event.target.value)}>
+              <option value="">Sin lead</option>
+              {leads.map((lead) => (
+                <option key={lead.id} value={lead.id}>
+                  {lead.name}
                 </option>
               ))}
             </Select>
           </Field>
-        </div>
 
-        {mode === "edit" ? (
-          <Field label="Estado" htmlFor="status">
-            <Select
-              id="status"
-              name="status"
-              value={status}
-              onChange={(event) => setStatus(event.target.value as AppointmentStatus)}
-            >
-              {APPOINTMENT_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {APPOINTMENT_STATUS_LABEL[s]}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        ) : null}
-
-        {showAdvanceLead ? (
-          <div className="rounded-lm-sm border border-lm-line-strong bg-lm-raised p-3">
-            <Field label={`Avanzar estado de ${appointment?.leads?.name ?? "el lead"} (opcional)`} htmlFor="newLeadStatus">
-              <Select id="newLeadStatus" name="newLeadStatus" defaultValue={advanceDefault}>
-                {LEAD_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {STATUS_LABEL[s]}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Fecha y hora" htmlFor="startsAt">
+              <Input id="startsAt" name="startsAt" type="datetime-local" defaultValue={startsAtDefault} required mono />
+            </Field>
+            <Field label="Duración" htmlFor="durationMinutes">
+              <Select id="durationMinutes" name="durationMinutes" defaultValue={durationDefault}>
+                {DURATIONS.map((d) => (
+                  <option key={d.value} value={d.value}>
+                    {d.label}
                   </option>
                 ))}
               </Select>
             </Field>
           </div>
-        ) : null}
 
-        <Field label="Link de la reunión (opcional)" htmlFor="meetingUrl">
-          <Input id="meetingUrl" name="meetingUrl" type="url" defaultValue={appointment?.meeting_url ?? undefined} placeholder="https://meet.google.com/…" />
-        </Field>
+          {mode === "edit" ? (
+            <Field label="Estado" htmlFor="status">
+              <Select
+                id="status"
+                name="status"
+                value={status}
+                onChange={(event) => setStatus(event.target.value as AppointmentStatus)}
+              >
+                {APPOINTMENT_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {APPOINTMENT_STATUS_LABEL[s]}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : null}
 
-        <Field label="Notas (opcional)" htmlFor="notes">
-          <Textarea id="notes" name="notes" defaultValue={appointment?.notes ?? undefined} />
-        </Field>
+          {showAdvanceLead ? (
+            <div className="rounded-lm-sm border border-lm-line-strong bg-lm-raised p-3">
+              <Field label={`Avanzar estado de ${appointment?.leads?.name ?? "el lead"} (opcional)`} htmlFor="newLeadStatus">
+                <Select id="newLeadStatus" name="newLeadStatus" defaultValue={advanceDefault}>
+                  {LEAD_STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {STATUS_LABEL[s]}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+          ) : null}
 
-        {state && !state.ok ? (
-          <p className="flex items-center gap-1.5 text-[13px] text-lm-danger">
-            <XCircle className="size-4" strokeWidth={1.5} />
-            {state.message}
-          </p>
-        ) : null}
+          <Field label="Link de la reunión (opcional)" htmlFor="meetingUrl">
+            <Input id="meetingUrl" name="meetingUrl" type="url" defaultValue={appointment?.meeting_url ?? undefined} placeholder="https://meet.google.com/…" />
+          </Field>
 
-        <div className="flex items-center justify-between gap-2 border-t border-lm-line pt-4">
-          {appointment ? (
-            <Button type="button" variant="ghost" size="sm" disabled={deleting} onClick={handleDelete}>
-              {deleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" strokeWidth={1.5} />}
-              Eliminar
-            </Button>
-          ) : (
-            <span />
-          )}
-          <div className="flex gap-2">
-            <Button type="button" variant="ghost" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button type="submit" variant="primary" disabled={pending}>
-              {pending ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" strokeWidth={1.5} />}
-              {mode === "edit" ? "Guardar" : "Agendar"}
-            </Button>
+          <Field label="Notas (opcional)" htmlFor="notes">
+            <Textarea id="notes" name="notes" defaultValue={appointment?.notes ?? undefined} />
+          </Field>
+
+          {state && !state.ok ? (
+            <p className="flex items-center gap-1.5 text-[13px] text-lm-danger">
+              <XCircle className="size-4" strokeWidth={1.5} />
+              {state.message}
+            </p>
+          ) : null}
+
+          <div className="flex items-center justify-between gap-2 border-t border-lm-line pt-4">
+            {appointment ? (
+              <Button type="button" variant="ghost" size="sm" disabled={deleting} onClick={handleDelete}>
+                {deleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" strokeWidth={1.5} />}
+                Eliminar
+              </Button>
+            ) : (
+              <span />
+            )}
+            <div className="flex gap-2">
+              <Button type="button" variant="ghost" onClick={onClose}>
+                Cancelar
+              </Button>
+              <Button type="submit" variant="primary" disabled={pending}>
+                {pending ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" strokeWidth={1.5} />}
+                {mode === "edit" ? "Guardar" : "Agendar"}
+              </Button>
+            </div>
           </div>
-        </div>
-      </form>
-    </Dialog>
+        </form>
+      </Dialog>
+      {confirmDialog}
+    </>
   );
 }

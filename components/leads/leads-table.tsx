@@ -5,11 +5,12 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useRef, useState, useTransition } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Select } from "@/components/leads/ui/field";
-import { EmptyState, Toast } from "@/components/leads/ui/feedback";
-import { Chip } from "@/components/leads/ui/status-badge";
-import { Table, Td, Th, Tr } from "@/components/leads/ui/table";
+import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm";
+import { Select } from "@/components/ui/field";
+import { EmptyState, Toast } from "@/components/ui/feedback";
+import { Chip } from "@/components/ui/status-badge";
+import { Table, Td, Th, Tr } from "@/components/ui/table";
 import {
   bulkAssignIndustry,
   bulkDeleteLeads,
@@ -68,6 +69,7 @@ export function LeadsTable({
   ascending: boolean;
   onSort: (field: LeadsSortField) => void;
 }) {
+  const { confirm, confirmDialog } = useConfirm();
   const router = useRouter();
   const [leads, setLeads] = useState(initialLeads);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -116,8 +118,14 @@ export function LeadsTable({
     setLeads((current) => current.map((lead) => (idSet.has(lead.id) ? { ...lead, status } : lead)));
   }
 
-  function handleDelete() {
-    if (!window.confirm(`¿Eliminar ${selected.size} leads? No se puede deshacer.`)) return;
+  async function handleDelete() {
+    const ok = await confirm({
+      title: selected.size === 1 ? "¿Eliminar este lead?" : `¿Eliminar ${selected.size} leads?`,
+      description: "No se puede deshacer: se borran también su historial y sus mensajes.",
+      confirmLabel: "Eliminar",
+      tone: "danger",
+    });
+    if (!ok) return;
     const ids = selectedIds;
     setLeads((current) => current.filter((lead) => !ids.includes(lead.id)));
     clearSelection();
@@ -201,109 +209,112 @@ export function LeadsTable({
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      {statusError ? (
-        <div className="w-max">
-          <Toast tone="error">{statusError}</Toast>
-        </div>
-      ) : null}
-      {selected.size > 0 ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-lm-md border border-lm-line-strong bg-lm-raised px-4 py-3">
-          <span className="font-mono text-[13px] tabular-nums text-lm-ink">{selected.size} seleccionados</span>
-
-          <div className="flex items-center gap-1.5">
-            <Select className="h-8 w-40 text-xs" value={bulkIndustry} onChange={(event) => setBulkIndustry(event.target.value)}>
-              <option value="">Asignar rubro…</option>
-              <option value="__none__">Sin rubro</option>
-              {industries.map((industry) => (
-                <option key={industry.id} value={industry.id}>
-                  {industry.name}
-                </option>
-              ))}
-            </Select>
-            <Button type="button" size="sm" variant="secondary" disabled={!bulkIndustry} onClick={handleAssignIndustry}>
-              Aplicar
-            </Button>
+    <>
+      <div className="flex flex-col gap-3">
+        {statusError ? (
+          <div className="w-max">
+            <Toast tone="error">{statusError}</Toast>
           </div>
+        ) : null}
+        {selected.size > 0 ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-lm-md border border-lm-line-strong bg-lm-raised px-4 py-3">
+            <span className="font-mono text-[13px] tabular-nums text-lm-ink">{selected.size} seleccionados</span>
 
-          <div className="flex items-center gap-1.5">
-            <Select className="h-8 w-40 text-xs" value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value as LeadStatus)}>
-              <option value="">Cambiar estado…</option>
-              {LEAD_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {STATUS_LABEL[status]}
-                </option>
-              ))}
-            </Select>
-            <Button type="button" size="sm" variant="secondary" disabled={!bulkStatus} onClick={handleBulkStatus}>
-              Aplicar
+            <div className="flex items-center gap-1.5">
+              <Select className="h-8 w-40 text-xs" value={bulkIndustry} onChange={(event) => setBulkIndustry(event.target.value)}>
+                <option value="">Asignar rubro…</option>
+                <option value="__none__">Sin rubro</option>
+                {industries.map((industry) => (
+                  <option key={industry.id} value={industry.id}>
+                    {industry.name}
+                  </option>
+                ))}
+              </Select>
+              <Button type="button" size="sm" variant="secondary" disabled={!bulkIndustry} onClick={handleAssignIndustry}>
+                Aplicar
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <Select className="h-8 w-40 text-xs" value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value as LeadStatus)}>
+                <option value="">Cambiar estado…</option>
+                {LEAD_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {STATUS_LABEL[status]}
+                  </option>
+                ))}
+              </Select>
+              <Button type="button" size="sm" variant="secondary" disabled={!bulkStatus} onClick={handleBulkStatus}>
+                Aplicar
+              </Button>
+            </div>
+
+            <Button type="button" size="sm" variant="secondary" onClick={handleEnrich}>
+              <Sparkles className="size-3.5" strokeWidth={1.5} />
+              Enriquecer
             </Button>
+
+            <Button type="button" size="sm" variant="secondary" onClick={handleExport}>
+              Exportar CSV
+            </Button>
+
+            <Button type="button" size="sm" variant="danger" onClick={handleDelete}>
+              Eliminar
+            </Button>
+
+            {pending ? <Loader2 className="size-4 animate-spin text-lm-signal-text" /> : null}
+            {enrichMessage ? <span className="text-xs text-lm-ink-3">{enrichMessage}</span> : null}
+
+            <button type="button" onClick={clearSelection} className="ml-auto text-xs text-lm-ink-3 hover:text-lm-ink">
+              Cancelar selección
+            </button>
           </div>
+        ) : null}
 
-          <Button type="button" size="sm" variant="secondary" onClick={handleEnrich}>
-            <Sparkles className="size-3.5" strokeWidth={1.5} />
-            Enriquecer
-          </Button>
-
-          <Button type="button" size="sm" variant="secondary" onClick={handleExport}>
-            Exportar CSV
-          </Button>
-
-          <Button type="button" size="sm" variant="danger" onClick={handleDelete}>
-            Eliminar
-          </Button>
-
-          {pending ? <Loader2 className="size-4 animate-spin text-lm-signal-text" /> : null}
-          {enrichMessage ? <span className="text-xs text-lm-ink-3">{enrichMessage}</span> : null}
-
-          <button type="button" onClick={clearSelection} className="ml-auto text-xs text-lm-ink-3 hover:text-lm-ink">
-            Cancelar selección
-          </button>
-        </div>
-      ) : null}
-
-      <Table>
-        <thead>
-          <tr>
-            <Th className="w-10">
-              <input
-                type="checkbox"
-                checked={allSelected}
-                onChange={toggleAll}
-                aria-label="Seleccionar todos"
-                className="size-3.5 rounded-xs border-lm-line-strong accent-lm-signal"
+        <Table>
+          <thead>
+            <tr>
+              <Th className="w-10">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={toggleAll}
+                  aria-label="Seleccionar todos"
+                  className="size-3.5 rounded-xs border-lm-line-strong accent-lm-signal"
+                />
+              </Th>
+              <Th>
+                <SortHeader field="name" label="Nombre" activeSort={sort} ascending={ascending} onSort={onSort} />
+              </Th>
+              <Th>Rubro</Th>
+              <Th>Contacto</Th>
+              <Th>Ciudad</Th>
+              <Th>Rating</Th>
+              <Th>
+                <SortHeader field="status" label="Estado" activeSort={sort} ascending={ascending} onSort={onSort} />
+              </Th>
+              <Th>Lista</Th>
+              <Th>
+                <SortHeader field="last_contacted_at" label="Últ. contacto" activeSort={sort} ascending={ascending} onSort={onSort} />
+              </Th>
+              <Th>Próxima acción</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {leads.map((lead) => (
+              <LeadRowView
+                key={lead.id}
+                lead={lead}
+                selected={selected.has(lead.id)}
+                onToggle={() => toggleOne(lead.id)}
+                onStatusChange={(status) => handleRowStatusChange(lead.id, status)}
               />
-            </Th>
-            <Th>
-              <SortHeader field="name" label="Nombre" activeSort={sort} ascending={ascending} onSort={onSort} />
-            </Th>
-            <Th>Rubro</Th>
-            <Th>Contacto</Th>
-            <Th>Ciudad</Th>
-            <Th>Rating</Th>
-            <Th>
-              <SortHeader field="status" label="Estado" activeSort={sort} ascending={ascending} onSort={onSort} />
-            </Th>
-            <Th>Lista</Th>
-            <Th>
-              <SortHeader field="last_contacted_at" label="Últ. contacto" activeSort={sort} ascending={ascending} onSort={onSort} />
-            </Th>
-            <Th>Próxima acción</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {leads.map((lead) => (
-            <LeadRowView
-              key={lead.id}
-              lead={lead}
-              selected={selected.has(lead.id)}
-              onToggle={() => toggleOne(lead.id)}
-              onStatusChange={(status) => handleRowStatusChange(lead.id, status)}
-            />
-          ))}
-        </tbody>
-      </Table>
-    </div>
+            ))}
+          </tbody>
+        </Table>
+      </div>
+      {confirmDialog}
+    </>
   );
 }
 

@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { signUpWithEmail } from "@/app/(auth)/login/actions";
-import { Button } from "@/components/leads/ui/button";
-import { Field, Input } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/field";
 import { createClient } from "@/lib/supabase/client";
 
 type Mode = "sign-in" | "sign-up";

@@ -1,5 +1,5 @@
-import { Table, Td, Th, Tr } from "@/components/leads/ui/table";
-import { EmptyLine } from "@/components/leads/ui/feedback";
+import { Table, Td, Th, Tr } from "@/components/ui/table";
+import { EmptyLine } from "@/components/ui/feedback";
 import { ANGLE_LABEL, type SalesAngle } from "@/lib/leads/ai/angles";
 import type { AngleVariantPerformance } from "@/lib/leads/queries";
 

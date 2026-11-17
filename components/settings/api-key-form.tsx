@@ -3,8 +3,9 @@
 import { CheckCircle2, KeyRound, Loader2, XCircle } from "lucide-react";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Input } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm";
+import { Input } from "@/components/ui/field";
 import type { ActionState } from "@/lib/settings/actions";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +39,7 @@ export function ApiKeyForm({
   testAction: KeyServerAction;
   deleteAction: () => Promise<void>;
 }) {
+  const { confirm, confirmDialog } = useConfirm();
   const [saveState, saveAction, savePending] = useActionState(saveServerAction, null);
   const [testState, testAction, testPending] = useActionState(testServerAction, null);
   const [deletePending, startDelete] = useTransition();
@@ -53,81 +55,84 @@ export function ApiKeyForm({
   const showSaveState = saveState && !saveDismissed;
 
   return (
-    <div className="flex flex-col gap-4">
-      {configured ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lm-sm border border-lm-line-strong bg-lm-raised px-4 py-3">
-          <div className="flex items-center gap-2 text-[13px]">
-            <KeyRound className="size-4 text-lm-signal-text" strokeWidth={1.5} />
-            <span className="font-mono text-lm-ink">{masked}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <form action={testAction} onSubmit={() => setTestDismissed(false)}>
-              <Button type="submit" variant="secondary" size="sm" disabled={testPending}>
-                {testPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                Probar conexión
+    <>
+      <div className="flex flex-col gap-4">
+        {configured ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lm-sm border border-lm-line-strong bg-lm-raised px-4 py-3">
+            <div className="flex items-center gap-2 text-[13px]">
+              <KeyRound className="size-4 text-lm-signal-text" strokeWidth={1.5} />
+              <span className="font-mono text-lm-ink">{masked}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <form action={testAction} onSubmit={() => setTestDismissed(false)}>
+                <Button type="submit" variant="secondary" size="sm" disabled={testPending}>
+                  {testPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
+                  Probar conexión
+                </Button>
+              </form>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                disabled={deletePending}
+                onClick={async () => {
+                  if (!(await confirm({ title: confirmDeleteMessage, description: "Las funciones que la usan dejan de andar hasta que cargues otra.", confirmLabel: "Eliminar", tone: "danger" }))) return;
+                  setSaveDismissed(true);
+                  setTestDismissed(true);
+                  startDelete(() => {
+                    void deleteAction();
+                  });
+                }}
+              >
+                Eliminar
               </Button>
-            </form>
-            <Button
-              type="button"
-              variant="danger"
-              size="sm"
-              disabled={deletePending}
-              onClick={() => {
-                if (!window.confirm(confirmDeleteMessage)) return;
-                setSaveDismissed(true);
-                setTestDismissed(true);
-                startDelete(() => {
-                  void deleteAction();
-                });
-              }}
-            >
-              Eliminar
-            </Button>
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
 
-      {showTestState ? (
-        <p
-          className={cn(
-            "flex items-center gap-1.5 text-[13px]",
-            testState.ok ? "text-lm-success" : "text-lm-danger",
-          )}
+        {showTestState ? (
+          <p
+            className={cn(
+              "flex items-center gap-1.5 text-[13px]",
+              testState.ok ? "text-lm-success" : "text-lm-danger",
+            )}
+          >
+            {testState.ok ? <CheckCircle2 className="size-4" strokeWidth={1.5} /> : <XCircle className="size-4" strokeWidth={1.5} />}
+            {testState.message}
+          </p>
+        ) : null}
+
+        <form
+          ref={formRef}
+          action={saveAction}
+          onSubmit={() => setSaveDismissed(false)}
+          className="flex flex-wrap items-end gap-3"
         >
-          {testState.ok ? <CheckCircle2 className="size-4" strokeWidth={1.5} /> : <XCircle className="size-4" strokeWidth={1.5} />}
-          {testState.message}
-        </p>
-      ) : null}
+          <div className="min-w-[260px] flex-1">
+            <label htmlFor="apiKey" className="mb-1.5 block font-lm-sans text-[13px] font-medium text-lm-ink-2">
+              {configured ? "Reemplazar API key" : label}
+            </label>
+            <Input id="apiKey" name="apiKey" type="password" autoComplete="off" placeholder={placeholder} required />
+          </div>
+          <Button type="submit" variant="primary" disabled={savePending}>
+            {savePending ? <Loader2 className="size-3.5 animate-spin" /> : null}
+            Guardar
+          </Button>
+        </form>
 
-      <form
-        ref={formRef}
-        action={saveAction}
-        onSubmit={() => setSaveDismissed(false)}
-        className="flex flex-wrap items-end gap-3"
-      >
-        <div className="min-w-[260px] flex-1">
-          <label htmlFor="apiKey" className="mb-1.5 block font-lm-sans text-[13px] font-medium text-lm-ink-2">
-            {configured ? "Reemplazar API key" : label}
-          </label>
-          <Input id="apiKey" name="apiKey" type="password" autoComplete="off" placeholder={placeholder} required />
-        </div>
-        <Button type="submit" variant="primary" disabled={savePending}>
-          {savePending ? <Loader2 className="size-3.5 animate-spin" /> : null}
-          Guardar
-        </Button>
-      </form>
-
-      {showSaveState ? (
-        <p
-          className={cn(
-            "flex items-center gap-1.5 text-[13px]",
-            saveState.ok ? "text-lm-success" : "text-lm-danger",
-          )}
-        >
-          {saveState.ok ? <CheckCircle2 className="size-4" strokeWidth={1.5} /> : <XCircle className="size-4" strokeWidth={1.5} />}
-          {saveState.message}
-        </p>
-      ) : null}
-    </div>
+        {showSaveState ? (
+          <p
+            className={cn(
+              "flex items-center gap-1.5 text-[13px]",
+              saveState.ok ? "text-lm-success" : "text-lm-danger",
+            )}
+          >
+            {saveState.ok ? <CheckCircle2 className="size-4" strokeWidth={1.5} /> : <XCircle className="size-4" strokeWidth={1.5} />}
+            {saveState.message}
+          </p>
+        ) : null}
+      </div>
+      {confirmDialog}
+    </>
   );
 }

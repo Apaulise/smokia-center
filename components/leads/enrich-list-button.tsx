@@ -3,7 +3,7 @@
 import { Loader2, Sparkles } from "lucide-react";
 import { useState, useTransition } from "react";
 
-import { Button } from "@/components/leads/ui/button";
+import { Button } from "@/components/ui/button";
 import { enrichLeadListBatch } from "@/lib/leads/ai/actions";
 
 /** "Enriquecer lista" (Plan §1.10): dispara el lote en segundo plano — no hay progreso en vivo, se refresca a mano. */

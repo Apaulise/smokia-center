@@ -3,8 +3,8 @@
 import { CheckCircle2, Loader2, UploadCloud, XCircle } from "lucide-react";
 import { useActionState, useEffect, useRef } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Field, Input, Select } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { Field, Input, Select } from "@/components/ui/field";
 import { importCsvLeads } from "@/lib/leads/actions";
 import type { Database } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";

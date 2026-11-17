@@ -1,11 +1,9 @@
 import type { ReactNode } from "react";
 
 /**
- * Encabezado de pantalla del Gestor de Leads: header bar delgado (56px, con
- * breadcrumb) + un bloque de contenido opcional (eyebrow, H2, descripción,
- * acción). Paralelo a `@/components/shell/page-header`, que sigue usando el
- * Gestor de Marca Personal — no se toca ese mientras Marca esté fuera de
- * alcance (CLAUDE.md §2).
+ * Encabezado de pantalla, igual en todos los gestores: header bar delgado
+ * (56px, con breadcrumb) + un bloque de contenido opcional (eyebrow, título,
+ * descripción, acción).
  */
 export function HeaderBar({ breadcrumb, meta }: { breadcrumb: ReactNode; meta?: ReactNode }) {
   return (

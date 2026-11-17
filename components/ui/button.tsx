@@ -1,48 +1,39 @@
 import Link from "next/link";
-import type { ButtonHTMLAttributes, ComponentProps } from "react";
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ComponentProps } from "react";
 
 import { cn } from "@/lib/utils";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger";
-type Size = "sm" | "md" | "lg";
-
-/*
- * Manual §9: "Botón principal: degradado; botón secundario: borde azul
- * translúcido", y §9 web: "Mantener legibilidad AA como mínimo".
- *
- * Las dos cosas chocan si el degradado va hasta el violeta: texto blanco sobre
- * #18D6E8 da 1.7:1 y texto oscuro sobre #7C3AED da 3.3:1 — ninguno pasa AA. Por
- * eso el botón usa el tramo cyan→azul del degradado con texto oscuro, donde el
- * peor punto (#4C7DFF) da 5.3:1. El degradado completo queda para superficies
- * grandes y texto decorativo, donde no hay que leer encima.
+/**
+ * Botón del sistema (Design System Button). Primario amarillo = la acción
+ * principal de la vista, uno solo por pantalla.
  */
+type Variant = "primary" | "secondary" | "ghost" | "danger";
+type Size = "sm" | "md";
+
 const VARIANTS: Record<Variant, string> = {
   primary: cn(
-    "lm-btn-liquid bg-lm-signal text-lm-on-signal font-semibold",
+    "lm-btn-liquid border-lm-signal bg-lm-signal text-lm-on-signal font-semibold",
+    "hover:border-lm-signal-hover",
   ),
+  // Translúcido: sobre el vidrio un relleno opaco se lee como un parche.
   secondary: cn(
-    "border border-line bg-elevated/60 text-ink",
-    "hover:border-cyan/40 hover:bg-elevated",
+    "border-lm-line-strong bg-lm-ink/5 text-lm-ink",
+    "hover:bg-lm-ink/10",
   ),
-  ghost: "text-muted hover:bg-surface/60 hover:text-ink",
-  danger: cn(
-    "border border-danger/30 bg-danger/10 text-danger",
-    "hover:border-danger/50 hover:bg-danger/20",
-  ),
+  ghost: cn("border-transparent bg-transparent text-lm-ink-2", "hover:bg-lm-ink/8 hover:text-lm-ink"),
+  danger: cn("border-transparent bg-transparent text-lm-danger", "hover:bg-lm-danger-soft"),
 };
 
 const SIZES: Record<Size, string> = {
-  sm: "h-8 gap-1.5 px-3 text-xs",
-  md: "h-10 gap-2 px-4 text-sm",
-  lg: "h-12 gap-2 px-6 text-base",
+  sm: "h-7 gap-1.5 px-2.5 text-xs",
+  md: "h-8 gap-2 px-3 text-[13px]",
 };
 
 const BASE = cn(
-  "inline-flex cursor-pointer items-center justify-center rounded-[12px]",
-  "font-medium whitespace-nowrap transition-all duration-200",
-  "focus-visible:ring-2 focus-visible:ring-cyan/60 focus-visible:ring-offset-2",
-  "focus-visible:ring-offset-base focus-visible:outline-none",
-  "disabled:pointer-events-none disabled:opacity-40",
+  "inline-flex shrink-0 cursor-pointer items-center justify-center rounded-lm-sm border",
+  "font-medium whitespace-nowrap transition-colors duration-150 ease-out font-lm-sans",
+  "focus-visible:lm-focus",
+  "disabled:pointer-events-none disabled:opacity-45",
 );
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -50,34 +41,59 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: Size;
 }
 
-export function Button({
-  variant = "secondary",
-  size = "md",
-  className,
-  ...props
-}: ButtonProps) {
-  return (
-    <button
-      className={cn(BASE, VARIANTS[variant], SIZES[size], className)}
-      {...props}
-    />
-  );
+export function Button({ variant = "secondary", size = "md", className, ...props }: ButtonProps) {
+  return <button className={cn(BASE, VARIANTS[variant], SIZES[size], className)} {...props} />;
 }
 
-/**
- * Mismo aspecto que Button, pero navega. Un <button> envolviendo un <a> no es
- * HTML válido, así que cuando la acción es ir a otra pantalla va esto.
- */
+/** Mismo aspecto que Button, pero navega: un `<Link>` real (se puede abrir en otra pestaña). */
 export function ButtonLink({
   variant = "secondary",
   size = "md",
   className,
   ...props
 }: ComponentProps<typeof Link> & { variant?: Variant; size?: Size }) {
+  return <Link className={cn(BASE, VARIANTS[variant], SIZES[size], className)} {...props} />;
+}
+
+/** Enlaces externos: un ancla real abre otra pestaña y permite copiar el destino. */
+export function ButtonExternalLink({
+  variant = "secondary",
+  size = "md",
+  className,
+  ...props
+}: AnchorHTMLAttributes<HTMLAnchorElement> & { href: string; variant?: Variant; size?: Size }) {
+  return <a className={cn(BASE, VARIANTS[variant], SIZES[size], className)} {...props} target="_blank" rel="noopener noreferrer" />;
+}
+
+/** Botón redondo sólo-ícono, 32×32 (como los de la referencia de vidrio). Siempre con aria-label. */
+export function IconButton({
+  className,
+  size = "md",
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & { size?: Size; "aria-label": string }) {
   return (
-    <Link
-      className={cn(BASE, VARIANTS[variant], SIZES[size], className)}
+    <button
+      className={cn(
+        BASE,
+        "rounded-full border-transparent bg-lm-ink/6 text-lm-ink-2 hover:bg-lm-ink/12 hover:text-lm-ink",
+        size === "sm" ? "size-7" : "size-8",
+        className,
+      )}
       {...props}
     />
+  );
+}
+
+/** Atajo de teclado en un chip mono, como el "⌘K" del buscador. */
+export function Kbd({ className, children }: { className?: string; children: string }) {
+  return (
+    <span
+      className={cn(
+        "rounded-lm-xs border border-lm-line px-1 py-px font-mono text-[10.5px] font-medium text-lm-ink-3",
+        className,
+      )}
+    >
+      {children}
+    </span>
   );
 }

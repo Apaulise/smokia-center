@@ -16,7 +16,8 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
  *
  * Teclado: al abrir, el foco entra al panel (o al campo con `autoFocus`), Tab
  * da la vuelta adentro en vez de irse a la página de atrás, Esc cierra y al
- * cerrar el foco vuelve a donde estaba.
+ * cerrar el foco vuelve a donde estaba. Si hay dos abiertos, todo eso lo hace
+ * sólo el de arriba.
  */
 export function Dialog({
   open,
@@ -44,6 +45,9 @@ export function Dialog({
   useEffect(() => {
     if (!open) return;
     function onKeyDown(event: KeyboardEvent) {
+      // Con dos diálogos abiertos (una confirmación arriba de un formulario) sólo responde el de arriba.
+      const dialogs = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
+      if (dialogs[dialogs.length - 1] !== panel.current) return;
       if (event.key === "Escape") {
         onClose();
         return;
@@ -96,7 +100,7 @@ export function Dialog({
       >
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-lm-line px-5 py-4">
           <div className="min-w-0">
-            <h3 id={titleId} className="truncate text-[15px] font-semibold text-lm-ink">
+            <h3 id={titleId} className="text-[15px] font-semibold text-balance text-lm-ink">
               {title}
             </h3>
             {description ? <p className="mt-1 text-[13px] text-lm-ink-2">{description}</p> : null}

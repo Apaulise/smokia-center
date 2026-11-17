@@ -4,9 +4,9 @@ import { CheckCircle2, Globe, Loader2, Mail, MapPin, Phone, PhoneCall, XCircle }
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 
-import { Button, ButtonExternalLink } from "@/components/leads/ui/button";
-import { Dialog } from "@/components/leads/ui/dialog";
-import { Field, Input, Select, Textarea } from "@/components/leads/ui/field";
+import { Button, ButtonExternalLink } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { logContactActivity } from "@/lib/leads/actions";
 import type { LeadWithRelations } from "@/lib/leads/queries";
 import { LEAD_STATUSES, STATUS_LABEL, type LeadActivityType, type LeadStatus } from "@/lib/leads/status";

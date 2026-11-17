@@ -2,8 +2,8 @@ import { ListChecks } from "lucide-react";
 
 import { EmptyListsActions } from "@/components/leads/empty-lists-actions";
 import { ListsBrowser } from "@/components/leads/lists-browser";
-import { EmptyState } from "@/components/leads/ui/feedback";
-import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
+import { EmptyState } from "@/components/ui/feedback";
+import { HeaderBar, PageHeading } from "@/components/ui/page-header";
 import { listLeadListsOverview } from "@/lib/leads/queries";
 import { listIndustries } from "@/lib/settings/queries";
 

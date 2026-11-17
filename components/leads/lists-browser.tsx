@@ -7,9 +7,9 @@ import { AddLeadDialog } from "@/components/leads/add-lead-dialog";
 import { CreateListDialog } from "@/components/leads/create-list-dialog";
 import { LeadListCard } from "@/components/leads/lead-list-card";
 import { ListsTable } from "@/components/leads/lists-table";
-import { Button, ButtonLink } from "@/components/leads/ui/button";
-import { Input } from "@/components/leads/ui/field";
-import { Segmented, SegmentedLink } from "@/components/leads/ui/tabs";
+import { Button, ButtonLink } from "@/components/ui/button";
+import { Input } from "@/components/ui/field";
+import { Segmented, SegmentedLink } from "@/components/ui/tabs";
 import type { LeadListOverviewRow } from "@/lib/leads/queries";
 import type { Database } from "@/lib/supabase/database.types";
 

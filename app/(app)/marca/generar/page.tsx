@@ -1,10 +1,10 @@
 import { KeyRound } from "lucide-react";
 
 import { BrandChatPanel } from "@/components/brand/chat/chat-panel";
-import { Crumbs } from "@/components/brand/ui/card";
-import { ButtonLink } from "@/components/leads/ui/button";
-import { EmptyState } from "@/components/leads/ui/feedback";
-import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
+import { Crumbs } from "@/components/ui/card";
+import { ButtonLink } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/feedback";
+import { HeaderBar, PageHeading } from "@/components/ui/page-header";
 import { getBrandChatMessages, getBrandChatThreads } from "@/lib/brand/queries";
 import { getGeminiKeyStatus } from "@/lib/settings/queries";
 import { requireUser } from "@/lib/supabase/server";

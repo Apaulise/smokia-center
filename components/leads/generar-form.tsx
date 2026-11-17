@@ -4,8 +4,8 @@ import { Loader2, XCircle } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 
-import { Button, Kbd } from "@/components/leads/ui/button";
-import { Field, Input, Select, Textarea } from "@/components/leads/ui/field";
+import { Button, Kbd } from "@/components/ui/button";
+import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { generateLeadList } from "@/lib/leads/actions";
 import type { ApifyAccountLimits } from "@/lib/apify/client";
 import type { ListPerformance } from "@/lib/leads/queries";

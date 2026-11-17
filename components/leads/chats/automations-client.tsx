@@ -4,11 +4,12 @@ import { AlertTriangle, CheckCircle2, ExternalLink, Loader2, Pause, Play, Plus, 
 import { useState, useTransition } from "react";
 
 import { TagChip } from "@/components/leads/chats/tag-chip";
-import { Button } from "@/components/leads/ui/button";
-import { Field, Input, Select, Textarea } from "@/components/leads/ui/field";
-import { EmptyState } from "@/components/leads/ui/feedback";
-import { Section } from "@/components/leads/ui/section";
-import { Segmented, SegmentedButton } from "@/components/leads/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm";
+import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { EmptyState } from "@/components/ui/feedback";
+import { Section } from "@/components/ui/section";
+import { Segmented, SegmentedButton } from "@/components/ui/tabs";
 import {
   chooseAutomationModel,
   createContentAutomation,
@@ -401,6 +402,7 @@ function AutomationsList({ automations, onChange }: { automations: ContentAutoma
 }
 
 function AutomationRow({ row, onChange }: { row: ContentAutomationView; onChange: (update: (items: ContentAutomationView[]) => ContentAutomationView[]) => void }) {
+  const { confirm, confirmDialog } = useConfirm();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
 
@@ -420,8 +422,14 @@ function AutomationRow({ row, onChange }: { row: ContentAutomationView; onChange
     });
   }
 
-  function remove() {
-    if (!confirm(`¿Borrar la automatización de "${row.keywords[0]}"? Se borra también en Zernio.`)) return;
+  async function remove() {
+    const ok = await confirm({
+      title: `¿Borrar la automatización de «${row.keywords[0]}»?`,
+      description: "Se borra también en Zernio: la palabra deja de responder en ese reel.",
+      confirmLabel: "Borrar",
+      tone: "danger",
+    });
+    if (!ok) return;
     startTransition(async () => {
       const result = await deleteContentAutomation(row.id);
       if (result.ok) onChange((items) => items.filter((item) => item.id !== row.id));
@@ -430,36 +438,39 @@ function AutomationRow({ row, onChange }: { row: ContentAutomationView; onChange
   }
 
   return (
-    <li className="flex flex-wrap items-center justify-between gap-3 py-3">
-      <div className="min-w-0">
-        <p className="flex items-center gap-2 font-lm-sans text-[13.5px] font-medium text-lm-ink">
-          {STAGE_LABEL[row.stage]} · <span className="font-mono">{row.keywords[0]}</span>
-          <span className={cn("text-xs font-medium", STATUS_TONE[row.status])}>{row.status === "ACTIVA" ? "Activa" : row.status === "PAUSADA" ? "Pausada" : "Error"}</span>
-        </p>
-        <p className="mt-0.5 truncate text-xs text-lm-ink-3">{row.resource_title}</p>
-        {row.error ? (
-          <p className="mt-0.5 flex items-center gap-1 text-xs text-lm-danger">
-            <AlertTriangle className="size-3" strokeWidth={1.5} /> {row.error}
+    <>
+      <li className="flex flex-wrap items-center justify-between gap-3 py-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 font-lm-sans text-[13.5px] font-medium text-lm-ink">
+            {STAGE_LABEL[row.stage]} · <span className="font-mono">{row.keywords[0]}</span>
+            <span className={cn("text-xs font-medium", STATUS_TONE[row.status])}>{row.status === "ACTIVA" ? "Activa" : row.status === "PAUSADA" ? "Pausada" : "Error"}</span>
           </p>
-        ) : null}
-        <p className="mt-0.5 font-mono text-[11px] text-lm-ink-3">
-          {row.started} disparos · {row.completed} completados · {row.failed} fallidos
-        </p>
-      </div>
-      <div className="flex shrink-0 items-center gap-1.5">
-        {row.permalink ? (
-          <a href={row.permalink} target="_blank" rel="noopener noreferrer" className="grid size-7 place-items-center rounded-lm-sm text-lm-ink-3 hover:bg-lm-raised hover:text-lm-ink" aria-label="Ver la pieza en Instagram">
-            <ExternalLink className="size-3.5" strokeWidth={1.5} />
-          </a>
-        ) : null}
-        <Button variant="secondary" size="sm" disabled={pending} onClick={toggle} aria-label={row.status === "ACTIVA" ? "Pausar" : "Reanudar"}>
-          {row.status === "ACTIVA" ? <Pause className="size-3.5" strokeWidth={1.5} /> : <Play className="size-3.5" strokeWidth={1.5} />}
-        </Button>
-        <Button variant="danger" size="sm" disabled={pending} onClick={remove} aria-label="Borrar">
-          <Trash2 className="size-3.5" strokeWidth={1.5} />
-        </Button>
-      </div>
-      {message ? <p className="basis-full text-xs text-lm-danger">{message}</p> : null}
-    </li>
+          <p className="mt-0.5 truncate text-xs text-lm-ink-3">{row.resource_title}</p>
+          {row.error ? (
+            <p className="mt-0.5 flex items-center gap-1 text-xs text-lm-danger">
+              <AlertTriangle className="size-3" strokeWidth={1.5} /> {row.error}
+            </p>
+          ) : null}
+          <p className="mt-0.5 font-mono text-[11px] text-lm-ink-3">
+            {row.started} disparos · {row.completed} completados · {row.failed} fallidos
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {row.permalink ? (
+            <a href={row.permalink} target="_blank" rel="noopener noreferrer" className="grid size-7 place-items-center rounded-lm-sm text-lm-ink-3 hover:bg-lm-raised hover:text-lm-ink" aria-label="Ver la pieza en Instagram">
+              <ExternalLink className="size-3.5" strokeWidth={1.5} />
+            </a>
+          ) : null}
+          <Button variant="secondary" size="sm" disabled={pending} onClick={toggle} aria-label={row.status === "ACTIVA" ? "Pausar" : "Reanudar"}>
+            {row.status === "ACTIVA" ? <Pause className="size-3.5" strokeWidth={1.5} /> : <Play className="size-3.5" strokeWidth={1.5} />}
+          </Button>
+          <Button variant="danger" size="sm" disabled={pending} onClick={remove} aria-label="Borrar">
+            <Trash2 className="size-3.5" strokeWidth={1.5} />
+          </Button>
+        </div>
+        {message ? <p className="basis-full text-xs text-lm-danger">{message}</p> : null}
+      </li>
+      {confirmDialog}
+    </>
   );
 }

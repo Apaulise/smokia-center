@@ -4,9 +4,9 @@ import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Dialog } from "@/components/leads/ui/dialog";
-import { Field, Input, Select, Textarea } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { createLeadManually } from "@/lib/leads/actions";
 import type { LeadListOverviewRow } from "@/lib/leads/queries";
 import { LEAD_STATUSES, STATUS_LABEL } from "@/lib/leads/status";

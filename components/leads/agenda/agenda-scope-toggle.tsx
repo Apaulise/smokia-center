@@ -1,6 +1,6 @@
 import { UserRound, UsersRound } from "lucide-react";
 
-import { Segmented, SegmentedLink } from "@/components/leads/ui/tabs";
+import { Segmented, SegmentedLink } from "@/components/ui/tabs";
 
 export type AgendaScope = "mine" | "team";
 

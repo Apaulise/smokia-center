@@ -3,7 +3,7 @@
 import { AudioLines, ExternalLink, FileText, ImageIcon, Loader2, Mic, Paperclip, Pencil, Play, Plus, Square, Trash2, Type, X, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { Button } from "@/components/leads/ui/button";
+import { Button } from "@/components/ui/button";
 import type { QuickReplyKind } from "@/lib/chats/db";
 import {
   BODY_MAX,

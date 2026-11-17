@@ -5,8 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useRef, useState, useTransition, type DragEvent } from "react";
 
-import { Toast } from "@/components/leads/ui/feedback";
-import { Chip } from "@/components/leads/ui/status-badge";
+import { Toast } from "@/components/ui/feedback";
+import { Chip } from "@/components/ui/status-badge";
 import { leadHref, navQueryString } from "@/lib/leads/nav-params";
 import { updateLeadStatus } from "@/lib/leads/actions";
 import type { LeadWithRelations } from "@/lib/leads/queries";

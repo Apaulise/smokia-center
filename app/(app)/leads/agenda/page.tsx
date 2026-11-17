@@ -6,7 +6,7 @@ import {
   ViewToggle as SharedViewToggle,
   type CalendarView,
 } from "@/components/shell/calendar-nav";
-import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
+import { HeaderBar, PageHeading } from "@/components/ui/page-header";
 import {
   addDaysIso,
   addMonthsIso,
@@ -155,9 +155,9 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
 }
 
 function PeriodNav({ scope, ...props }: { view: View; prev: string; next: string; today: string; scope: AgendaScope }) {
-  return <SharedPeriodNav basePath={BASE_PATH} variant="signal" extraParams={{ scope: scope === "team" ? "team" : undefined }} {...props} />;
+  return <SharedPeriodNav basePath={BASE_PATH} extraParams={{ scope: scope === "team" ? "team" : undefined }} {...props} />;
 }
 
 function ViewToggle({ scope, ...props }: { view: View; date: string; scope: AgendaScope }) {
-  return <SharedViewToggle basePath={BASE_PATH} variant="signal" extraParams={{ scope: scope === "team" ? "team" : undefined }} {...props} />;
+  return <SharedViewToggle basePath={BASE_PATH} extraParams={{ scope: scope === "team" ? "team" : undefined }} {...props} />;
 }

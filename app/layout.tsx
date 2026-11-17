@@ -1,24 +1,10 @@
 import type { Metadata } from "next";
-import { Host_Grotesk, Inter, JetBrains_Mono, Sora } from "next/font/google";
+import { Host_Grotesk, JetBrains_Mono } from "next/font/google";
 
 import { NavigationProgress } from "@/components/shell/navigation-progress";
-import { THEME_INIT_SCRIPT } from "@/components/shell/theme-toggle";
+import { THEME_INIT_SCRIPT, ThemeSync } from "@/components/shell/theme-toggle";
 
 import "./globals.css";
-
-// §4 del manual: Sora en titulares, Inter en cuerpo/UI, JetBrains Mono en datos.
-// Vigente para el Gestor de Marca Personal, que no se toca en este rediseño.
-const sora = Sora({
-  variable: "--font-sora",
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-});
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-});
 
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains",
@@ -26,9 +12,12 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500"],
 });
 
-// Sistema "Señal y humo" del Gestor de Leads: Host Grotesk en vez de
-// Sora/Inter (Design System, tokens de tipografía). Se suma sin sacar los
-// anteriores (Marca sigue usándolos).
+/*
+ * Dos familias y nada más: Host Grotesk para toda la interfaz y JetBrains Mono
+ * para números, fechas y datos (CLAUDE.md §6). Sora e Inter, del manual viejo,
+ * se sacaron el 2026-11-17: ya no las usaba ninguna pantalla y eran dos
+ * descargas más en cada carga.
+ */
 const hostGrotesk = Host_Grotesk({
   variable: "--font-host-grotesk",
   subsets: ["latin"],
@@ -46,12 +35,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="es"
       suppressHydrationWarning
-      className={`${sora.variable} ${inter.variable} ${jetbrainsMono.variable} ${hostGrotesk.variable} h-full`}
+      className={`${jetbrainsMono.variable} ${hostGrotesk.variable} h-full`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className="min-h-full">
+        <ThemeSync />
         <NavigationProgress />
         {children}
       </body>

@@ -1,8 +1,8 @@
 import { Lock } from "lucide-react";
 
 import { ButtonLink } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
-import { PageHeader } from "@/components/shell/page-header";
+import { EmptyState } from "@/components/ui/feedback";
+import { HeaderBar, PageHeading } from "@/components/ui/page-header";
 
 /**
  * Módulo todavía no construido. Se muestra en vez de esconderse, para que la
@@ -21,10 +21,11 @@ export function ComingSoon({
 }) {
   return (
     <>
-      <PageHeader eyebrow={eyebrow} title={title} description={description} />
-      <div className="px-6 lg:px-10">
+      <HeaderBar breadcrumb={title} />
+      <div className="flex flex-col gap-8 px-6 py-7 lg:px-8">
+        <PageHeading eyebrow={eyebrow} title={title} description={description} />
         <EmptyState
-          icon={<Lock className="size-5" />}
+          icon={<Lock className="size-5" strokeWidth={1.5} />}
           title={`${phase} — todavía no construido`}
           description="Primero tiene que quedar terminado y en uso el Gestor de Leads. Un gestor por vez."
           action={

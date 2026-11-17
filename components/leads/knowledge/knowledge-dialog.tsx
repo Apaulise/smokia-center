@@ -3,9 +3,9 @@
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Dialog } from "@/components/leads/ui/dialog";
-import { Field, Input, Select, Textarea } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { saveKnowledgeNote } from "@/lib/leads/knowledge/actions";
 import type { KnowledgeRow } from "@/lib/leads/knowledge/queries";
 import {

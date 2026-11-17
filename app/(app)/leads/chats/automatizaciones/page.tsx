@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { AutomationsClient } from "@/components/leads/chats/automations-client";
-import { HeaderBar } from "@/components/leads/ui/page-header";
+import { HeaderBar } from "@/components/ui/page-header";
 import { listContentAutomations, loadAutomationSetup } from "@/lib/chats/automation-actions";
 
 export const metadata = { title: "Automatizaciones · SmokIA" };

@@ -1,7 +1,7 @@
 import { AlertTriangle, TrendingUp } from "lucide-react";
 import Link from "next/link";
 
-import { ButtonLink } from "@/components/leads/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import type { NextAppointmentBriefing } from "@/lib/leads/queries";
 import { STATUS_LABEL } from "@/lib/leads/status";
 

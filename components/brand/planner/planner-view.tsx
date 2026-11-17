@@ -7,9 +7,9 @@ import { useCallback, useState, useTransition, type DragEvent, type ReactNode } 
 import type { LinkablePost } from "@/lib/brand/goals/queries";
 import { ImportAnalysisBanner } from "@/components/brand/planner/import-analysis-banner";
 import { PlannerItemDialog } from "@/components/brand/planner/item-dialog";
-import { Eyebrow, Tag } from "@/components/brand/ui/card";
+import { Eyebrow, Tag } from "@/components/ui/card";
 import { CalendarGrid, type CalendarMove } from "@/components/leads/agenda/calendar-grid";
-import { Button } from "@/components/leads/ui/button";
+import { Button } from "@/components/ui/button";
 import { movePlannerItem } from "@/lib/brand/planner/actions";
 import type { PlannerItemChoice, PlannerNoteChoice } from "@/lib/brand/planner/queries";
 import { KIND_LABEL, STATUS_LABEL, type PlannerItem } from "@/lib/brand/planner/schema";
@@ -196,7 +196,6 @@ export function PlannerView({
         </aside>
 
         <CalendarGrid
-          variant="signal"
           mode={mode}
           days={days}
           items={items}

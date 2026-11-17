@@ -1,7 +1,7 @@
 import { ApprovalQueue } from "@/components/ops/approval-queue";
 import { OpsFrame } from "@/components/ops/frame";
-import { EmptyState } from "@/components/leads/ui/feedback";
-import { PageHeading } from "@/components/leads/ui/page-header";
+import { EmptyState } from "@/components/ui/feedback";
+import { PageHeading } from "@/components/ui/page-header";
 import { formatUpdatedAt } from "@/lib/ops/format";
 import { getOpsRecords } from "@/lib/ops/queries";
 

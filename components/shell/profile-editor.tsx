@@ -3,9 +3,9 @@
 import { Camera, Shuffle, Upload } from "lucide-react";
 import { useRef, useState, useTransition } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Dialog } from "@/components/leads/ui/dialog";
-import { Field, Input } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { Field, Input } from "@/components/ui/field";
 import { ProfileAvatar } from "@/components/shell/profile-avatar";
 import { saveProfile } from "@/lib/profile/actions";
 import { AVATAR_BUCKET, DICEBEAR_STYLES, dicebearUrl, type DicebearStyle } from "@/lib/profile/avatars";

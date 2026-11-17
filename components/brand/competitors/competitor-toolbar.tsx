@@ -4,9 +4,10 @@ import { Loader2, Plus, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Dialog } from "@/components/leads/ui/dialog";
-import { Input } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm";
+import { Dialog } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/field";
 import { addCompetitor, refreshAllCompetitors } from "@/lib/brand/competitors/actions";
 import {
   DEFAULT_RESULTS_LIMIT,
@@ -98,13 +99,19 @@ export function AddCompetitorButton({ variant = "primary" }: { variant?: "primar
 
 /** "Actualizar todas": lanza una corrida por cuenta, así que pide confirmación con el costo total antes. */
 export function RefreshAllButton({ competitorCount, totalResultsLimit }: { competitorCount: number; totalResultsLimit: number }) {
+  const { confirm, confirmDialog } = useConfirm();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   async function handleRefresh() {
     const cost = usd.format(estimateRunCostUsd(totalResultsLimit));
-    if (!window.confirm(`Se lanza una corrida por cada una de las ${competitorCount} cuentas: unos ${cost} en total (estimado). ¿Seguir?`)) return;
+    const ok = await confirm({
+      title: "¿Actualizar todas las cuentas?",
+      description: `Se lanza una corrida de Apify por cada una de las ${competitorCount} cuentas: unos ${cost} en total (estimado).`,
+      confirmLabel: "Actualizar",
+    });
+    if (!ok) return;
 
     setBusy(true);
     setMessage(null);
@@ -116,12 +123,15 @@ export function RefreshAllButton({ competitorCount, totalResultsLimit }: { compe
   }
 
   return (
-    <div className="flex items-center gap-3">
-      {message ? <span className="text-xs text-lm-ink-2">{message}</span> : null}
-      <Button type="button" variant="secondary" className="h-[34px]" onClick={handleRefresh} disabled={busy || competitorCount === 0}>
-        {busy ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
-        Actualizar todas
-      </Button>
-    </div>
+    <>
+      <div className="flex items-center gap-3">
+        {message ? <span className="text-xs text-lm-ink-2">{message}</span> : null}
+        <Button type="button" variant="secondary" className="h-[34px]" onClick={handleRefresh} disabled={busy || competitorCount === 0}>
+          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+          Actualizar todas
+        </Button>
+      </div>
+      {confirmDialog}
+    </>
   );
 }

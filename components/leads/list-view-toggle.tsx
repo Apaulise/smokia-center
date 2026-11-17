@@ -3,7 +3,7 @@
 import { LayoutGrid, TableProperties } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
-import { Segmented, SegmentedLink } from "@/components/leads/ui/tabs";
+import { Segmented, SegmentedLink } from "@/components/ui/tabs";
 
 /** Conserva los filtros locales reflejados en la URL al cambiar de vista. */
 export function ListViewToggle({ view, basePath }: { view: "tabla" | "kanban"; basePath: string }) {

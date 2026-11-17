@@ -1,7 +1,7 @@
 import Link from "next/link";
 
-import { Chip } from "@/components/leads/ui/status-badge";
-import { MiniBar, Table, Td, TdSub, Th, Tr } from "@/components/leads/ui/table";
+import { Chip } from "@/components/ui/status-badge";
+import { MiniBar, Table, Td, TdSub, Th, Tr } from "@/components/ui/table";
 import { CSV_PROVIDER_META, getProvider } from "@/lib/providers/registry";
 import type { ListPerformance } from "@/lib/leads/queries";
 

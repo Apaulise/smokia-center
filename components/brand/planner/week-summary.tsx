@@ -1,6 +1,6 @@
 import { AlertTriangle } from "lucide-react";
 
-import { Eyebrow } from "@/components/brand/ui/card";
+import { Eyebrow } from "@/components/ui/card";
 import { WEEKLY_REELS_MAX, WEEKLY_REELS_MIN } from "@/lib/brand/planner/schema";
 import type { WeekSummary } from "@/lib/brand/planner/week";
 import { cn } from "@/lib/utils";

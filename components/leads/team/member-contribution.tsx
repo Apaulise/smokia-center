@@ -1,5 +1,5 @@
 import { ProfileAvatar } from "@/components/shell/profile-avatar";
-import { MiniBar, Table, Td, TdSub, Th, Tr } from "@/components/leads/ui/table";
+import { MiniBar, Table, Td, TdSub, Th, Tr } from "@/components/ui/table";
 import type { MemberSummary } from "@/lib/leads/team/summary";
 
 function ofTeam(value: number, total: number) {

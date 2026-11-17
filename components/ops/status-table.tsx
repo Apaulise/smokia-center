@@ -1,5 +1,5 @@
-import { Chip, StatusBadge } from "@/components/leads/ui/status-badge";
-import { Table, Td, TdSub, Th, Tr } from "@/components/leads/ui/table";
+import { Chip, StatusBadge } from "@/components/ui/status-badge";
+import { Table, Td, TdSub, Th, Tr } from "@/components/ui/table";
 import { ESTADO_GROUP, ESTADO_LABEL } from "@/lib/ops/schema";
 import type { OpsStatusItem } from "@/lib/ops/types";
 

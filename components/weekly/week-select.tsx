@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 
-import { Select } from "@/components/leads/ui/field";
+import { Select } from "@/components/ui/field";
 
 export function WeekSelect({
   area,

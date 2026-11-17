@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { Card, CardHeader } from "@/components/brand/ui/card";
+import { Card, CardHeader } from "@/components/ui/card";
 import type { NextStep } from "@/lib/brand/goals/next-steps";
 
 /**

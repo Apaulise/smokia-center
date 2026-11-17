@@ -4,9 +4,9 @@ import { CheckCircle2, Loader2, Sparkles, XCircle } from "lucide-react";
 import { useActionState, useEffect, useRef, useTransition } from "react";
 
 import { DeleteButton } from "@/components/settings/delete-button";
-import { Button } from "@/components/leads/ui/button";
-import { Field, Input } from "@/components/leads/ui/field";
-import { Chip } from "@/components/leads/ui/status-badge";
+import { Button } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/field";
+import { Chip } from "@/components/ui/status-badge";
 import type { Database } from "@/lib/supabase/database.types";
 import { createIndustry, deleteIndustry, seedDefaultIndustries } from "@/lib/settings/actions";
 import { cn } from "@/lib/utils";

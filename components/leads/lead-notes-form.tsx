@@ -4,8 +4,8 @@ import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Field, Input, Textarea } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { Field, Input, Textarea } from "@/components/ui/field";
 
 import { updateLeadNotes } from "@/lib/leads/actions";
 

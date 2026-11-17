@@ -4,7 +4,7 @@ import { Loader2, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 
-import { Button } from "@/components/leads/ui/button";
+import { Button } from "@/components/ui/button";
 import { syncBrandNow } from "@/lib/brand/actions";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
 import { createClient } from "@/lib/supabase/client";

@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { CreateListDialog } from "@/components/leads/create-list-dialog";
-import { Button, ButtonLink } from "@/components/leads/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import type { Database } from "@/lib/supabase/database.types";
 
 type Industry = Database["public"]["Tables"]["industries"]["Row"];

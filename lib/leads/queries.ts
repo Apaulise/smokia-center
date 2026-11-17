@@ -1,4 +1,5 @@
 import { addDaysIso, isoDateToUtcInstant, todayIso } from "@/lib/leads/calendar";
+import { orSafeTerm } from "@/lib/leads/search";
 import { createClient } from "@/lib/supabase/server";
 import type { LeadStatus } from "@/lib/leads/status";
 import type { Database, Json } from "@/lib/supabase/database.types";
@@ -32,8 +33,8 @@ function applyLeadFilters<T>(query: T, filters: LeadsFilter) {
   if (filters.status) q = q.eq("status", filters.status);
   if (filters.leadListId) q = q.eq("lead_list_id", filters.leadListId);
   if (filters.city) q = q.eq("city", filters.city);
-  if (filters.q?.trim()) {
-    const term = filters.q.trim().replace(/[%,]/g, "");
+  const term = filters.q ? orSafeTerm(filters.q) : "";
+  if (term) {
     q = q.or(`name.ilike.%${term}%,phone.ilike.%${term}%,email.ilike.%${term}%,address.ilike.%${term}%`);
   }
   return q;
@@ -616,7 +617,7 @@ const EMPTY_PALETTE_RESULTS: CommandPaletteResults = { leads: [], lists: [] };
 
 /** Resultados del ⌘K (Sidebar §01.B): leads y listas por nombre, 5 de cada uno. RLS filtra por owner_id como siempre. */
 export async function searchCommandPalette(query: string): Promise<CommandPaletteResults> {
-  const term = query.trim().replace(/[%,]/g, "");
+  const term = orSafeTerm(query);
   if (!term) return EMPTY_PALETTE_RESULTS;
 
   const supabase = await createClient();

@@ -4,7 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 
-import { Toast } from "@/components/leads/ui/feedback";
+import { Toast } from "@/components/ui/feedback";
 import { updateLeadStatus } from "@/lib/leads/actions";
 import { LEAD_STATUSES, STATUS_LABEL, STATUS_TEMPERATURE_GROUP, type LeadStatus } from "@/lib/leads/status";
 import { cn } from "@/lib/utils";
