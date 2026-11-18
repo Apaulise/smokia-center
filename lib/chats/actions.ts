@@ -713,11 +713,21 @@ export async function loadOlderMessages(conversationId: string, before: string):
 // el webhook no haya avisado todavía: en desarrollo (Zernio no alcanza
 // `localhost`, CLAUDE.md §11) es la única vía para que entren mensajes sin
 // tocar "Sincronizar" a mano; en producción es la red de seguridad si algún
-// webhook se perdió. A propósito liviano (maxFetches chico, sin etiquetas ni
-// refresco del webhook — eso lo siguen haciendo el botón manual y el cron)
-// para poder correr cada 20 s sin pasarse con la API de Zernio.
+// webhook se perdió. A propósito liviano (maxFetches chico) para poder correr
+// cada 20 s sin pasarse con la API de Zernio; las etiquetas y el refresco de
+// eventos del webhook van aparte, limitados en frecuencia (ver más abajo).
 
 const POLL_MAX_FETCHES = 15;
+
+// Las etiquetas (listar contactos de Zernio, hasta 10 páginas) son más pesadas
+// que los mensajes: se piden a lo sumo una vez por minuto por cuenta. El mapa
+// vive en la instancia del servidor; si otra instancia lo repite no pasa nada,
+// la sincronización es idempotente.
+const TAG_SYNC_EVERY_MS = 60_000;
+const lastTagSync = new Map<string, number>();
+// El webhook se actualiza una vez por cuenta y por instancia: así las conexiones
+// hechas antes de §1.26 reciben los eventos de etiquetas sin apretar "Sincronizar".
+const webhookRefreshed = new Set<string>();
 
 export async function pollInboxNow(): Promise<{ ok: boolean }> {
   await requireUser();
@@ -735,8 +745,21 @@ export async function pollInboxNow(): Promise<{ ok: boolean }> {
     try {
       const apiKey = await readApiKey(chats, account.id);
       if (!apiKey) continue;
-      const result = await syncChannelAccount(chats, contextOf(account), apiKey, { maxFetches: POLL_MAX_FETCHES });
-      if (result.error) ok = false;
+      const context = contextOf(account);
+      const result = await syncChannelAccount(chats, context, apiKey, { maxFetches: POLL_MAX_FETCHES });
+      if (result.error) {
+        ok = false;
+        continue;
+      }
+      if (!webhookRefreshed.has(account.id)) {
+        webhookRefreshed.add(account.id);
+        await refreshWebhookEvents(chats, account.id, apiKey);
+      }
+      const last = lastTagSync.get(account.id) ?? 0;
+      if (Date.now() - last >= TAG_SYNC_EVERY_MS) {
+        lastTagSync.set(account.id, Date.now());
+        await syncContactTags(chats, context, apiKey);
+      }
     } catch {
       ok = false;
     }
