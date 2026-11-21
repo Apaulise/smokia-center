@@ -1,4 +1,5 @@
 import { FollowUpQueue } from "@/components/leads/follow-up-queue";
+import { FollowUpTabs } from "@/components/leads/crm/sections";
 import { HeaderBar, PageHeading } from "@/components/ui/page-header";
 import { FollowUpMetricsPanel } from "@/components/leads/follow-up-metrics-panel";
 import { getFollowUpMetrics } from "@/lib/leads/follow-up-metrics";
@@ -17,6 +18,7 @@ export default async function SeguimientoPage() {
           title="Seguimiento"
           description="Leads ya contactados que siguen sin cerrar, con los más estancados primero."
         />
+        <FollowUpTabs active="prospectos" />
         <FollowUpMetricsPanel metrics={metrics} />
         <FollowUpQueue leads={leads} />
       </div>

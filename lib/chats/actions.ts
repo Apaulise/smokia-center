@@ -33,6 +33,7 @@ import {
 import { syncContactTags } from "@/lib/chats/tags";
 import { decrypt, encrypt } from "@/lib/crypto";
 import type { Json } from "@/lib/supabase/database.types";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, requireUser } from "@/lib/supabase/server";
 
 /** Lo que devuelven las acciones que se llaman a mano (botones): siempre hay resultado. */
@@ -730,7 +731,7 @@ const lastTagSync = new Map<string, number>();
 const webhookRefreshed = new Set<string>();
 
 export async function pollInboxNow(): Promise<{ ok: boolean }> {
-  await requireUser();
+  const user = await requireUser();
   const chats = asChats(await createClient());
   // RLS: sólo las cuentas propias y las que el socio compartió.
   const { data: accounts } = await chats
@@ -740,13 +741,34 @@ export async function pollInboxNow(): Promise<{ ok: boolean }> {
     .eq("status", "ACTIVA");
   if (!accounts || accounts.length === 0) return { ok: true };
 
+  // La cuenta puede ser propia o estar compartida por un socio. El cliente
+  // normal ya hizo esa autorización mediante RLS arriba, pero la ingesta de
+  // un DM entrante siempre escribe con el owner de la cuenta. Un socio sólo
+  // tiene permiso RLS para enviar sus propios mensajes salientes; si usáramos
+  // `chats` acá, no podría recuperar un webhook perdido. Para una cuenta
+  // propia conservamos RLS (también permite probar en localhost sin service
+  // role); el admin sólo se crea si hace falta una cuenta compartida.
+  let admin: ChatsClient | null = null;
+  if (accounts.some((account) => account.owner_id !== user.id)) {
+    try {
+      admin = asChats(createAdminClient());
+    } catch {
+      return { ok: false };
+    }
+  }
+
   let ok = true;
   for (const account of accounts) {
     try {
       const apiKey = await readApiKey(chats, account.id);
       if (!apiKey) continue;
+      const writer = account.owner_id === user.id ? chats : admin;
+      if (!writer) {
+        ok = false;
+        continue;
+      }
       const context = contextOf(account);
-      const result = await syncChannelAccount(chats, context, apiKey, { maxFetches: POLL_MAX_FETCHES });
+      const result = await syncChannelAccount(writer, context, apiKey, { maxFetches: POLL_MAX_FETCHES });
       if (result.error) {
         ok = false;
         continue;
@@ -758,7 +780,7 @@ export async function pollInboxNow(): Promise<{ ok: boolean }> {
       const last = lastTagSync.get(account.id) ?? 0;
       if (Date.now() - last >= TAG_SYNC_EVERY_MS) {
         lastTagSync.set(account.id, Date.now());
-        await syncContactTags(chats, context, apiKey);
+        await syncContactTags(writer, context, apiKey);
       }
     } catch {
       ok = false;

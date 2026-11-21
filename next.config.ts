@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
   // aparte en `.next-verify`, así nunca pisa la carpeta del dev server.
   distDir: process.env.NEXT_BUILD_DIST_DIR || ".next",
   experimental: {
+    agentUpgrade: "security",
     // Volver a una pestaña que se visitó hace menos de 30s es instantáneo: el
     // router reusa la pantalla en vez de pedirla otra vez al servidor. Los
     // Server Actions que mutan datos invalidan esta caché solos; lo que cambia

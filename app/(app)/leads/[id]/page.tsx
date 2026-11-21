@@ -4,6 +4,9 @@ import { notFound } from "next/navigation";
 import { cache, type ReactNode } from "react";
 
 import { LeadChatCard } from "@/components/leads/chats/lead-chat-card";
+import { ClientEditor } from "@/components/leads/crm/client-editor";
+import { ContextTasks } from "@/components/leads/crm/sections";
+import { getClientForLead, getTaskPeople } from "@/lib/crm/queries";
 import { ContactActions } from "@/components/leads/contact-actions";
 import { MessageThread } from "@/components/leads/conversation/message-thread";
 import { SignalsList } from "@/components/leads/copilot/signals-list";
@@ -75,7 +78,7 @@ export default async function LeadFichaPage({ params, searchParams }: PageProps<
   const navSort = NAV_SORT_FIELDS.includes(sortParam as LeadsSortField) ? (sortParam as LeadsSortField) : "created_at";
   const navQuery = navQueryString({ get: (key) => first(query[key]) ?? null });
 
-  const [activities, messages, signals, appointments, intel, chatPreview, navIds] = await Promise.all([
+  const [activities, messages, signals, appointments, intel, chatPreview, navIds, converted] = await Promise.all([
     listLeadActivities(id),
     listLeadMessages(id),
     listLeadSignals(id),
@@ -83,6 +86,7 @@ export default async function LeadFichaPage({ params, searchParams }: PageProps<
     getLeadIntel(id),
     getLeadChatPreview(id),
     lead.lead_lists ? listLeadIdsForNav(navFilters, navSort, first(query.dir) === "asc") : Promise.resolve([id]),
+    getClientForLead(id),
   ]);
   // Al contactar, el lead cambia de estado y sale del filtro con el que se abrió (ej. "Listo para contactar"):
   // se lo reinserta en su lugar según el orden de la tabla para que el siguiente sea el que venía después.
@@ -138,6 +142,9 @@ export default async function LeadFichaPage({ params, searchParams }: PageProps<
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-lm-sans text-[22px] leading-7 font-semibold tracking-[-0.01em] text-lm-ink">{lead.name}</h1>
           <StageSelect leadId={lead.id} status={lead.status} />
+          {converted.ready && (converted.client || lead.status === "CERRADO_GANADO") ? (
+            <ClientEditor source={lead} existingId={converted.client?.id} people={(await getTaskPeople()).people} />
+          ) : null}
           <span className="font-mono text-xs text-lm-ink-3">
             etapa {stageIndex} de {LEAD_STATUSES.length}
           </span>
@@ -155,9 +162,9 @@ export default async function LeadFichaPage({ params, searchParams }: PageProps<
         </div>
       </div>
 
-      <div className="grid gap-8 px-6 py-8 lg:grid-cols-[260px_minmax(0,1fr)_340px] lg:px-8">
+      <div className="grid grid-cols-1 gap-6 px-4 py-6 sm:px-6 xl:grid-cols-[250px_minmax(0,1fr)] 2xl:grid-cols-[250px_minmax(0,1fr)_300px]">
         {/* Izquierda: contacto, rubro y origen, agenda, notas */}
-        <div className="flex flex-col gap-6">
+        <div className="flex min-w-0 flex-col gap-6">
           <InfoSection eyebrow="Contacto">
             <dl className="flex flex-col gap-2.5 text-[13px]">
               {lead.phone ? <InfoRow label="Teléfono" value={<span className="font-mono">{lead.phone}</span>} /> : null}
@@ -235,12 +242,15 @@ export default async function LeadFichaPage({ params, searchParams }: PageProps<
           ) : null}
 
           <InfoSection eyebrow="Agenda" divider>
-            <ScheduleDialog leadId={lead.id} leadName={lead.name} upcoming={appointments} />
+            <div id="reuniones" className="scroll-mt-16">
+              <ScheduleDialog leadId={lead.id} leadName={lead.name} upcoming={appointments} />
+            </div>
           </InfoSection>
 
           <InfoSection eyebrow="Notas" divider>
             <LeadNotesForm leadId={lead.id} nextActionAt={lead.next_action_at} />
           </InfoSection>
+          <ContextTasks context={{ kind: "lead", id, label: lead.name }} />
         </div>
 
         {/* Centro: composer contextual + actividad */}
@@ -255,7 +265,7 @@ export default async function LeadFichaPage({ params, searchParams }: PageProps<
             nextBestActionReason={intel?.next_best_action_reason ?? null}
             preferFollowUp={modo === "seguimiento"}
           />
-          <MessageThread messages={messages} activities={activities} />
+          <div id="actividad" className="scroll-mt-16"><MessageThread messages={messages} activities={activities} /></div>
         </div>
 
         {/* Derecha: Copilot */}
