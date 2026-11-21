@@ -1611,6 +1611,213 @@ export type Database = {
           },
         ]
       }
+      crm_client_contacts: {
+        Row: {
+          client_id: string
+          email: string | null
+          id: string
+          job_title: string | null
+          name: string
+          owner_id: string
+          phone: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          client_id: string
+          email?: string | null
+          id?: string
+          job_title?: string | null
+          name: string
+          owner_id?: string
+          phone?: string | null
+        }
+        Update: {
+          client_id?: string
+          email?: string | null
+          id?: string
+          job_title?: string | null
+          name?: string
+          owner_id?: string
+          phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_client_contacts_client_id_owner_id_fkey"
+            columns: ["client_id", "owner_id"]
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id", "owner_id"]
+          },
+        ]
+      }
+      crm_clients: {
+        Row: {
+          assignee_id: string | null
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          owner_id: string
+          source_lead_id: string | null
+          status: Database["public"]["Enums"]["crm_client_status"]
+        }
+        ComputedFields: never
+        Insert: {
+          assignee_id?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          owner_id?: string
+          source_lead_id?: string | null
+          status?: Database["public"]["Enums"]["crm_client_status"]
+        }
+        Update: {
+          assignee_id?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          owner_id?: string
+          source_lead_id?: string | null
+          status?: Database["public"]["Enums"]["crm_client_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_clients_source_lead_id_fkey"
+            columns: ["source_lead_id"]
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_board_colors: {
+        Row: { team_id: string; status: Database["public"]["Enums"]["crm_task_status"]; color: string }
+        Insert: { team_id: string; status: Database["public"]["Enums"]["crm_task_status"]; color: string }
+        Update: { team_id?: string; status?: Database["public"]["Enums"]["crm_task_status"]; color?: string }
+        Relationships: [{ foreignKeyName: "crm_board_colors_team_id_fkey"; columns: ["team_id"]; referencedRelation: "teams"; referencedColumns: ["id"] }]
+      }
+      crm_task_assignees: {
+        Row: { task_id: string; user_id: string }
+        Insert: { task_id: string; user_id: string }
+        Update: { task_id?: string; user_id?: string }
+        Relationships: [{ foreignKeyName: "crm_task_assignees_task_id_fkey"; columns: ["task_id"]; referencedRelation: "crm_tasks"; referencedColumns: ["id"] }]
+      }
+      crm_projects: {
+        Row: {
+          id: string
+          client_id: string
+          name: string
+          status: Database["public"]["Enums"]["crm_project_status"]
+          starts_on: string | null
+          due_on: string | null
+          current_stage_id: string | null
+          edit_version: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          client_id: string
+          name: string
+          status?: Database["public"]["Enums"]["crm_project_status"]
+          starts_on?: string | null
+          due_on?: string | null
+          current_stage_id?: string | null
+          edit_version?: string
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["crm_projects"]["Insert"]>
+        Relationships: [
+          { foreignKeyName: "crm_projects_client_id_fkey"; columns: ["client_id"]; referencedRelation: "crm_clients"; referencedColumns: ["id"] },
+          { foreignKeyName: "crm_project_current_stage"; columns: ["id", "current_stage_id"]; referencedRelation: "crm_project_stages"; referencedColumns: ["project_id", "id"] },
+        ]
+      }
+      crm_project_stages: {
+        Row: { id: string; project_id: string; name: string; position: number }
+        Insert: { id?: string; project_id: string; name: string; position: number }
+        Update: Partial<Database["public"]["Tables"]["crm_project_stages"]["Insert"]>
+        Relationships: [{ foreignKeyName: "crm_project_stages_project_id_fkey"; columns: ["project_id"]; referencedRelation: "crm_projects"; referencedColumns: ["id"] }]
+      }
+      crm_project_assignees: {
+        Row: { project_id: string; user_id: string }
+        Insert: { project_id: string; user_id: string }
+        Update: Partial<Database["public"]["Tables"]["crm_project_assignees"]["Insert"]>
+        Relationships: [{ foreignKeyName: "crm_project_assignees_project_id_fkey"; columns: ["project_id"]; referencedRelation: "crm_projects"; referencedColumns: ["id"] }]
+      }
+      crm_tasks: {
+        Row: {
+          client_id: string | null
+          completed_at: string | null
+          completed_by: string | null
+          conversation_id: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          edit_version: string
+          id: string
+          lead_id: string | null
+          owner_id: string
+          priority: Database["public"]["Enums"]["crm_task_priority"]
+          project_id: string | null
+          status: Database["public"]["Enums"]["crm_task_status"]
+          title: string
+        }
+        ComputedFields: never
+        Insert: {
+          client_id?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          edit_version?: string
+          id?: string
+          lead_id?: string | null
+          owner_id?: string
+          priority?: Database["public"]["Enums"]["crm_task_priority"]
+          project_id?: string | null
+          status?: Database["public"]["Enums"]["crm_task_status"]
+          title: string
+        }
+        Update: {
+          client_id?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          edit_version?: string
+          id?: string
+          lead_id?: string | null
+          owner_id?: string
+          priority?: Database["public"]["Enums"]["crm_task_priority"]
+          project_id?: string | null
+          status?: Database["public"]["Enums"]["crm_task_status"]
+          title?: string
+        }
+        Relationships: [
+          { foreignKeyName: "crm_task_project_client"; columns: ["project_id", "client_id"]; referencedRelation: "crm_projects"; referencedColumns: ["id", "client_id"] },
+          {
+            foreignKeyName: "crm_tasks_client_id_fkey"
+            columns: ["client_id"]
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_conversation_id_fkey"
+            columns: ["conversation_id"]
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_lead_id_fkey"
+            columns: ["lead_id"]
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       industries: {
         Row: {
           color: string
@@ -2781,6 +2988,40 @@ export type Database = {
         Args: { p_account: string; p_share: boolean }
         Returns: undefined
       }
+      crm_save_task: {
+        Args: { p_id: string | null; p_task: Json; p_assignees: string[] }
+        Returns: string | null
+      }
+      crm_save_project: {
+        Args: { p_id: string | null; p_project: Json; p_stages: Json; p_assignees: string[] }
+        Returns: string | null
+      }
+      crm_create_client: {
+        Args: {
+          p_assignee?: string | null
+          p_contact_name?: string
+          p_email?: string
+          p_job_title?: string
+          p_name: string
+          p_notes?: string
+          p_phone?: string
+          p_source?: string
+          p_status: Database["public"]["Enums"]["crm_client_status"]
+        }
+        Returns: string
+      }
+      crm_set_task_done: {
+        Args: { p_done: boolean; p_id: string }
+        Returns: boolean
+      }
+      crm_can_access: {
+        Args: { p_owner: string }
+        Returns: boolean
+      }
+      crm_set_task_status: {
+        Args: { p_id: string; p_status: Database["public"]["Enums"]["crm_task_status"] }
+        Returns: boolean
+      }
       lead_angle_counts_30d: {
         Args: never
         Returns: {
@@ -3019,6 +3260,10 @@ export type Database = {
       brand_recommendation_kind: "REPETIR" | "CORTAR" | "PROBAR"
       brand_recommendation_objective: "ALCANCE" | "AUTORIDAD" | "CONVERSION"
       brand_recommendation_status: "NUEVA" | "APLICADA" | "DESCARTADA"
+      crm_client_status: "onboarding" | "active" | "paused"
+      crm_task_priority: "high" | "normal" | "low"
+      crm_task_status: "pending" | "in_progress" | "done"
+      crm_project_status: "planned" | "in_progress" | "paused" | "done"
       job_status: "PENDIENTE" | "EN_CURSO" | "COMPLETADO" | "FALLIDO"
       lead_activity_type:
         | "NOTA"
@@ -3279,6 +3524,10 @@ export const Constants = {
       brand_recommendation_kind: ["REPETIR", "CORTAR", "PROBAR"],
       brand_recommendation_objective: ["ALCANCE", "AUTORIDAD", "CONVERSION"],
       brand_recommendation_status: ["NUEVA", "APLICADA", "DESCARTADA"],
+      crm_client_status: ["onboarding", "active", "paused"],
+      crm_task_priority: ["high", "normal", "low"],
+      crm_task_status: ["pending", "in_progress", "done"],
+      crm_project_status: ["planned", "in_progress", "paused", "done"],
       job_status: ["PENDIENTE", "EN_CURSO", "COMPLETADO", "FALLIDO"],
       lead_activity_type: [
         "NOTA",

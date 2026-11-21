@@ -4,6 +4,7 @@ import { AlarmClock, Check, ExternalLink, Loader2, Megaphone, Plus, RefreshCw, T
 import { useState, useTransition, type ReactNode } from "react";
 
 import { LeadLink } from "@/components/leads/chats/conversation-actions";
+import { ChatTasks } from "@/components/leads/crm/chat-tasks";
 import { StageMark, TAG_DOT, TAG_TONE, TagChip } from "@/components/leads/chats/tag-chip";
 import type { TagLabelRow } from "@/lib/chats/db";
 import { changeConversationTags, refreshConversationTags, setConversationFollowUp } from "@/lib/chats/inbox-actions";
@@ -308,6 +309,10 @@ export function ContactPanel({
               {followMessage.ok && lead ? " También quedó como próxima acción del lead." : ""}
             </p>
           ) : null}
+        </Block>
+
+        <Block title="Tareas" icon={<Check className="size-3" aria-hidden />}>
+          <ChatTasks key={conversation.id} conversationId={conversation.id} />
         </Block>
 
         <Block title="Lead" icon={<span className="size-1.5 rounded-full bg-lm-smoke-4" aria-hidden />}>

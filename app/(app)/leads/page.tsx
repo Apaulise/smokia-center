@@ -1,5 +1,6 @@
 import { Radar } from "lucide-react";
 import Link from "next/link";
+import { CrmDashboard } from "@/components/leads/crm/sections";
 
 import { ActivityTimelineChart } from "@/components/leads/dashboard/activity-timeline-chart";
 import { AngleExperimentsTable } from "@/components/leads/dashboard/angle-experiments";
@@ -82,13 +83,14 @@ export default async function LeadsDashboardPage({
         <HeaderBar breadcrumb="Gestor de Leads / Dashboard" />
         <div className="px-6 py-8 lg:px-8">
           <PageHeading eyebrow={`RESUMEN · ${monthLabel}`} title="Dashboard" />
+          <div className="mt-6"><CrmDashboard /></div>
           <div className="mt-8">
             <EmptyState
               icon={<Radar className="size-5" strokeWidth={1.5} />}
               title="Todavía no hay leads"
               description="Generá tu primera lista por rubro y zona para empezar a ver métricas acá."
               action={
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-center gap-2">
                   {generarCta}
                   <ButtonLink href="/leads/generar" variant="secondary">
                     Importar CSV
@@ -124,7 +126,7 @@ export default async function LeadsDashboardPage({
           eyebrow={`RESUMEN · ${monthLabel}`}
           title="Dashboard"
           action={
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <Segmented>
                 {(Object.keys(PERIODS) as Period[]).map((key) => (
                   <SegmentedLink key={key} href={`/leads?period=${key}`} active={key === period}>
@@ -136,6 +138,8 @@ export default async function LeadsDashboardPage({
             </div>
           }
         />
+
+        <CrmDashboard />
 
         <KpiRow>
           {execution ? (

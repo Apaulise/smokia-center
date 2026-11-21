@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { startOfWeekIso } from "../lib/leads/calendar.ts";
+import { addDaysIso, startOfWeekIso } from "../lib/leads/calendar.ts";
 import { canPublishWeekly } from "../lib/weekly/access.ts";
 import { computeBrand, computeFollowUps, computeProspecting, isPositiveReply, replyClass } from "../lib/weekly/compute.ts";
 import { mergeReport } from "../lib/weekly/merge.ts";
 import { parseChanges } from "../lib/weekly/parse.ts";
 import { presentWeekly, formatReplyGapNote } from "../lib/weekly/present.ts";
 import { camelizeWeekly, weeklyPublishPayload } from "../lib/weekly/schema.ts";
-import { isPublishableWeek, parseWeekStart, weekWindow } from "../lib/weekly/weeks.ts";
+import { currentWeekStart, isPublishableWeek, parseWeekStart, weekWindow } from "../lib/weekly/weeks.ts";
 import { weeklyArea } from "../lib/weekly/areas.ts";
 
 const WEEK = "2026-10-26";
@@ -272,7 +272,8 @@ test("el payload acepta snake_case y rechaza una semana que no es lunes", () => 
   const bad = weeklyPublishPayload.safeParse({ area: "whatsapp", week: "2026-10-27", conclusions: "Hola" });
   assert.equal(bad.success, false);
 
-  const future = weeklyPublishPayload.safeParse({ area: "x_threads", week: "2026-11-02", conclusions: "Hola" });
+  const nextWeek = addDaysIso(currentWeekStart(), 7);
+  const future = weeklyPublishPayload.safeParse({ area: "x_threads", week: nextWeek, conclusions: "Hola" });
   assert.equal(future.success, false);
 });
 
