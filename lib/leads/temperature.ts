@@ -1,5 +1,3 @@
-import type { BadgeTone } from "@/components/ui/badge";
-
 /**
  * La temperatura (SPA §10) no es una columna (Plan §1.9): se deriva de
  * `interest_level` en TypeScript. Un valor derivado que se persiste es un
@@ -13,13 +11,6 @@ export const TEMPERATURE_LABEL: Record<LeadTemperature, string> = {
   TIBIO: "Tibio",
   CALIENTE: "Caliente",
   MUY_CALIENTE: "Muy caliente",
-};
-
-export const TEMPERATURE_TONE: Record<LeadTemperature, BadgeTone> = {
-  FRIO: "neutral",
-  TIBIO: "cyan",
-  CALIENTE: "violet",
-  MUY_CALIENTE: "positive",
 };
 
 export function leadTemperature(interestLevel: number | null): LeadTemperature | null {

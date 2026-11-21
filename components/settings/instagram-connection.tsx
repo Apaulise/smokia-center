@@ -3,8 +3,9 @@
 import { CheckCircle2, KeyRound, Loader2, XCircle } from "lucide-react";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Field, Input } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm";
+import { Field, Input } from "@/components/ui/field";
 import {
   deleteInstagramCredentials,
   saveInstagramCredentials,
@@ -19,6 +20,7 @@ import { cn } from "@/lib/utils";
  * `ApiKeyForm` (guardar / probar / eliminar), con dos campos en vez de uno.
  */
 export function InstagramConnection({ configured, masked }: { configured: boolean; masked: string | null }) {
+  const { confirm, confirmDialog } = useConfirm();
   const [saveState, saveAction, savePending] = useActionState(saveInstagramCredentials, null);
   const [testState, testAction, testPending] = useActionState(testInstagramConnection, null);
   const [deletePending, startDelete] = useTransition();
@@ -31,67 +33,76 @@ export function InstagramConnection({ configured, masked }: { configured: boolea
   }, [saveState]);
 
   return (
-    <div className="flex flex-col gap-4">
-      {configured ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lm-sm border border-lm-line-strong bg-lm-raised px-4 py-3">
-          <div className="flex items-center gap-2 text-[13px]">
-            <KeyRound className="size-4 text-lm-signal-text" strokeWidth={1.5} />
-            <span className="font-mono text-lm-ink">{masked}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <form action={testAction} onSubmit={() => setTestDismissed(false)}>
-              <Button type="submit" variant="secondary" size="sm" disabled={testPending}>
-                {testPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                Probar conexión
+    <>
+      <div className="flex flex-col gap-4">
+        {configured ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lm-sm border border-lm-line-strong bg-lm-raised px-4 py-3">
+            <div className="flex items-center gap-2 text-[13px]">
+              <KeyRound className="size-4 text-lm-signal-text" strokeWidth={1.5} />
+              <span className="font-mono text-lm-ink">{masked}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <form action={testAction} onSubmit={() => setTestDismissed(false)}>
+                <Button type="submit" variant="secondary" size="sm" disabled={testPending}>
+                  {testPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
+                  Probar conexión
+                </Button>
+              </form>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                disabled={deletePending}
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: "¿Desconectar tu Instagram?",
+                    description: "Se dejan de sincronizar las métricas y no se puede publicar hasta volver a conectarlo.",
+                    confirmLabel: "Desconectar",
+                    tone: "danger",
+                  });
+                  if (!ok) return;
+                  setSaveDismissed(true);
+                  setTestDismissed(true);
+                  startDelete(() => {
+                    void deleteInstagramCredentials();
+                  });
+                }}
+              >
+                Desconectar
               </Button>
-            </form>
-            <Button
-              type="button"
-              variant="danger"
-              size="sm"
-              disabled={deletePending}
-              onClick={() => {
-                if (!window.confirm("¿Desconectar tu Instagram? Se dejan de sincronizar métricas y no se puede publicar hasta volver a conectarlo.")) return;
-                setSaveDismissed(true);
-                setTestDismissed(true);
-                startDelete(() => {
-                  void deleteInstagramCredentials();
-                });
-              }}
-            >
-              Desconectar
-            </Button>
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
 
-      <StatusLine state={testDismissed ? null : testState} />
+        <StatusLine state={testDismissed ? null : testState} />
 
-      <form
-        ref={formRef}
-        action={saveAction}
-        onSubmit={() => setSaveDismissed(false)}
-        className="flex flex-wrap items-end gap-3"
-      >
-        <Field label={configured ? "Reemplazar token" : "Token de acceso"} htmlFor="accessToken" className="min-w-[260px] flex-[2]">
-          <Input id="accessToken" name="accessToken" type="password" autoComplete="off" placeholder="IGAA… o EAA…" required />
-        </Field>
-        <Field label="Id de la cuenta de Instagram" htmlFor="userId" className="min-w-[180px] flex-1">
-          <Input id="userId" name="userId" inputMode="numeric" autoComplete="off" placeholder="1784…" mono required />
-        </Field>
-        <Button type="submit" variant="primary" disabled={savePending}>
-          {savePending ? <Loader2 className="size-3.5 animate-spin" /> : null}
-          {configured ? "Reemplazar" : "Conectar"}
-        </Button>
-      </form>
+        <form
+          ref={formRef}
+          action={saveAction}
+          onSubmit={() => setSaveDismissed(false)}
+          className="flex flex-wrap items-end gap-3"
+        >
+          <Field label={configured ? "Reemplazar token" : "Token de acceso"} htmlFor="accessToken" className="min-w-[260px] flex-[2]">
+            <Input id="accessToken" name="accessToken" type="password" autoComplete="off" placeholder="IGAA… o EAA…" required />
+          </Field>
+          <Field label="Id de la cuenta de Instagram" htmlFor="userId" className="min-w-[180px] flex-1">
+            <Input id="userId" name="userId" inputMode="numeric" autoComplete="off" placeholder="1784…" mono required />
+          </Field>
+          <Button type="submit" variant="primary" disabled={savePending}>
+            {savePending ? <Loader2 className="size-3.5 animate-spin" /> : null}
+            {configured ? "Reemplazar" : "Conectar"}
+          </Button>
+        </form>
 
-      <StatusLine state={saveDismissed ? null : saveState} />
+        <StatusLine state={saveDismissed ? null : saveState} />
 
-      <p className="text-xs text-lm-ink-3">
-        Cada usuario conecta su propia cuenta. El token de larga duración vence a los 60 días: si la conexión falla con
-        “venció o fue revocado”, generá uno nuevo y reemplazalo acá.
-      </p>
-    </div>
+        <p className="text-xs text-lm-ink-3">
+          Cada usuario conecta su propia cuenta. El token de larga duración vence a los 60 días: si la conexión falla con
+          “venció o fue revocado”, generá uno nuevo y reemplazalo acá.
+        </p>
+      </div>
+      {confirmDialog}
+    </>
   );
 }
 

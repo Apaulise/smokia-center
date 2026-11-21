@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { MiniBar, Table, Td, Th, Tr } from "@/components/leads/ui/table";
+import { MiniBar, Table, Td, Th, Tr } from "@/components/ui/table";
 import type { OpsAreaSummary } from "@/lib/ops/types";
 
 export function AreaSummaryTable({ rows }: { rows: OpsAreaSummary[] }) {

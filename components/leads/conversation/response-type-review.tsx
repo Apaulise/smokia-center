@@ -71,7 +71,7 @@ export function ResponseTypeReview({
               onClick={() => choose(type)}
               aria-pressed={current === type}
               className={cn(
-                "flex h-7 items-center gap-1 rounded-[3px] px-2.5 text-xs transition-colors disabled:opacity-50",
+                "flex h-7 items-center gap-1 rounded-[6px] px-2.5 text-xs transition-colors disabled:opacity-50",
                 current === type ? "bg-lm-surface font-medium text-lm-ink" : "text-lm-ink-3 hover:text-lm-ink",
               )}
             >

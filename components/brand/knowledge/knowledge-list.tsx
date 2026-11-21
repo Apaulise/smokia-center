@@ -6,9 +6,9 @@ import { useState, type ReactNode } from "react";
 
 import { KnowledgeDialog } from "@/components/brand/knowledge/knowledge-dialog";
 import { Markdown } from "@/components/brand/markdown";
-import { Eyebrow, Tag } from "@/components/brand/ui/card";
-import { Button } from "@/components/leads/ui/button";
-import { EmptyLine } from "@/components/leads/ui/feedback";
+import { Eyebrow, Tag } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { EmptyLine } from "@/components/ui/feedback";
 import { deleteKnowledgeNote } from "@/lib/brand/knowledge/actions";
 import type { KnowledgeRow } from "@/lib/brand/knowledge/queries";
 import {

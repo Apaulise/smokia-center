@@ -2,7 +2,7 @@ import { AlertTriangle, HelpCircle, Lightbulb } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Markdown } from "@/components/brand/markdown";
-import { Card, CardHeader, Eyebrow } from "@/components/brand/ui/card";
+import { Card, CardHeader, Eyebrow } from "@/components/ui/card";
 import type { Database } from "@/lib/supabase/database.types";
 
 type AnalysisNote = Database["public"]["Tables"]["brand_analysis_notes"]["Row"];

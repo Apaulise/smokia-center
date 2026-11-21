@@ -3,9 +3,9 @@ import Link from "next/link";
 
 import type { AutomationSummary } from "@/components/leads/chats/contact-panel";
 import { InboxClient } from "@/components/leads/chats/inbox-client";
-import { ButtonLink } from "@/components/leads/ui/button";
-import { EmptyState } from "@/components/leads/ui/feedback";
-import { HeaderBar } from "@/components/leads/ui/page-header";
+import { ButtonLink } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/feedback";
+import { HeaderBar } from "@/components/ui/page-header";
 import { asChats } from "@/lib/chats/db";
 import { listQuickReplies } from "@/lib/chats/inbox-actions";
 import { getConversationDetail, listChannelAccounts, listConversations, listTagLabels, type ConversationFilter } from "@/lib/chats/queries";
@@ -99,9 +99,9 @@ export default async function ChatsPage({
           />
         </div>
       ) : (
-        <div className="flex h-[calc(100dvh-3.5rem)] min-h-0 flex-col">
+        <div className="flex h-[calc(100dvh-3.5rem-var(--lm-shell-y))] min-h-0 flex-col">
           {brokenAccounts.length > 0 ? (
-            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-lm-line bg-lm-surface px-6 py-2 text-[13px] text-lm-ink-2" role="status">
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-lm-line bg-lm-ink/5 px-6 py-2 text-[13px] text-lm-ink-2" role="status">
               <AlertTriangle className="size-4 shrink-0 text-lm-signal-text" strokeWidth={1.5} />
               {brokenAccounts.map((account) => `@${account.handle ?? "instagram"}`).join(", ")}: {brokenAccounts[0]?.status_detail ?? "la cuenta necesita reconectarse en Zernio"}.
               <Link href="/configuracion" className="text-lm-signal-text hover:underline">

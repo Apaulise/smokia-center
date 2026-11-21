@@ -3,7 +3,7 @@
 import { Film, Loader2, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 
-import { Button } from "@/components/leads/ui/button";
+import { Button } from "@/components/ui/button";
 import { attachItemMedia, removeItemMedia } from "@/lib/brand/planner/actions";
 import {
   acceptForKind,

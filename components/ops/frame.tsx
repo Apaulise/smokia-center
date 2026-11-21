@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { HeaderBar } from "@/components/leads/ui/page-header";
+import { HeaderBar } from "@/components/ui/page-header";
 
 export function OpsFrame({ crumb, updatedAt, children }: { crumb: string; updatedAt: string; children: ReactNode }) {
   return (

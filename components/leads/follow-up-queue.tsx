@@ -4,10 +4,10 @@ import { MessageSquareReply, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { EmptyLine } from "@/components/leads/ui/feedback";
-import { Input } from "@/components/leads/ui/field";
-import { Chip, StatusBadge } from "@/components/leads/ui/status-badge";
-import { Table, Td, Th, Tr } from "@/components/leads/ui/table";
+import { EmptyLine } from "@/components/ui/feedback";
+import { Input } from "@/components/ui/field";
+import { Chip, StatusBadge } from "@/components/ui/status-badge";
+import { Table, Td, Th, Tr } from "@/components/ui/table";
 import type { FollowUpQueueLead } from "@/lib/leads/queries";
 import { STATUS_LABEL, STATUS_TEMPERATURE_GROUP } from "@/lib/leads/status";
 

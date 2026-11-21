@@ -4,8 +4,8 @@ import { Loader2, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Dialog } from "@/components/leads/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { generateBrandAnalysis } from "@/lib/brand/actions";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
 

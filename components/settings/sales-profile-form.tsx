@@ -3,8 +3,8 @@
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { useActionState } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Field, Textarea } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { Field, Textarea } from "@/components/ui/field";
 import { saveSalesProfile } from "@/lib/settings/actions";
 
 const PLACEHOLDER = `Trabajo solo, con automatizaciones e IA para negocios de servicios.

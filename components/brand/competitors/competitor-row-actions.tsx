@@ -4,9 +4,10 @@ import { Loader2, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Dialog } from "@/components/leads/ui/dialog";
-import { Input } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm";
+import { Dialog } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/field";
 import { deleteCompetitor, refreshCompetitor, updateCompetitorResultsLimit } from "@/lib/brand/competitors/actions";
 import { estimateRunCostUsd, MAX_RESULTS_LIMIT } from "@/lib/brand/competitors/schema";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,7 @@ export function CompetitorRowActions({
   resultsLimit: number;
   running: boolean;
 }) {
+  const { confirm, confirmDialog } = useConfirm();
   const router = useRouter();
   const [busy, setBusy] = useState<"refresh" | "delete" | "limit" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +92,7 @@ export function CompetitorRowActions({
   }
 
   async function handleDelete() {
-    if (!window.confirm(`¿Dejar de seguir a @${username}? Se borran las publicaciones que se trajeron.`)) return;
+    if (!(await confirm({ title: `¿Dejar de seguir a @${username}?`, description: "Se borran las publicaciones que se trajeron.", confirmLabel: "Dejar de seguir", tone: "danger" }))) return;
     setBusy("delete");
     setError(null);
     const result = await deleteCompetitor(id);
@@ -103,69 +105,72 @@ export function CompetitorRowActions({
   }
 
   return (
-    <div className="flex flex-col items-end gap-1">
-      <div className="flex items-center gap-0.5 text-lm-ink-3">
-        <IconAction
-          label={`Actualizar @${username}`}
-          title={`Trae de nuevo ${resultsLimit} publicaciones: unos ${usd.format(estimateRunCostUsd(resultsLimit))} (estimado)`}
-          disabled={busy !== null || running}
-          onClick={handleRefresh}
-        >
-          {busy === "refresh" ? <Loader2 className="size-[13px] animate-spin" /> : <RefreshCw className="size-[13px]" />}
-        </IconAction>
-        <IconAction
-          label={`Editar cuántas publicaciones trae @${username}`}
-          title="Cuántas publicaciones trae la próxima actualización"
-          disabled={busy !== null}
-          onClick={() => {
-            setLimit(String(resultsLimit));
-            setError(null);
-            setEditing(true);
-          }}
-        >
-          <Pencil className="size-[13px]" />
-        </IconAction>
-        <IconAction
-          label={`Dejar de seguir a @${username}`}
-          title="Dejar de seguir"
-          danger
-          disabled={busy !== null}
-          onClick={handleDelete}
-        >
-          {busy === "delete" ? <Loader2 className="size-[13px] animate-spin" /> : <Trash2 className="size-[13px]" />}
-        </IconAction>
-      </div>
-      {error ? <p className="max-w-56 text-right text-xs text-lm-danger">{error}</p> : null}
-
-      <Dialog
-        open={editing}
-        onClose={busy === "limit" ? () => undefined : () => setEditing(false)}
-        title={`Publicaciones por corrida de @${username}`}
-        description="Se aplica a la próxima actualización. No trae nada ahora."
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-lm-ink-2">Publicaciones a traer</label>
-            <Input type="number" min={1} max={MAX_RESULTS_LIMIT} value={limit} onChange={(e) => setLimit(e.target.value)} autoFocus />
-            <p className="mt-1 text-xs text-lm-ink-2">
-              Apify cobra por resultado.{" "}
-              {validLimit
-                ? `Cada actualización de esta cuenta va a costar unos ${usd.format(estimateRunCostUsd(parsedLimit))} (estimado).`
-                : `Entre 1 y ${MAX_RESULTS_LIMIT}.`}
-            </p>
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => setEditing(false)} disabled={busy === "limit"}>
-              Cancelar
-            </Button>
-            <Button type="button" variant="primary" onClick={handleSaveLimit} disabled={busy === "limit" || !validLimit}>
-              {busy === "limit" ? <Loader2 className="size-3.5 animate-spin" /> : null}
-              Guardar
-            </Button>
-          </div>
+    <>
+      <div className="flex flex-col items-end gap-1">
+        <div className="flex items-center gap-0.5 text-lm-ink-3">
+          <IconAction
+            label={`Actualizar @${username}`}
+            title={`Trae de nuevo ${resultsLimit} publicaciones: unos ${usd.format(estimateRunCostUsd(resultsLimit))} (estimado)`}
+            disabled={busy !== null || running}
+            onClick={handleRefresh}
+          >
+            {busy === "refresh" ? <Loader2 className="size-[13px] animate-spin" /> : <RefreshCw className="size-[13px]" />}
+          </IconAction>
+          <IconAction
+            label={`Editar cuántas publicaciones trae @${username}`}
+            title="Cuántas publicaciones trae la próxima actualización"
+            disabled={busy !== null}
+            onClick={() => {
+              setLimit(String(resultsLimit));
+              setError(null);
+              setEditing(true);
+            }}
+          >
+            <Pencil className="size-[13px]" />
+          </IconAction>
+          <IconAction
+            label={`Dejar de seguir a @${username}`}
+            title="Dejar de seguir"
+            danger
+            disabled={busy !== null}
+            onClick={handleDelete}
+          >
+            {busy === "delete" ? <Loader2 className="size-[13px] animate-spin" /> : <Trash2 className="size-[13px]" />}
+          </IconAction>
         </div>
-      </Dialog>
-    </div>
+        {error ? <p className="max-w-56 text-right text-xs text-lm-danger">{error}</p> : null}
+
+        <Dialog
+          open={editing}
+          onClose={busy === "limit" ? () => undefined : () => setEditing(false)}
+          title={`Publicaciones por corrida de @${username}`}
+          description="Se aplica a la próxima actualización. No trae nada ahora."
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1.5 block text-[13px] font-medium text-lm-ink-2">Publicaciones a traer</label>
+              <Input type="number" min={1} max={MAX_RESULTS_LIMIT} value={limit} onChange={(e) => setLimit(e.target.value)} autoFocus />
+              <p className="mt-1 text-xs text-lm-ink-2">
+                Apify cobra por resultado.{" "}
+                {validLimit
+                  ? `Cada actualización de esta cuenta va a costar unos ${usd.format(estimateRunCostUsd(parsedLimit))} (estimado).`
+                  : `Entre 1 y ${MAX_RESULTS_LIMIT}.`}
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={() => setEditing(false)} disabled={busy === "limit"}>
+                Cancelar
+              </Button>
+              <Button type="button" variant="primary" onClick={handleSaveLimit} disabled={busy === "limit" || !validLimit}>
+                {busy === "limit" ? <Loader2 className="size-3.5 animate-spin" /> : null}
+                Guardar
+              </Button>
+            </div>
+          </div>
+        </Dialog>
+      </div>
+      {confirmDialog}
+    </>
   );
 }

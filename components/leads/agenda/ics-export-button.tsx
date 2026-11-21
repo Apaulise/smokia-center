@@ -3,7 +3,7 @@
 import { CalendarArrowDown, Loader2 } from "lucide-react";
 import { useTransition } from "react";
 
-import { Button } from "@/components/leads/ui/button";
+import { Button } from "@/components/ui/button";
 import { exportAgendaIcs } from "@/lib/leads/actions";
 
 function downloadIcs(ics: string, filename: string) {

@@ -9,8 +9,8 @@ import { SalesProfileForm } from "@/components/settings/sales-profile-form";
 import { InstagramConnection } from "@/components/settings/instagram-connection";
 import { ZernioConnection } from "@/components/settings/zernio-connection";
 import { listChannelAccounts } from "@/lib/chats/queries";
-import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
-import { Panel, Section } from "@/components/leads/ui/section";
+import { HeaderBar, PageHeading } from "@/components/ui/page-header";
+import { Panel, Section } from "@/components/ui/section";
 import {
   getActorOverrides,
   getApifyKeyStatus,
@@ -39,9 +39,8 @@ export default async function ConfiguracionPage() {
   const webhookReachable = Boolean(appUrl) && !/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(appUrl);
 
   return (
-    // bg-lm-bg propio: esta pantalla no cuelga de app/(app)/leads/layout.tsx (que ya
-    // envuelve así sus rutas), así que sin esto el degradado de Marca se filtraría detrás.
-    <div className="min-h-dvh bg-lm-bg font-lm-sans text-lm-ink">
+    // Tipografía y color propios: esta pantalla no cuelga de app/(app)/leads/layout.tsx.
+    <div className="lm-page-min font-lm-sans text-lm-ink">
       <HeaderBar breadcrumb="Configuración" />
       <div className="flex flex-col gap-10 px-6 py-8 lg:px-8">
         <PageHeading

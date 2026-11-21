@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Dialog } from "@/components/leads/ui/dialog";
-import { Select } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { Select } from "@/components/ui/field";
 import { markAppointmentDone, updateAppointmentStatus } from "@/lib/leads/actions";
 import { APPOINTMENT_STATUSES, APPOINTMENT_STATUS_LABEL, type AppointmentStatus } from "@/lib/leads/appointments";
 import type { AppointmentWithLead } from "@/lib/leads/queries";

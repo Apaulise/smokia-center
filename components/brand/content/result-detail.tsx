@@ -1,5 +1,5 @@
 import { ResultChip } from "@/components/brand/result-badge";
-import { Card, CardBody, CardHeader, Eyebrow } from "@/components/brand/ui/card";
+import { Card, CardBody, CardHeader, Eyebrow } from "@/components/ui/card";
 import {
   BASELINE_WINDOW,
   FAILED_THRESHOLD,

@@ -1,31 +1,31 @@
 "use client";
 
-import { AudioLines, BookmarkPlus, Loader2, Mic, Play, Send, Square, Zap } from "lucide-react";
+import { BookmarkPlus, Loader2, Send, Zap } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { Button } from "@/components/leads/ui/button";
+import { QuickRepliesPanel, type QuickReplyActions } from "@/components/leads/chats/quick-replies-panel";
+import { Button } from "@/components/ui/button";
+import type { QuickReplyKind } from "@/lib/chats/db";
 import { fillQuickReply } from "@/lib/chats/inbox";
-import { formatDuration, matchQuickReplies, type QuickReplyView } from "@/lib/chats/quick-replies";
+import { matchQuickReplies, QUICK_REPLY_SECTIONS, sendableNoun, type QuickReplyView } from "@/lib/chats/quick-replies";
 import { cn } from "@/lib/utils";
 
 const MAX_LENGTH = 1000;
-/** Lo que dura el "Deshacer" de un audio mandado con un toque, antes de salir de verdad. */
+/** Lo que dura el "Deshacer" de un guardado mandado con un toque, antes de salir de verdad. */
 const UNDO_MS = 4000;
 
 /** Borradores por conversación: cambiar de chat no pierde lo que se estaba escribiendo. */
 const drafts = new Map<string, string>();
 
-export type ComposerQuickReplies = {
+export type ComposerQuickReplies = QuickReplyActions & {
   ready: boolean;
   items: QuickReplyView[];
-  /** Manda un audio guardado (después del "Deshacer"). */
-  onSendAudio: (reply: QuickReplyView) => void;
-  /** Guarda el texto del campo como respuesta rápida. */
-  onSaveText: (title: string, body: string) => Promise<{ ok: boolean; message: string }>;
-  /** Abre el grabador para guardar un audio nuevo. */
-  onRecord: () => void;
+  /** Manda un audio, una imagen o un documento guardados (después del "Deshacer"). */
+  onSendAttachment: (reply: QuickReplyView) => void;
   /** Se usó una respuesta (para ordenar por uso). */
   onUsed: (reply: QuickReplyView) => void;
+  /** Se abrió el panel: renueva las vistas previas si están por vencer. */
+  onOpen: () => void;
 };
 
 /**
@@ -38,8 +38,9 @@ export type ComposerQuickReplies = {
  * reintentar con la misma key, así que no se duplica.
  *
  * Respuestas rápidas: `/` al principio del campo (o el botón del rayo) abre el
- * selector. Un texto se inserta con `{{nombre}}` ya reemplazado, para revisarlo
- * antes de mandar; un audio sale con un toque, con 4 s para deshacer.
+ * panel, con sus tres secciones (textos, audios, documentos/imágenes). Un texto
+ * se inserta con `{{nombre}}` ya reemplazado, para revisarlo antes de mandar;
+ * un audio, una imagen o un documento salen con un toque, con 4 s para deshacer.
  */
 export function MessageComposer({
   conversationId,
@@ -62,32 +63,47 @@ export function MessageComposer({
 }) {
   const [text, setText] = useState(() => drafts.get(conversationId) ?? "");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [tab, setTab] = useState<QuickReplyKind>("TEXTO");
   const [highlight, setHighlight] = useState(0);
-  const [pendingAudio, setPendingAudio] = useState<{ reply: QuickReplyView } | null>(null);
+  const [pendingSend, setPendingSend] = useState<QuickReplyView | null>(null);
   const [saveState, setSaveState] = useState<{ ok: boolean; message: string } | null>(null);
   const [saving, setSaving] = useState(false);
-  const [playing, setPlaying] = useState<string | null>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
-  const player = useRef<HTMLAudioElement | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // "/texto" al principio del campo filtra el selector; el botón lo abre sin filtro.
+  // "/texto" al principio del campo filtra el panel; el botón lo abre sin filtro.
   const slashQuery = text.startsWith("/") && !text.includes("\n") ? text.slice(1) : null;
   const showPicker = quickReplies.ready && (pickerOpen || slashQuery !== null);
   const query = slashQuery ?? "";
-  const matches = useMemo(() => (showPicker ? matchQuickReplies(quickReplies.items, query).slice(0, 8) : []), [showPicker, quickReplies.items, query]);
+
+  // Las coincidencias de cada sección. Con un filtro escrito, si la sección elegida
+  // quedó vacía se muestra la primera que tenga algo: no hay que ir a buscarla.
+  const sections = useMemo(() => {
+    const empty: Record<QuickReplyKind, QuickReplyView[]> = { TEXTO: [], AUDIO: [], ARCHIVO: [] };
+    if (!showPicker) return empty;
+    for (const reply of matchQuickReplies(quickReplies.items, query)) empty[reply.kind]?.push(reply);
+    return empty;
+  }, [showPicker, quickReplies.items, query]);
+  const activeTab = query && sections[tab].length === 0 ? (QUICK_REPLY_SECTIONS.find((section) => sections[section.kind].length > 0)?.kind ?? tab) : tab;
+  const matches = sections[activeTab];
+  const counts = { TEXTO: sections.TEXTO.length, AUDIO: sections.AUDIO.length, ARCHIVO: sections.ARCHIVO.length };
 
   useEffect(
     () => () => {
       if (undoTimer.current) clearTimeout(undoTimer.current);
-      player.current?.pause();
     },
     [],
   );
 
+  // Cada vez que se abre el panel (botón o «/»), las vistas previas se renuevan si hace falta.
+  const { onOpen } = quickReplies;
+  useEffect(() => {
+    if (showPicker) onOpen();
+  }, [showPicker, onOpen]);
+
   if (disabledReason) {
     return (
-      <div className="border-t border-lm-line bg-lm-surface px-4 py-3 text-[13px] text-lm-ink-2" role="status">
+      <div className="border-t border-lm-line px-4 py-3 text-[13px] text-lm-ink-2" role="status">
         {disabledReason}
       </div>
     );
@@ -131,35 +147,19 @@ export function MessageComposer({
       return;
     }
     if (slashQuery !== null) updateText("");
-    // Audio: sale solo en 4 s, salvo que se toque "Deshacer".
+    // Audio, imagen o documento: sale solo en 4 s, salvo que se toque "Deshacer".
     if (undoTimer.current) clearTimeout(undoTimer.current);
-    setPendingAudio({ reply });
+    setPendingSend(reply);
     undoTimer.current = setTimeout(() => {
-      setPendingAudio(null);
-      quickReplies.onSendAudio(reply);
+      setPendingSend(null);
+      quickReplies.onSendAttachment(reply);
     }, UNDO_MS);
+    textarea.current?.focus();
   }
 
-  function undoAudio() {
+  function undoSend() {
     if (undoTimer.current) clearTimeout(undoTimer.current);
-    setPendingAudio(null);
-  }
-
-  function togglePreview(reply: QuickReplyView) {
-    if (!reply.previewUrl) return;
-    if (playing === reply.id) {
-      player.current?.pause();
-      setPlaying(null);
-      return;
-    }
-    player.current?.pause();
-    const audio = new Audio(reply.previewUrl);
-    audio.onended = () => setPlaying(null);
-    player.current = audio;
-    void audio.play().then(
-      () => setPlaying(reply.id),
-      () => setPlaying(null),
-    );
+    setPendingSend(null);
   }
 
   async function saveAsQuickReply() {
@@ -173,69 +173,35 @@ export function MessageComposer({
   }
 
   return (
-    <div className="relative border-t border-lm-line bg-lm-surface px-4 py-3">
+    <div className="relative border-t border-lm-line px-3 py-3 sm:px-4">
       {showPicker ? (
-        <div
-          className="lm-glass-pop lm-shadow-pop absolute right-4 bottom-full left-4 mb-2 max-h-80 overflow-y-auto rounded-lm-md border border-lm-line-strong p-1.5"
-          role="listbox"
-          aria-label="Respuestas rápidas"
-        >
-          <div className="flex items-center justify-between gap-2 px-2 pt-1 pb-1.5">
-            <span className="font-lm-sans text-[11px] font-semibold tracking-[0.08em] text-lm-ink-3 uppercase">Respuestas rápidas</span>
-            <button type="button" onClick={quickReplies.onRecord} className="inline-flex items-center gap-1 font-lm-sans text-[11.5px] text-lm-ink-2 hover:text-lm-ink focus-visible:lm-focus">
-              <Mic className="size-3" strokeWidth={1.5} />
-              Grabar un audio
-            </button>
-          </div>
-          {matches.length === 0 ? (
-            <p className="px-2 py-3 text-[12.5px] text-lm-ink-3">
-              {quickReplies.items.length === 0 ? "Todavía no guardaste respuestas. Escribí una y tocá el marcador para guardarla, o grabá un audio." : "Ninguna coincide."}
-            </p>
-          ) : (
-            matches.map((reply, index) => (
-              <div
-                key={reply.id}
-                role="option"
-                aria-selected={index === highlight}
-                onMouseEnter={() => setHighlight(index)}
-                className={cn("flex items-center gap-2 rounded-lm-sm px-2 py-1.5", index === highlight && "bg-lm-raised")}
-              >
-                <button type="button" onClick={() => choose(reply)} className="flex min-w-0 flex-1 items-center gap-2 text-left focus-visible:lm-focus">
-                  {reply.kind === "AUDIO" ? (
-                    <AudioLines className="size-3.5 shrink-0 text-lm-ink-2" strokeWidth={1.5} />
-                  ) : (
-                    <Zap className="size-3.5 shrink-0 text-lm-ink-3" strokeWidth={1.5} />
-                  )}
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-lm-sans text-[13px] font-medium text-lm-ink">{reply.title}</span>
-                    <span className="block truncate text-[12px] text-lm-ink-3">
-                      {reply.kind === "AUDIO" ? `Audio ${formatDuration(reply.durationMs)} · se manda con un toque` : (reply.body ?? "")}
-                    </span>
-                  </span>
-                </button>
-                {reply.kind === "AUDIO" && reply.previewUrl ? (
-                  <button
-                    type="button"
-                    onClick={() => togglePreview(reply)}
-                    aria-label={playing === reply.id ? "Detener" : `Escuchar ${reply.title}`}
-                    className="grid size-7 shrink-0 place-items-center rounded-lm-sm text-lm-ink-2 hover:bg-lm-surface hover:text-lm-ink focus-visible:lm-focus"
-                  >
-                    {playing === reply.id ? <Square className="size-3" strokeWidth={1.5} /> : <Play className="size-3" strokeWidth={1.5} />}
-                  </button>
-                ) : null}
-              </div>
-            ))
-          )}
-        </div>
+        <QuickRepliesPanel
+          tab={activeTab}
+          onTabChange={(kind) => {
+            setTab(kind);
+            setHighlight(0);
+          }}
+          matches={matches}
+          counts={counts}
+          filtered={Boolean(query)}
+          highlight={highlight}
+          onHighlight={setHighlight}
+          onChoose={choose}
+          onClose={closePicker}
+          onRefocus={() => textarea.current?.focus()}
+          actions={quickReplies}
+        />
       ) : null}
 
-      {pendingAudio ? (
-        <div className="mb-2 flex items-center justify-between gap-3 rounded-lm-sm border border-lm-line-strong bg-lm-raised px-3 py-2 text-[12.5px] text-lm-ink" role="status">
+      {pendingSend ? (
+        <div className="mb-2 flex items-center justify-between gap-3 rounded-lm-sm border border-lm-line-strong bg-lm-ink/6 px-3 py-2 text-[12.5px] text-lm-ink" role="status">
           <span className="inline-flex min-w-0 items-center gap-2">
             <Loader2 className="size-3.5 shrink-0 animate-spin text-lm-ink-3" />
-            <span className="truncate">Mandando el audio «{pendingAudio.reply.title}»…</span>
+            <span className="truncate">
+              Mandando {sendableNoun(pendingSend)} «{pendingSend.title}»…
+            </span>
           </span>
-          <button type="button" onClick={undoAudio} className="shrink-0 font-medium text-lm-signal-text underline-offset-2 hover:underline focus-visible:lm-focus">
+          <button type="button" onClick={undoSend} className="shrink-0 font-medium text-lm-signal-text underline-offset-2 hover:underline focus-visible:lm-focus">
             Deshacer
           </button>
         </div>
@@ -258,8 +224,8 @@ export function MessageComposer({
           aria-expanded={showPicker}
           title={quickReplies.ready ? "Respuestas rápidas · escribí / al principio" : "Falta aplicar la migración de respuestas rápidas"}
           className={cn(
-            "grid size-9 shrink-0 place-items-center rounded-lm-sm border border-lm-line-strong text-lm-ink-2 transition-colors duration-150 ease-out hover:bg-lm-raised hover:text-lm-ink focus-visible:lm-focus disabled:opacity-45",
-            showPicker && "bg-lm-raised text-lm-ink",
+            "grid size-9 shrink-0 place-items-center rounded-full bg-lm-ink/6 text-lm-ink-2 transition-colors duration-150 ease-out hover:bg-lm-ink/12 hover:text-lm-ink focus-visible:lm-focus disabled:opacity-45",
+            showPicker && "bg-lm-ink/12 text-lm-ink",
           )}
         >
           <Zap className="size-4" strokeWidth={1.5} />
@@ -309,7 +275,7 @@ export function MessageComposer({
           rows={1}
           placeholder="Escribí tu respuesta… (/ para respuestas rápidas)"
           aria-label="Respuesta"
-          className="max-h-40 min-h-9 flex-1 resize-none rounded-lm-sm border border-lm-line-strong bg-lm-raised px-3 py-2 font-lm-sans text-[13.5px] leading-[1.35] text-lm-ink [field-sizing:content] placeholder:text-lm-ink-3 focus:border-lm-signal focus:outline-none"
+          className="max-h-40 min-h-9 flex-1 resize-none rounded-lm-md border border-lm-line-strong bg-lm-ink/5 px-3 py-2 font-lm-sans text-[13.5px] leading-[1.35] text-lm-ink [field-sizing:content] placeholder:text-lm-ink-3 focus:border-lm-signal focus:outline-none"
         />
         <Button type="submit" variant="primary" disabled={!text.trim() || tooLong || slashQuery !== null} className="h-9">
           <Send className="size-3.5" strokeWidth={1.5} />

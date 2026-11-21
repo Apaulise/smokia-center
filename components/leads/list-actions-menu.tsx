@@ -4,10 +4,10 @@ import { AlertTriangle, CheckCircle2, Loader2, MoreHorizontal, Pencil, Trash2, X
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Dialog } from "@/components/leads/ui/dialog";
-import { Field, Input } from "@/components/leads/ui/field";
-import { RowMenuTrigger } from "@/components/leads/ui/table";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { Field, Input } from "@/components/ui/field";
+import { RowMenuTrigger } from "@/components/ui/table";
 import { deleteLeadList, renameLeadList } from "@/lib/leads/actions";
 import { cn } from "@/lib/utils";
 

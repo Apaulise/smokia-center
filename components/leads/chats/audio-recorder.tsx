@@ -3,9 +3,9 @@
 import { Loader2, Mic, Square, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Dialog } from "@/components/leads/ui/dialog";
-import { Field, Input } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { Field, Input } from "@/components/ui/field";
 import { createAudioQuickReply, prepareAudioUpload } from "@/lib/chats/inbox-actions";
 import { AUDIO_MAX_BYTES, AUDIO_MAX_MS, audioMimeOf, formatDuration, type QuickReplyView } from "@/lib/chats/quick-replies";
 import { downmix, encodeWav, resample, trimSilence, VOICE_SAMPLE_RATE } from "@/lib/chats/wav";

@@ -3,8 +3,8 @@
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { useActionState } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Field, Input } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/field";
 import { saveActorOverride } from "@/lib/settings/actions";
 import { PROVIDERS } from "@/lib/providers/registry";
 import type { AnyLeadSourceProvider } from "@/lib/providers/types";

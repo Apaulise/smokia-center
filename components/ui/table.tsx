@@ -60,7 +60,7 @@ export function Tr({
 }: HTMLAttributes<HTMLTableRowElement> & { selected?: boolean }) {
   return (
     <tr
-      className={cn("group transition-colors duration-150", selected ? "bg-lm-signal-soft" : "hover:bg-lm-raised", className)}
+      className={cn("group transition-colors duration-150", selected ? "bg-lm-signal-soft" : "hover:bg-lm-ink/5", className)}
       {...props}
     />
   );

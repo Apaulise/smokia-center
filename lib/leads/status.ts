@@ -1,4 +1,3 @@
-import type { BadgeTone } from "@/components/ui/badge";
 import type { Database } from "@/lib/supabase/database.types";
 
 export type LeadStatus = Database["public"]["Enums"]["lead_status"];
@@ -48,26 +47,6 @@ export const STATUS_LABEL: Record<LeadStatus, string> = {
   SEGUIMIENTO: "En seguimiento",
   CERRADO_PERDIDO: "Cerrado perdido",
   DESCARTADO: "Descartado",
-};
-
-export const STATUS_TONE: Record<LeadStatus, BadgeTone> = {
-  NUEVO: "neutral",
-  LISTO: "neutral",
-  CONTACTADO: "cyan",
-  AUTORESPUESTA: "cyan",
-  RESPONDIO: "cyan",
-  DIAGNOSTICO: "violet",
-  CALIFICADO: "violet",
-  INTERESADO: "violet",
-  REUNION_PROPUESTA: "violet",
-  REUNION_AGENDADA: "violet",
-  REUNION_REALIZADA: "violet",
-  PROPUESTA_ENVIADA: "violet",
-  CERRADO_GANADO: "positive",
-  AHORA_NO: "warning",
-  SEGUIMIENTO: "warning",
-  CERRADO_PERDIDO: "danger",
-  DESCARTADO: "danger",
 };
 
 /**

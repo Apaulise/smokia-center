@@ -1,6 +1,6 @@
 import { UserRound, UsersRound } from "lucide-react";
 
-import { Segmented, SegmentedLink } from "@/components/leads/ui/tabs";
+import { Segmented, SegmentedLink } from "@/components/ui/tabs";
 
 export type AgendaScope = "mine" | "team";
 
@@ -17,7 +17,7 @@ export function AgendaScopeToggle({ scope, view, date, hasTeam, teamAvailable }:
           <UsersRound className="mr-1.5 size-3.5" strokeWidth={1.5} /> Equipo
         </SegmentedLink>
       ) : (
-        <span className="flex h-7 cursor-not-allowed items-center rounded-[3px] px-3 text-[13px] text-lm-ink-3 opacity-50" title="Falta aplicar la actualización de base de datos">
+        <span className="flex h-7 cursor-not-allowed items-center rounded-[6px] px-3 text-[13px] text-lm-ink-3 opacity-50" title="Falta aplicar la actualización de base de datos">
           <UsersRound className="mr-1.5 size-3.5" strokeWidth={1.5} /> Equipo
         </span>
       )}

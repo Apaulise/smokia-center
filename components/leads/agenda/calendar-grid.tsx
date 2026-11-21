@@ -18,42 +18,25 @@ export interface CalendarMove {
   time: string | null;
 }
 
-type Variant = "brand" | "signal";
-
-/** Clases por variante: "brand" (Marca, default, sin tocar) y "signal" (Leads, "Señal y humo"). */
-const V: Record<Variant, Record<string, string>> = {
-  brand: {
-    container: "overflow-hidden rounded-[20px] border border-line bg-elevated/70",
-    head: "border-b border-line/60 text-xs font-medium text-muted uppercase",
-    cell: "border-r border-b border-line/40 p-1.5 last:border-r-0",
-    outsideMonth: "bg-base/40",
-    dragOver: "bg-cyan/5",
-    todayCircle: "bg-cyan text-base font-semibold",
-    dayNumber: "text-muted hover:text-ink",
-    chip: "border-line/60 bg-surface/60 hover:border-cyan/40",
-    more: "text-cyan hover:underline",
-    less: "text-muted hover:underline",
-  },
-  signal: {
-    container: "lm-glass-soft overflow-hidden rounded-lm-lg border",
-    head: "border-b border-lm-line font-lm-sans text-[11px] font-semibold tracking-[0.1em] text-lm-ink-3 uppercase",
-    cell: "border-r border-b border-lm-line p-1.5 last:border-r-0",
-    outsideMonth: "bg-lm-smoke-1/50",
-    dragOver: "bg-lm-signal-soft",
-    todayCircle: "bg-lm-signal text-lm-on-signal font-semibold",
-    dayNumber: "text-lm-ink-3 hover:text-lm-ink",
-    chip: "border-lm-line bg-lm-raised hover:border-lm-line-strong",
-    more: "text-lm-signal-text hover:underline",
-    less: "text-lm-ink-3 hover:underline",
-  },
+/** Clases de la grilla, en los tokens del sistema. */
+const V: Record<string, string> = {
+  container: "lm-glass-soft overflow-hidden rounded-lm-lg border",
+  head: "border-b border-lm-line font-lm-sans text-[11px] font-semibold tracking-[0.1em] text-lm-ink-3 uppercase",
+  cell: "border-r border-b border-lm-line p-1.5 last:border-r-0",
+  outsideMonth: "bg-lm-smoke-1/50",
+  dragOver: "bg-lm-signal-soft",
+  todayCircle: "bg-lm-signal text-lm-on-signal font-semibold",
+  dayNumber: "text-lm-ink-3 hover:text-lm-ink",
+  chip: "border-lm-line bg-lm-ink/5 hover:border-lm-line-strong",
+  more: "text-lm-signal-text hover:underline",
+  less: "text-lm-ink-3 hover:underline",
 };
 
 /**
  * Grilla de mes o semana con drag & drop nativo (mismo patrón que LeadsKanban).
  * No sabe qué es lo que muestra: la agenda de Leads le pasa turnos y el
  * planificador de Marca le pasa piezas de contenido (Plans/03 §3.7). Quien la
- * usa decide qué dibuja dentro de cada tarjeta y qué pasa al soltarla;
- * `variant` sólo cambia el tema (CLAUDE.md §2: Marca sigue con el suyo).
+ * usa decide qué dibuja dentro de cada tarjeta y qué pasa al soltarla.
  */
 export function CalendarGrid<T extends { id: string }>({
   mode,
@@ -70,7 +53,6 @@ export function CalendarGrid<T extends { id: string }>({
   onCreateAt,
   onEdit,
   onMove,
-  variant = "brand",
 }: {
   mode: "mes" | "semana";
   days: string[];
@@ -93,9 +75,8 @@ export function CalendarGrid<T extends { id: string }>({
   onCreateAt: (dateIso: string) => void;
   onEdit: (item: T) => void;
   onMove: (move: CalendarMove) => void;
-  variant?: Variant;
 }) {
-  const v = V[variant];
+  const v = V;
   const [dragOverDay, setDragOverDay] = useState<string | null>(null);
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
 

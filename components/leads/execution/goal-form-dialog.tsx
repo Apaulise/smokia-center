@@ -3,9 +3,9 @@
 import { Loader2, XCircle } from "lucide-react";
 import { useActionState, useEffect, useState } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Dialog } from "@/components/leads/ui/dialog";
-import { Field, Input } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { Field, Input } from "@/components/ui/field";
 import { defineSalesGoal } from "@/lib/leads/execution/actions";
 import type { ChainInputs } from "@/lib/leads/execution/chain";
 

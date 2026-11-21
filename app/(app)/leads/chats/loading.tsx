@@ -2,8 +2,8 @@
 export default function ChatsLoading() {
   return (
     <div className="animate-pulse" role="status" aria-label="Cargando chats">
-      <div className="h-14 border-b border-lm-line bg-lm-surface" />
-      <div className="grid h-[calc(100dvh-3.5rem)] lg:grid-cols-[340px_minmax(0,1fr)]">
+      <div className="h-14 border-b border-lm-line" />
+      <div className="grid h-[calc(100dvh-3.5rem-var(--lm-shell-y))] lg:grid-cols-[340px_minmax(0,1fr)]">
         <div className="border-r border-lm-line">
           <div className="space-y-3 border-b border-lm-line p-3">
             <div className="h-8 rounded-lm-sm bg-lm-raised" />

@@ -1,4 +1,4 @@
-import { CopilotScore } from "@/components/leads/ui/copilot";
+import { CopilotScore } from "@/components/ui/copilot";
 import type { LeadMemory } from "@/lib/leads/ai/prompts";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/lib/supabase/database.types";

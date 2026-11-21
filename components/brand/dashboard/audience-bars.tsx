@@ -1,5 +1,5 @@
-import { Eyebrow, Meter } from "@/components/brand/ui/card";
-import { Waffle, type WaffleSegment } from "@/components/brand/ui/waffle";
+import { Eyebrow, Meter } from "@/components/ui/card";
+import { Waffle, type WaffleSegment } from "@/components/ui/waffle";
 import type { Database } from "@/lib/supabase/database.types";
 
 type AudienceRow = Database["public"]["Functions"]["brand_audience_summary"]["Returns"][number];

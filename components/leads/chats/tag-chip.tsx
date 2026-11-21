@@ -1,30 +1,42 @@
 import { X } from "lucide-react";
 
 import type { FunnelStage } from "@/lib/chats/db";
-import type { TagView } from "@/lib/chats/tag-view";
+import type { TagColor, TagView } from "@/lib/chats/tag-view";
 import { cn } from "@/lib/utils";
 
 /**
- * Los tres colores del embudo (decisión del dueño, 2026-11-16): se reusan los
- * tokens semánticos que ya existen (nunca un hex suelto, CLAUDE.md §6) — el
- * amarillo de dato queda para BOFU, lo más cerca de la venta; TOFU y MOFU usan
- * `info` y `success`, que ya son parte del sistema. Una etiqueta sin etapa
- * (negocio, curioso, una palabra clave) sigue neutra: el color no se gasta de más.
+ * Los cuatro colores de las etiquetas predefinidas (decisión del dueño,
+ * 2026-11-16): Agenda verde, Negocio azul, Curioso rojo, Seguimiento amarillo.
+ * Salen de tokens (`lm-tag-*` y `signal`, nunca un hex suelto, CLAUDE.md §6) y
+ * son el único código de color de la bandeja: cualquier otra etiqueta va
+ * neutra y la etapa del embudo se marca en mono, sin color, para que dos
+ * códigos de color no compitan en la misma fila.
  */
-const STAGE_TONE: Record<FunnelStage, string> = {
-  TOFU: "border-transparent bg-lm-info/15 text-lm-info",
-  MOFU: "border-transparent bg-lm-success-soft text-lm-success",
-  BOFU: "border-transparent bg-lm-signal-soft text-lm-signal-text",
+export const TAG_TONE: Record<TagColor, string> = {
+  // Relleno lleno (decisión del dueño, 2026-11-17). El texto es `lm-bg`: oscuro sobre
+  // los tonos claros del tema oscuro y claro sobre los tonos fuertes del tema claro.
+  green: "border-transparent bg-lm-tag-green text-lm-bg",
+  blue: "border-transparent bg-lm-tag-blue text-lm-bg",
+  red: "border-transparent bg-lm-tag-red text-lm-bg",
+  yellow: "border-transparent bg-lm-signal text-lm-on-signal",
 };
 
-/** Una etiqueta de Zernio. Coloreada por etapa del embudo si la tiene; si no, neutra. */
+/** El punto de color de un filtro o botón sin elegir (elegido, va relleno). */
+export const TAG_DOT: Record<TagColor, string> = {
+  green: "bg-lm-tag-green",
+  blue: "bg-lm-tag-blue",
+  red: "bg-lm-tag-red",
+  yellow: "bg-lm-signal",
+};
+
+/** Una etiqueta de Zernio. Con su color si es una de las cuatro predefinidas; si no, neutra. */
 export function TagChip({ view, onRemove, className }: { view: TagView; onRemove?: () => void; className?: string }) {
   return (
     <span
       title={view.tag}
       className={cn(
         "inline-flex h-5 max-w-40 items-center gap-1 rounded-lm-xs border px-1.5 font-lm-sans text-[11px] font-medium",
-        view.stage ? STAGE_TONE[view.stage] : "border-lm-line bg-lm-surface text-lm-ink-2 font-normal",
+        view.color ? TAG_TONE[view.color] : "border-lm-line bg-lm-ink/5 font-normal text-lm-ink-2",
         view.keyword && "border-dashed",
         className,
       )}
@@ -35,7 +47,7 @@ export function TagChip({ view, onRemove, className }: { view: TagView; onRemove
           type="button"
           onClick={onRemove}
           aria-label={`Sacar la etiqueta ${view.label}`}
-          className="-mr-0.5 grid size-3.5 place-items-center rounded-lm-xs opacity-70 hover:bg-lm-overlay hover:opacity-100 focus-visible:lm-focus"
+          className="-mr-0.5 grid size-3.5 place-items-center rounded-full opacity-70 hover:bg-lm-ink/15 hover:opacity-100 focus-visible:lm-focus"
         >
           <X className="size-3" strokeWidth={1.5} />
         </button>
@@ -51,12 +63,15 @@ const STAGE_TITLE: Record<FunnelStage, string> = {
   BOFU: "Fondo del embudo: calificado para vender",
 };
 
-/** La etapa del embudo, en mono, con el color de su etapa (ver `STAGE_TONE`). */
+/** La etapa del embudo, en mono y sin color: el color queda para las etiquetas predefinidas. */
 export function StageMark({ stage, className }: { stage: FunnelStage; className?: string }) {
   return (
     <span
       title={STAGE_TITLE[stage]}
-      className={cn("inline-flex h-5 items-center rounded-lm-xs px-1.5 font-mono text-[10.5px] font-semibold tracking-[0.04em]", STAGE_TONE[stage], className)}
+      className={cn(
+        "inline-flex h-5 items-center rounded-lm-xs border border-lm-line-strong px-1.5 font-mono text-[10.5px] font-semibold tracking-[0.04em] text-lm-ink-2",
+        className,
+      )}
     >
       {STAGE_LABEL[stage]}
     </span>

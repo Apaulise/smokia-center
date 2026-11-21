@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Button } from "@/components/leads/ui/button";
+import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 
 export function GoogleSignInButton({ next }: { next: string }) {

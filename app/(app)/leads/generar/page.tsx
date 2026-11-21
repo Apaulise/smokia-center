@@ -1,6 +1,6 @@
 import { GenerarSourceSwitch } from "@/components/leads/generar-source-switch";
 import { JobStatusPanel } from "@/components/leads/job-status-panel";
-import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
+import { HeaderBar, PageHeading } from "@/components/ui/page-header";
 import { getListPerformance } from "@/lib/leads/queries";
 import { getApifyCredit, listIndustries } from "@/lib/settings/queries";
 

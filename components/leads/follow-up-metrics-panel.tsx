@@ -1,7 +1,7 @@
-import { EmptyLine } from "@/components/leads/ui/feedback";
-import { Kpi, KpiRow } from "@/components/leads/ui/kpi-row";
-import { Section } from "@/components/leads/ui/section";
-import { Table, Td, Th, Tr } from "@/components/leads/ui/table";
+import { EmptyLine } from "@/components/ui/feedback";
+import { Kpi, KpiRow } from "@/components/ui/kpi-row";
+import { Section } from "@/components/ui/section";
+import { Table, Td, Th, Tr } from "@/components/ui/table";
 import type { FollowUpBucket, FollowUpMetrics } from "@/lib/leads/follow-up-metrics";
 
 const pct = (n: number, d: number) => (d > 0 ? `${Math.round((n / d) * 100)} %` : "—");

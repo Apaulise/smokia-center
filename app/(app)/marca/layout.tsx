@@ -12,13 +12,12 @@ const PLATFORM = "INSTAGRAM" as const;
 export const maxDuration = 60;
 
 /**
- * Envoltorio visual del sistema "Señal y humo": fondo opaco, texto y
- * tipografía propios, para que el degradado del body no se filtre detrás de
- * las pantallas de Marca (mismo criterio que app/(app)/leads/layout.tsx).
+ * Envoltorio de las pantallas de Marca: tipografía y color de texto del
+ * sistema, y el alto mínimo del escenario (mismo criterio que app/(app)/leads/layout.tsx).
  */
 export default function MarcaLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-dvh font-lm-sans text-lm-ink">
+    <div className="lm-page-min font-lm-sans text-lm-ink">
       <BrandAutoSync platform={PLATFORM} />
       {children}
     </div>

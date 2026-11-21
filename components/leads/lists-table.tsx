@@ -2,8 +2,8 @@ import Link from "next/link";
 
 import { sourceLabel } from "@/components/leads/lead-list-card";
 import { ListActionsMenu } from "@/components/leads/list-actions-menu";
-import { Chip, StatusBadge } from "@/components/leads/ui/status-badge";
-import { Table, Td, Th, Tr } from "@/components/leads/ui/table";
+import { Chip, StatusBadge } from "@/components/ui/status-badge";
+import { Table, Td, Th, Tr } from "@/components/ui/table";
 import type { LeadListOverviewRow } from "@/lib/leads/queries";
 
 const JOB_STATUS_LABEL: Record<LeadListOverviewRow["status"], string> = {

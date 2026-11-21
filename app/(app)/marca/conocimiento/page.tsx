@@ -2,8 +2,8 @@ import { Search } from "lucide-react";
 import Link from "next/link";
 
 import { KnowledgeList } from "@/components/brand/knowledge/knowledge-list";
-import { Crumbs } from "@/components/brand/ui/card";
-import { HeaderBar } from "@/components/leads/ui/page-header";
+import { Crumbs } from "@/components/ui/card";
+import { HeaderBar } from "@/components/ui/page-header";
 import { getKnowledgeCounts, searchKnowledge } from "@/lib/brand/knowledge/queries";
 import { COLLECTION_LABEL, isKnowledgeCollection, KNOWLEDGE_COLLECTIONS } from "@/lib/brand/knowledge/schema";
 import { cn } from "@/lib/utils";

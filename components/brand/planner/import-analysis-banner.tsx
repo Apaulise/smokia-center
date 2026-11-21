@@ -4,7 +4,7 @@ import { Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import { Button } from "@/components/leads/ui/button";
+import { Button } from "@/components/ui/button";
 import { analyzeImportedReels } from "@/lib/brand/planner/actions";
 
 /**

@@ -1,6 +1,6 @@
 import { AlertTriangle, Info } from "lucide-react";
 
-import { Card, CardBody, CardHeader, Meter, Tag } from "@/components/brand/ui/card";
+import { Card, CardBody, CardHeader, Meter, Tag } from "@/components/ui/card";
 import { WINDOW_HOURS, type FollowerSurprise, type PostFollowerGain } from "@/lib/brand/goals/attribution";
 import { formatCount } from "@/lib/brand/goals/progress";
 import { formatMultiple } from "@/lib/brand/insights";

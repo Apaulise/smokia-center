@@ -3,9 +3,9 @@
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Dialog } from "@/components/leads/ui/dialog";
-import { Input, Select, Textarea } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { Input, Select, Textarea } from "@/components/ui/field";
 import { saveBrandContentIdea } from "@/lib/brand/actions";
 import { extractHashtags } from "@/lib/brand/insights";
 import { CONTENT_OBJECTIVES, OBJECTIVE_LABEL, type ContentObjective } from "@/lib/brand/planner/schema";

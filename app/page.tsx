@@ -14,15 +14,15 @@ export const metadata = { title: "Inicio · SmokIA" };
 
 /**
  * Pantalla global: elegir a qué gestor entrar. Cada gestor es un espacio
- * separado (sidebar propio, ver components/shell/sidebar.tsx); acá se ve un
- * la pantalla principal real de cada uno, en un iframe (ScreenPreview). Vive fuera de `(app)` a propósito: sin
- * sidebar, porque todavía no se está dentro de ningún gestor.
+ * separado (sidebar propio, ver components/shell/sidebar.tsx); acá se ve la
+ * pantalla principal real de cada uno, en un iframe (ScreenPreview). Vive
+ * fuera de `(app)` a propósito: sin sidebar, porque todavía no se está dentro
+ * de ningún gestor.
  */
 export default async function HubPage() {
-  const user = await getCurrentUser();
+  // En paralelo: el perfil no depende del usuario (RLS ya filtra por la sesión).
+  const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
   if (!user) redirect("/login");
-
-  const profile = await getProfile();
   const name = displayName(profile, user.email);
 
   return (
@@ -82,7 +82,6 @@ export default async function HubPage() {
             <ScreenPreview
               src="/leads"
               title="Vista previa del Gestor de Leads"
-              delayMs={700}
             />
           </HubCard>
 
@@ -95,7 +94,6 @@ export default async function HubPage() {
             <ScreenPreview
               src="/operaciones"
               title="Vista previa del Gestor de Operaciones"
-              delayMs={1400}
             />
           </HubCard>
 

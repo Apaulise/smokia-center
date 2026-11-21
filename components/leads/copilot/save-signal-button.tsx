@@ -4,7 +4,7 @@ import { BookmarkPlus } from "lucide-react";
 import { useState } from "react";
 
 import { KnowledgeDialog } from "@/components/leads/knowledge/knowledge-dialog";
-import { Button } from "@/components/leads/ui/button";
+import { Button } from "@/components/ui/button";
 import type { KnowledgeCollection } from "@/lib/leads/knowledge/schema";
 import type { LeadSignalRow } from "@/lib/leads/queries";
 

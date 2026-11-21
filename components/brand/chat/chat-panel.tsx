@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { ChatMessage } from "./chat-message";
 import { SaveIdeaDialog } from "./save-idea-dialog";
 import { ChatThreadList } from "./thread-list";
-import { Button } from "@/components/leads/ui/button";
+import { Button } from "@/components/ui/button";
 import { deleteBrandChatThread, sendBrandChatMessage } from "@/lib/brand/actions";
 import type { BrandPlatform } from "@/lib/brand/sources/types";
 import { createClient } from "@/lib/supabase/client";
@@ -257,8 +257,8 @@ export function BrandChatPanel({
   }
 
   return (
-    // Alto de pantalla completo; en mobile se descuenta la barra del menú (lg:hidden) que queda arriba.
-    <div className="flex h-[calc(100dvh-61px)] min-h-[480px] overflow-hidden lg:h-dvh">
+    // Alto de pantalla completo menos lo que ocupa el shell (`--lm-shell-y`: la barra del menú en mobile, el aire del escenario en desktop).
+    <div className="flex h-[calc(100dvh-var(--lm-shell-y))] min-h-[480px] overflow-hidden">
       <aside className="hidden w-72 shrink-0 border-r border-lm-line md:block">
         <ChatThreadList
           threads={threads}

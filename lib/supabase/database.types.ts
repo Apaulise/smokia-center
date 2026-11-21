@@ -1331,6 +1331,10 @@ export type Database = {
           audio_path: string | null
           body: string | null
           created_at: string
+          file_mime: string | null
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
           id: string
           kind: string
           owner_id: string
@@ -1345,6 +1349,10 @@ export type Database = {
           audio_path?: string | null
           body?: string | null
           created_at?: string
+          file_mime?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
           id?: string
           kind: string
           owner_id: string
@@ -1359,6 +1367,10 @@ export type Database = {
           audio_path?: string | null
           body?: string | null
           created_at?: string
+          file_mime?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
           id?: string
           kind?: string
           owner_id?: string

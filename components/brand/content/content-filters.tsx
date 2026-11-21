@@ -1,8 +1,8 @@
 import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { Button } from "@/components/leads/ui/button";
-import { Input, Select } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { Input, Select } from "@/components/ui/field";
 import type { ContentSortField } from "@/lib/brand/queries";
 import type { Database } from "@/lib/supabase/database.types";
 

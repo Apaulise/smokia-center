@@ -3,9 +3,9 @@
 import { CheckCircle2, Loader2, RefreshCw, XCircle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 
-import { Button, ButtonLink } from "@/components/leads/ui/button";
-import { Panel } from "@/components/leads/ui/section";
-import { StatusBadge } from "@/components/leads/ui/status-badge";
+import { Button, ButtonLink } from "@/components/ui/button";
+import { Panel } from "@/components/ui/section";
+import { StatusBadge } from "@/components/ui/status-badge";
 import type { StatusTemperatureGroup } from "@/lib/leads/status";
 import { reconcileJob } from "@/lib/leads/actions";
 import { createClient } from "@/lib/supabase/client";

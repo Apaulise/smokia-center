@@ -1,4 +1,4 @@
-import { Meter } from "@/components/brand/ui/card";
+import { Meter } from "@/components/ui/card";
 import type { PatternRow } from "@/lib/brand/insights";
 
 /** Filas rankeadas por magnitud: una sola serie neutra, con el número siempre al lado de la barra (dataviz). */

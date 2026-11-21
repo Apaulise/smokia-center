@@ -3,7 +3,7 @@ import Link from "next/link";
 import { hookText } from "@/components/brand/analysis/retention-list";
 import { PostThumb } from "@/components/brand/post-thumb";
 import { ResultChip } from "@/components/brand/result-badge";
-import { Eyebrow } from "@/components/brand/ui/card";
+import { Eyebrow } from "@/components/ui/card";
 import {
   formatObjectiveValue,
   KIND_LABEL,

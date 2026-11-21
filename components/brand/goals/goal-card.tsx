@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { GoalDialogButton } from "@/components/brand/goals/goal-dialog";
-import { Card, CardBody, CardHeader, Eyebrow, Meter } from "@/components/brand/ui/card";
+import { Card, CardBody, CardHeader, Eyebrow, Meter } from "@/components/ui/card";
 import {
   formatCount,
   formatIsoDate,

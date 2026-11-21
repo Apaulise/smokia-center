@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 import { PostThumb } from "@/components/brand/post-thumb";
 import { ResultBadge } from "@/components/brand/result-badge";
-import { EmptyValue } from "@/components/brand/ui/card";
+import { EmptyValue } from "@/components/ui/card";
 import type { PostResult } from "@/lib/brand/insights";
 import type { Database } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";

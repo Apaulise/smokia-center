@@ -1,7 +1,7 @@
-import { Button, ButtonLink } from "@/components/leads/ui/button";
-import { Field, Input } from "@/components/leads/ui/field";
-import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
-import { Tabs, TabLink } from "@/components/leads/ui/tabs";
+import { Button, ButtonLink } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/field";
+import { HeaderBar, PageHeading } from "@/components/ui/page-header";
+import { Tabs, TabLink } from "@/components/ui/tabs";
 import { KnowledgeList } from "@/components/leads/knowledge/knowledge-list";
 import { getKnowledgeCounts, searchKnowledge } from "@/lib/leads/knowledge/queries";
 import { COLLECTION_LABEL, isKnowledgeCollection, KNOWLEDGE_COLLECTIONS } from "@/lib/leads/knowledge/schema";
@@ -40,7 +40,7 @@ export default async function ConocimientoPage({ searchParams }: { searchParams:
         <Tabs>
           {KNOWLEDGE_COLLECTIONS.map((c) => (
             <TabLink key={c} href={`/leads/conocimiento?c=${c}`} active={c === collection}>
-              {COLLECTION_LABEL[c]} <span className="ml-1 font-mono text-xs text-lm-ink-3">{counts[c]}</span>
+              {COLLECTION_LABEL[c]} <span className="ml-1 font-mono text-xs opacity-60">{counts[c]}</span>
             </TabLink>
           ))}
         </Tabs>

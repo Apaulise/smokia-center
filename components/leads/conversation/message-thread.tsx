@@ -4,11 +4,11 @@ import { Check, Loader2, Pencil, X } from "lucide-react";
 import { useState, useTransition } from "react";
 
 import { ResponseTypeReview } from "@/components/leads/conversation/response-type-review";
-import { Button } from "@/components/leads/ui/button";
-import { Textarea } from "@/components/leads/ui/field";
-import { Tabs, TabButton } from "@/components/leads/ui/tabs";
-import { Timeline, TimelineEvent, TimelineMessage } from "@/components/leads/ui/timeline";
-import { EmptyLine } from "@/components/leads/ui/feedback";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/field";
+import { Tabs, TabButton } from "@/components/ui/tabs";
+import { Timeline, TimelineEvent, TimelineMessage } from "@/components/ui/timeline";
+import { EmptyLine } from "@/components/ui/feedback";
 import { ANGLE_LABEL, type SalesAngle } from "@/lib/leads/ai/angles";
 import { mergeConversation, type ThreadItem } from "@/lib/leads/conversation";
 import { updateLeadMessageContent } from "@/lib/leads/message-actions";
@@ -59,13 +59,13 @@ export function MessageThread({
       <div className="flex items-center justify-between">
         <span className="font-lm-sans text-[11px] font-semibold tracking-[0.1em] text-lm-ink-3 uppercase">Actividad</span>
         <Tabs>
-          <TabButton active={filter === "todo"} onClick={() => setFilter("todo")} className="text-xs">
+          <TabButton active={filter === "todo"} onClick={() => setFilter("todo")} className="h-7 px-3 text-xs">
             Todo
           </TabButton>
-          <TabButton active={filter === "mensajes"} onClick={() => setFilter("mensajes")} className="text-xs">
+          <TabButton active={filter === "mensajes"} onClick={() => setFilter("mensajes")} className="h-7 px-3 text-xs">
             Mensajes
           </TabButton>
-          <TabButton active={filter === "ia"} onClick={() => setFilter("ia")} className="text-xs">
+          <TabButton active={filter === "ia"} onClick={() => setFilter("ia")} className="h-7 px-3 text-xs">
             IA
           </TabButton>
         </Tabs>

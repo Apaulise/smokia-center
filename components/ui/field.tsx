@@ -38,7 +38,7 @@ export function Field({
 }
 
 const CONTROL = cn(
-  "w-full rounded-lm-sm border border-lm-line-strong bg-lm-raised px-3 text-lm-ink font-lm-sans text-sm",
+  "w-full rounded-lm-sm border border-lm-line-strong bg-lm-ink/5 px-3 text-lm-ink font-lm-sans text-sm",
   "placeholder:text-lm-ink-3",
   "focus:border-lm-signal focus:shadow-[0_0_0_3px_var(--color-lm-signal-soft)] focus:outline-none",
   "disabled:pointer-events-none disabled:opacity-45",

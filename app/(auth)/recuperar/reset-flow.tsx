@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { AuthShell } from "@/app/(auth)/login/login-screen";
-import { Button } from "@/components/leads/ui/button";
-import { Field, Input } from "@/components/leads/ui/field";
+import { Button } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/field";
 import { OTPInput } from "@/components/ui/otp-input";
 
 import { requestPasswordReset, updatePassword, verifyResetCode } from "./actions";

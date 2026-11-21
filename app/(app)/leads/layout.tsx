@@ -8,10 +8,9 @@ import type { ReactNode } from "react";
 export const maxDuration = 60;
 
 /**
- * Envoltorio visual del sistema "Señal y humo": fondo opaco, texto y
- * tipografía propios, para que el degradado del body (Marca) no se filtre
- * detrás de las pantallas de Leads.
+ * Envoltorio de las pantallas de Leads: tipografía y color de texto del
+ * sistema, y el alto mínimo del escenario (`lm-page-min`, globals.css).
  */
 export default function LeadsLayout({ children }: { children: ReactNode }) {
-  return <div className="min-h-dvh font-lm-sans text-lm-ink">{children}</div>;
+  return <div className="lm-page-min font-lm-sans text-lm-ink">{children}</div>;
 }

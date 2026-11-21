@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { PostThumb } from "@/components/brand/post-thumb";
-import { Meter } from "@/components/brand/ui/card";
+import { Meter } from "@/components/ui/card";
 import type { AnalysisPost, PatternRow } from "@/lib/brand/insights";
 
 const HOOK_MAX_CHARS = 160;

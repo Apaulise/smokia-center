@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 
 import { MediaUploader } from "@/components/brand/planner/media-uploader";
-import { Tag } from "@/components/brand/ui/card";
-import { Button } from "@/components/leads/ui/button";
-import { Dialog } from "@/components/leads/ui/dialog";
-import { Input, Select, Textarea } from "@/components/leads/ui/field";
+import { Tag } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm";
+import { Dialog } from "@/components/ui/dialog";
+import { Input, Select, Textarea } from "@/components/ui/field";
 import type { LinkablePost } from "@/lib/brand/goals/queries";
 import {
   createPlannerItem,
@@ -95,6 +96,7 @@ export function PlannerItemDialog({
   /** Algo cambió en la base: el padre refresca y cierra. */
   onDone: () => void;
 }) {
+  const { confirm, confirmDialog } = useConfirm();
   const published = item?.status === "PUBLICADO";
 
   const [title, setTitle] = useState(item?.title ?? "");
@@ -170,7 +172,15 @@ export function PlannerItemDialog({
 
   /** Escribe el guion en el campo, sin guardar: se lee, se corrige y se guarda con el resto de la pieza. */
   async function handleGenerateScript() {
-    if (script.trim() && !window.confirm("Ya hay un guion escrito. ¿Reemplazarlo por uno nuevo?")) return;
+    if (
+      script.trim() &&
+      !(await confirm({
+        title: "¿Reemplazar el guion?",
+        description: "Ya hay un guion escrito. El nuevo lo reemplaza en el campo; no se guarda hasta que guardes la pieza.",
+        confirmLabel: "Reemplazar",
+      }))
+    )
+      return;
     setBusy("script");
     setError(null);
     setScriptCaveat(null);
@@ -186,7 +196,7 @@ export function PlannerItemDialog({
 
   async function handleDelete() {
     if (!item) return;
-    if (!window.confirm("¿Eliminar esta pieza y sus archivos? No se puede deshacer.")) return;
+    if (!(await confirm({ title: "¿Eliminar esta pieza?", description: "Se borran también sus archivos. No se puede deshacer.", confirmLabel: "Eliminar", tone: "danger" }))) return;
     setBusy("delete");
     setError(null);
     const result = await deletePlannerItem(item.id);
@@ -237,7 +247,12 @@ export function PlannerItemDialog({
 
   async function handleUnlink() {
     if (!item) return;
-    if (!window.confirm("¿Desvincular esta pieza de su post? Vuelve a “Listo”, sin fecha de publicación ni métricas, y se puede vincular de nuevo.")) return;
+    const ok = await confirm({
+      title: "¿Desvincular esta pieza de su post?",
+      description: "Vuelve a «Listo», sin fecha de publicación ni métricas. Se puede vincular de nuevo.",
+      confirmLabel: "Desvincular",
+    });
+    if (!ok) return;
     setBusy("unlink");
     setError(null);
     const result = await unlinkPublishedItem(item.id);
@@ -253,330 +268,333 @@ export function PlannerItemDialog({
   const missingForEvaluation = [!objective ? "objetivo" : null, !hypothesis.trim() ? "hipótesis" : null].filter(Boolean);
 
   return (
-    <Dialog
-      open
-      onClose={busy ? () => undefined : onClose}
-      title={mode === "edit" ? "Editar pieza" : "Nueva pieza"}
-      description={item ? `${KIND_LABEL[item.kind]} · ${STATUS_LABEL[item.status]}` : undefined}
-      className="max-w-2xl"
-    >
-      <div className="space-y-5">
-        {published ? (
-          <div className="space-y-2 rounded-lm-md border border-lm-success/30 bg-lm-success-soft p-3 text-sm">
-            <p className="flex items-center gap-1.5 text-lm-success">
-              <CheckCircle2 className="size-4" />
-              Publicada{item?.published_at ? ` el ${new Date(item.published_at).toLocaleString("es-AR")}` : ""}.
-            </p>
-            {item?.post_id ? (
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                <Link href={`/marca/contenido/${item.post_id}`} className="inline-flex items-center gap-1.5 text-lm-signal-text hover:underline">
-                  Ver sus métricas
-                  <ExternalLink className="size-3.5" />
-                </Link>
-                <button
-                  type="button"
-                  onClick={handleUnlink}
-                  disabled={busy !== null}
-                  className="inline-flex items-center gap-1.5 text-xs text-lm-ink-2 hover:text-lm-ink disabled:opacity-40"
-                >
-                  {busy === "unlink" ? <Loader2 className="size-3.5 animate-spin" /> : <Link2Off className="size-3.5" />}
-                  Desvincular
-                </button>
-              </div>
-            ) : (
-              <p className="text-xs text-lm-ink-2">
-                {item?.kind === "HISTORIA"
-                  ? "Las historias no entran a la biblioteca de contenido, así que no tienen métricas para empalmar."
-                  : "Todavía no está empalmada con sus métricas: aparece después de la próxima sincronización."}
+    <>
+      <Dialog
+        open
+        onClose={busy ? () => undefined : onClose}
+        title={mode === "edit" ? "Editar pieza" : "Nueva pieza"}
+        description={item ? `${KIND_LABEL[item.kind]} · ${STATUS_LABEL[item.status]}` : undefined}
+        className="max-w-2xl"
+      >
+        <div className="space-y-5">
+          {published ? (
+            <div className="space-y-2 rounded-lm-md border border-lm-success/30 bg-lm-success-soft p-3 text-sm">
+              <p className="flex items-center gap-1.5 text-lm-success">
+                <CheckCircle2 className="size-4" />
+                Publicada{item?.published_at ? ` el ${new Date(item.published_at).toLocaleString("es-AR")}` : ""}.
               </p>
-            )}
-            <p className="text-xs text-lm-ink-2">Una pieza publicada conserva su tipo, estado y fecha; se puede seguir editando la hipótesis y las notas.</p>
-          </div>
-        ) : null}
+              {item?.post_id ? (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <Link href={`/marca/contenido/${item.post_id}`} className="inline-flex items-center gap-1.5 text-lm-signal-text hover:underline">
+                    Ver sus métricas
+                    <ExternalLink className="size-3.5" />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleUnlink}
+                    disabled={busy !== null}
+                    className="inline-flex items-center gap-1.5 text-xs text-lm-ink-2 hover:text-lm-ink disabled:opacity-40"
+                  >
+                    {busy === "unlink" ? <Loader2 className="size-3.5 animate-spin" /> : <Link2Off className="size-3.5" />}
+                    Desvincular
+                  </button>
+                </div>
+              ) : (
+                <p className="text-xs text-lm-ink-2">
+                  {item?.kind === "HISTORIA"
+                    ? "Las historias no entran a la biblioteca de contenido, así que no tienen métricas para empalmar."
+                    : "Todavía no está empalmada con sus métricas: aparece después de la próxima sincronización."}
+                </p>
+              )}
+              <p className="text-xs text-lm-ink-2">Una pieza publicada conserva su tipo, estado y fecha; se puede seguir editando la hipótesis y las notas.</p>
+            </div>
+          ) : null}
 
-        {item?.publish_error && !published ? (
-          <p className="flex items-start gap-1.5 rounded-lm-md border border-lm-line-strong bg-lm-raised p-3 text-xs text-lm-ink-2">
-            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-            El último intento de publicar falló: {item.publish_error}
-          </p>
-        ) : null}
+          {item?.publish_error && !published ? (
+            <p className="flex items-start gap-1.5 rounded-lm-md border border-lm-line-strong bg-lm-raised p-3 text-xs text-lm-ink-2">
+              <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+              El último intento de publicar falló: {item.publish_error}
+            </p>
+          ) : null}
 
-        <Field label="Título">
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Un nombre corto para encontrarla" autoFocus={mode === "create"} />
-        </Field>
-
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Tipo">
-            <Select value={kind} onChange={(e) => setKind(e.target.value as ContentKind)} disabled={published}>
-              {kindOptions.map((value) => (
-                <option key={value} value={value}>
-                  {KIND_LABEL[value]}
-                </option>
-              ))}
-            </Select>
+          <Field label="Título">
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Un nombre corto para encontrarla" autoFocus={mode === "create"} />
           </Field>
-          <Field label="Estado">
-            {published ? (
-              <div className="flex h-10 items-center">
-                <Tag size="md" className="border border-lm-success/45 text-lm-success">Publicado</Tag>
-              </div>
-            ) : (
-              <Select value={status} onChange={(e) => setStatus(e.target.value as ContentStatus)}>
-                {EDITABLE_STATUSES.map((value) => (
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Tipo">
+              <Select value={kind} onChange={(e) => setKind(e.target.value as ContentKind)} disabled={published}>
+                {kindOptions.map((value) => (
                   <option key={value} value={value}>
-                    {STATUS_LABEL[value]}
+                    {KIND_LABEL[value]}
                   </option>
                 ))}
               </Select>
-            )}
-          </Field>
-          <Field label="Objetivo" hint="Contra qué se va a medir (SOC §16).">
-            <Select value={objective} onChange={(e) => setObjective(e.target.value as ContentObjective | "")}>
-              <option value="">Sin definir</option>
-              {CONTENT_OBJECTIVES.map((value) => (
-                <option key={value} value={value}>
-                  {OBJECTIVE_LABEL[value]}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Fecha planificada">
-            <Input type="date" mono value={date} onChange={(e) => setDate(e.target.value)} disabled={published} />
-          </Field>
-          <Field label="Hora">
-            <Input type="time" mono value={time} onChange={(e) => setTime(e.target.value)} disabled={published || !date} />
-          </Field>
-        </div>
-
-        <Field label="Hipótesis" hint="Escribila antes de grabar: es lo que después se compara contra el resultado (SOC §12).">
-          <Textarea value={hypothesis} onChange={(e) => setHypothesis(e.target.value)} placeholder={HYPOTHESIS_PLACEHOLDER} className="min-h-20" />
-        </Field>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Hook">
-            <Input value={hook} onChange={(e) => setHook(e.target.value)} placeholder="La primera frase, o el primer plano" />
-          </Field>
-          <Field label="Ángulo">
-            <Input value={angle} onChange={(e) => setAngle(e.target.value)} placeholder="Desde dónde se cuenta" />
-          </Field>
-        </div>
-
-        {item?.source_url ? (
-          <p className="rounded-lm-md border border-lm-line bg-lm-surface px-3 py-2 text-xs text-lm-ink-2">
-            Salió de un outlier de la competencia.{" "}
-            <a href={item.source_url} target="_blank" rel="noreferrer noopener" className="text-lm-signal-text hover:underline">
-              Ver la publicación original
-            </a>
-          </p>
-        ) : null}
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Desciende de" hint="Si es una variante de un ganador, cuál: forma el cluster (SOC §13).">
-            <Select value={parentId} onChange={(e) => setParentId(e.target.value)}>
-              <option value="">Ninguna — es un experimento nuevo</option>
-              {lineage.map((choice) => (
-                <option key={choice.id} value={choice.id}>
-                  {choice.title} ({KIND_LABEL[choice.kind]})
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Salió de" hint="La nota de RADAR o de WINNERS que dio la idea.">
-            <Select value={knowledgeId} onChange={(e) => setKnowledgeId(e.target.value)}>
-              <option value="">Ninguna</option>
-              {choices.notes.map((note) => (
-                <option key={note.id} value={note.id}>
-                  {note.collection} · {note.title}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        </div>
-
-        <Field label="Idea">
-          <Textarea value={idea} onChange={(e) => setIdea(e.target.value)} className="min-h-24" />
-        </Field>
-        <Field
-          label="Guion"
-          hint={busy === "script" ? "Escribiendo el guion a partir de la idea: puede tardar un minuto." : undefined}
-          action={
-            published ? null : (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                disabled={busy !== null || !idea.trim()}
-                title={idea.trim() ? undefined : "Escribí la idea primero: el guion se arma a partir de ella."}
-                onClick={handleGenerateScript}
-              >
-                {busy === "script" ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
-                {busy === "script" ? "Generando…" : "Generar guion"}
-              </Button>
-            )
-          }
-        >
-          <Textarea value={script} onChange={(e) => setScript(e.target.value)} className="min-h-32" />
-        </Field>
-        {scriptCaveat ? (
-          <p className="-mt-3 flex items-start gap-1.5 rounded-lm-md border border-lm-line-strong bg-lm-raised p-3 text-xs text-lm-ink-2">
-            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-            {scriptCaveat}
-          </p>
-        ) : null}
-
-        {isStory ? (
-          <p className="text-xs text-lm-ink-2">Las historias no llevan caption ni hashtags: Instagram no los admite.</p>
-        ) : (
-          <>
-            <Field label="Caption">
-              <Textarea value={caption} onChange={(e) => setCaption(e.target.value)} className="min-h-24" />
             </Field>
-            <Field
-              label="Hashtags"
-              hint={
-                <span className={composedLength > CAPTION_MAX_CHARS ? "text-lm-danger" : undefined}>
-                  Caption con hashtags: {composedLength} de {CAPTION_MAX_CHARS} caracteres.
-                </span>
-              }
-            >
-              <Input value={hashtags} onChange={(e) => setHashtags(e.target.value)} placeholder="#ia #automatizacion" />
+            <Field label="Estado">
+              {published ? (
+                <div className="flex h-10 items-center">
+                  <Tag size="md" className="border border-lm-success/45 text-lm-success">Publicado</Tag>
+                </div>
+              ) : (
+                <Select value={status} onChange={(e) => setStatus(e.target.value as ContentStatus)}>
+                  {EDITABLE_STATUSES.map((value) => (
+                    <option key={value} value={value}>
+                      {STATUS_LABEL[value]}
+                    </option>
+                  ))}
+                </Select>
+              )}
             </Field>
-          </>
-        )}
-
-        {PUBLISH_FROM_APP_ENABLED ? (
-        <div className="space-y-2 border-t border-lm-line pt-5">
-          <h4 className="text-xs font-medium tracking-wide text-lm-ink-2 uppercase">Archivo</h4>
-          {item ? (
-            <MediaUploader
-              ownerId={ownerId}
-              itemId={item.id}
-              kind={kind}
-              media={media}
-              onChange={setMedia}
-              disabled={published || busy !== null}
-            />
-          ) : (
-            <p className="text-xs text-lm-ink-2">Guardá la pieza y abrila de nuevo para subir el archivo: la ruta en el bucket lleva su id.</p>
-          )}
-        </div>
-        ) : null}
-      </div>
-
-      {error ? <p className="mt-4 text-sm text-lm-danger">{error}</p> : null}
-
-      {linking && item ? (
-        <div className="mt-4 space-y-3 rounded-lm-md border border-lm-line-strong bg-lm-raised p-4">
-          <p className="text-sm text-lm-ink">
-            ¿Cuál de tus publicaciones es <strong>“{title}”</strong>?
-          </p>
-          {candidates.length === 0 ? (
-            <p className="text-xs text-lm-ink-2">
-              No hay posts propios sin vincular de un formato compatible. Si la publicaste hace poco, sincronizá desde el dashboard de Marca y volvé a probar.
-            </p>
-          ) : (
-            <ul className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
-              {candidates.map((post) => (
-                <li key={post.postId}>
-                  <label
-                    className={`flex cursor-pointer items-start gap-3 rounded-lm-md border p-2.5 text-sm ${
-                      selectedPostId === post.postId ? "border-lm-signal/60 bg-lm-signal-soft" : "border-lm-line hover:bg-lm-surface"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="linkable-post"
-                      className="mt-1 accent-lm-signal"
-                      checked={selectedPostId === post.postId}
-                      onChange={() => setSelectedPostId(post.postId)}
-                    />
-                    <span className="min-w-0">
-                      <span className="tabular block text-xs text-lm-ink-2">
-                        {post.publishedAt ? new Date(post.publishedAt).toLocaleString("es-AR") : "sin fecha"} ·{" "}
-                        {KIND_LABEL[post.kind as ContentKind] ?? post.kind}
-                        {post.views !== null ? ` · ${post.views.toLocaleString("es-AR")} views` : ""}
-                      </span>
-                      <span className="block truncate text-lm-ink">{post.caption?.replace(/\s+/g, " ").trim() || "Sin caption"}</span>
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="text-xs text-lm-ink-2">Queda publicada con la fecha real del post y toma sus métricas. Se puede deshacer con “Desvincular”.</p>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => setLinking(false)} disabled={busy === "link"}>
-              Volver
-            </Button>
-            <Button type="button" variant="primary" onClick={handleLink} disabled={busy === "link" || !selectedPostId}>
-              {busy === "link" ? <Loader2 className="size-3.5 animate-spin" /> : <Link2 className="size-3.5" />}
-              {busy === "link" ? "Vinculando…" : "Marcar como publicada"}
-            </Button>
+            <Field label="Objetivo" hint="Contra qué se va a medir (SOC §16).">
+              <Select value={objective} onChange={(e) => setObjective(e.target.value as ContentObjective | "")}>
+                <option value="">Sin definir</option>
+                {CONTENT_OBJECTIVES.map((value) => (
+                  <option key={value} value={value}>
+                    {OBJECTIVE_LABEL[value]}
+                  </option>
+                ))}
+              </Select>
+            </Field>
           </div>
-        </div>
-      ) : confirming && item ? (
-        <div className="mt-4 space-y-3 rounded-lm-md border border-lm-line-strong bg-lm-raised p-4">
-          <p className="text-sm text-lm-ink">
-            Vas a publicar <strong>“{title}”</strong> en {accountUsername ? `@${accountUsername}` : "Instagram"} ahora mismo. Desde la app no se puede deshacer.
-          </p>
-          {missingForEvaluation.length > 0 ? (
-            <p className="flex items-start gap-1.5 text-xs text-lm-ink-2">
-              <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-              Sale sin {missingForEvaluation.join(" ni ")}: después no vas a poder saber si el experimento funcionó ni contra qué.
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Fecha planificada">
+              <Input type="date" mono value={date} onChange={(e) => setDate(e.target.value)} disabled={published} />
+            </Field>
+            <Field label="Hora">
+              <Input type="time" mono value={time} onChange={(e) => setTime(e.target.value)} disabled={published || !date} />
+            </Field>
+          </div>
+
+          <Field label="Hipótesis" hint="Escribila antes de grabar: es lo que después se compara contra el resultado (SOC §12).">
+            <Textarea value={hypothesis} onChange={(e) => setHypothesis(e.target.value)} placeholder={HYPOTHESIS_PLACEHOLDER} className="min-h-20" />
+          </Field>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Hook">
+              <Input value={hook} onChange={(e) => setHook(e.target.value)} placeholder="La primera frase, o el primer plano" />
+            </Field>
+            <Field label="Ángulo">
+              <Input value={angle} onChange={(e) => setAngle(e.target.value)} placeholder="Desde dónde se cuenta" />
+            </Field>
+          </div>
+
+          {item?.source_url ? (
+            <p className="rounded-lm-md border border-lm-line bg-lm-surface px-3 py-2 text-xs text-lm-ink-2">
+              Salió de un outlier de la competencia.{" "}
+              <a href={item.source_url} target="_blank" rel="noreferrer noopener" className="text-lm-signal-text hover:underline">
+                Ver la publicación original
+              </a>
             </p>
           ) : null}
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => setConfirming(false)} disabled={busy === "publish"}>
-              Volver
-            </Button>
-            <Button type="button" variant="primary" onClick={handlePublish} disabled={busy === "publish"}>
-              {busy === "publish" ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
-              {busy === "publish" ? "Publicando…" : "Sí, publicar ahora"}
-            </Button>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Desciende de" hint="Si es una variante de un ganador, cuál: forma el cluster (SOC §13).">
+              <Select value={parentId} onChange={(e) => setParentId(e.target.value)}>
+                <option value="">Ninguna — es un experimento nuevo</option>
+                {lineage.map((choice) => (
+                  <option key={choice.id} value={choice.id}>
+                    {choice.title} ({KIND_LABEL[choice.kind]})
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Salió de" hint="La nota de RADAR o de WINNERS que dio la idea.">
+              <Select value={knowledgeId} onChange={(e) => setKnowledgeId(e.target.value)}>
+                <option value="">Ninguna</option>
+                {choices.notes.map((note) => (
+                  <option key={note.id} value={note.id}>
+                    {note.collection} · {note.title}
+                  </option>
+                ))}
+              </Select>
+            </Field>
           </div>
-          {busy === "publish" ? <p className="text-xs text-lm-ink-2">Instagram procesa el archivo antes de publicarlo: un video puede tardar hasta un minuto. No cierres esta ventana.</p> : null}
-        </div>
-      ) : (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-lm-line pt-4">
-          {item && !published ? (
-            <Button type="button" variant="ghost" size="sm" disabled={busy !== null} onClick={handleDelete}>
-              {busy === "delete" ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
-              Eliminar
-            </Button>
+
+          <Field label="Idea">
+            <Textarea value={idea} onChange={(e) => setIdea(e.target.value)} className="min-h-24" />
+          </Field>
+          <Field
+            label="Guion"
+            hint={busy === "script" ? "Escribiendo el guion a partir de la idea: puede tardar un minuto." : undefined}
+            action={
+              published ? null : (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={busy !== null || !idea.trim()}
+                  title={idea.trim() ? undefined : "Escribí la idea primero: el guion se arma a partir de ella."}
+                  onClick={handleGenerateScript}
+                >
+                  {busy === "script" ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+                  {busy === "script" ? "Generando…" : "Generar guion"}
+                </Button>
+              )
+            }
+          >
+            <Textarea value={script} onChange={(e) => setScript(e.target.value)} className="min-h-32" />
+          </Field>
+          {scriptCaveat ? (
+            <p className="-mt-3 flex items-start gap-1.5 rounded-lm-md border border-lm-line-strong bg-lm-raised p-3 text-xs text-lm-ink-2">
+              <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+              {scriptCaveat}
+            </p>
+          ) : null}
+
+          {isStory ? (
+            <p className="text-xs text-lm-ink-2">Las historias no llevan caption ni hashtags: Instagram no los admite.</p>
           ) : (
-            <span />
+            <>
+              <Field label="Caption">
+                <Textarea value={caption} onChange={(e) => setCaption(e.target.value)} className="min-h-24" />
+              </Field>
+              <Field
+                label="Hashtags"
+                hint={
+                  <span className={composedLength > CAPTION_MAX_CHARS ? "text-lm-danger" : undefined}>
+                    Caption con hashtags: {composedLength} de {CAPTION_MAX_CHARS} caracteres.
+                  </span>
+                }
+              >
+                <Input value={hashtags} onChange={(e) => setHashtags(e.target.value)} placeholder="#ia #automatizacion" />
+              </Field>
+            </>
           )}
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {PUBLISH_FROM_APP_ENABLED && item && !published ? (
-              <span className="text-xs text-lm-ink-2" title={publishProblem ?? undefined}>
-                {publishProblem ? publishProblem : null}
-              </span>
-            ) : null}
-            <Button type="button" variant="ghost" onClick={onClose} disabled={busy !== null}>
-              Cancelar
-            </Button>
-            {item && !published && compatibleKinds ? (
-              <Button type="button" variant="secondary" disabled={busy !== null} onClick={() => setLinking(true)}>
-                <Link2 className="size-3.5" />
-                Ya la publiqué
-              </Button>
-            ) : null}
-            {PUBLISH_FROM_APP_ENABLED && item && !published ? (
-              <Button type="button" variant="secondary" disabled={busy !== null || publishProblem !== null} onClick={() => setConfirming(true)}>
-                <Send className="size-3.5" />
-                Publicar ahora
-              </Button>
-            ) : null}
-            <Button type="button" variant="primary" disabled={busy !== null || !title.trim()} onClick={handleSave}>
-              {busy === "save" ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" />}
-              {mode === "edit" ? "Guardar" : "Crear"}
-            </Button>
+
+          {PUBLISH_FROM_APP_ENABLED ? (
+          <div className="space-y-2 border-t border-lm-line pt-5">
+            <h4 className="text-xs font-medium tracking-wide text-lm-ink-2 uppercase">Archivo</h4>
+            {item ? (
+              <MediaUploader
+                ownerId={ownerId}
+                itemId={item.id}
+                kind={kind}
+                media={media}
+                onChange={setMedia}
+                disabled={published || busy !== null}
+              />
+            ) : (
+              <p className="text-xs text-lm-ink-2">Guardá la pieza y abrila de nuevo para subir el archivo: la ruta en el bucket lleva su id.</p>
+            )}
           </div>
+          ) : null}
         </div>
-      )}
-    </Dialog>
+
+        {error ? <p className="mt-4 text-sm text-lm-danger">{error}</p> : null}
+
+        {linking && item ? (
+          <div className="mt-4 space-y-3 rounded-lm-md border border-lm-line-strong bg-lm-raised p-4">
+            <p className="text-sm text-lm-ink">
+              ¿Cuál de tus publicaciones es <strong>“{title}”</strong>?
+            </p>
+            {candidates.length === 0 ? (
+              <p className="text-xs text-lm-ink-2">
+                No hay posts propios sin vincular de un formato compatible. Si la publicaste hace poco, sincronizá desde el dashboard de Marca y volvé a probar.
+              </p>
+            ) : (
+              <ul className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
+                {candidates.map((post) => (
+                  <li key={post.postId}>
+                    <label
+                      className={`flex cursor-pointer items-start gap-3 rounded-lm-md border p-2.5 text-sm ${
+                        selectedPostId === post.postId ? "border-lm-signal/60 bg-lm-signal-soft" : "border-lm-line hover:bg-lm-surface"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="linkable-post"
+                        className="mt-1 accent-lm-signal"
+                        checked={selectedPostId === post.postId}
+                        onChange={() => setSelectedPostId(post.postId)}
+                      />
+                      <span className="min-w-0">
+                        <span className="tabular block text-xs text-lm-ink-2">
+                          {post.publishedAt ? new Date(post.publishedAt).toLocaleString("es-AR") : "sin fecha"} ·{" "}
+                          {KIND_LABEL[post.kind as ContentKind] ?? post.kind}
+                          {post.views !== null ? ` · ${post.views.toLocaleString("es-AR")} views` : ""}
+                        </span>
+                        <span className="block truncate text-lm-ink">{post.caption?.replace(/\s+/g, " ").trim() || "Sin caption"}</span>
+                      </span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="text-xs text-lm-ink-2">Queda publicada con la fecha real del post y toma sus métricas. Se puede deshacer con “Desvincular”.</p>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={() => setLinking(false)} disabled={busy === "link"}>
+                Volver
+              </Button>
+              <Button type="button" variant="primary" onClick={handleLink} disabled={busy === "link" || !selectedPostId}>
+                {busy === "link" ? <Loader2 className="size-3.5 animate-spin" /> : <Link2 className="size-3.5" />}
+                {busy === "link" ? "Vinculando…" : "Marcar como publicada"}
+              </Button>
+            </div>
+          </div>
+        ) : confirming && item ? (
+          <div className="mt-4 space-y-3 rounded-lm-md border border-lm-line-strong bg-lm-raised p-4">
+            <p className="text-sm text-lm-ink">
+              Vas a publicar <strong>“{title}”</strong> en {accountUsername ? `@${accountUsername}` : "Instagram"} ahora mismo. Desde la app no se puede deshacer.
+            </p>
+            {missingForEvaluation.length > 0 ? (
+              <p className="flex items-start gap-1.5 text-xs text-lm-ink-2">
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                Sale sin {missingForEvaluation.join(" ni ")}: después no vas a poder saber si el experimento funcionó ni contra qué.
+              </p>
+            ) : null}
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={() => setConfirming(false)} disabled={busy === "publish"}>
+                Volver
+              </Button>
+              <Button type="button" variant="primary" onClick={handlePublish} disabled={busy === "publish"}>
+                {busy === "publish" ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+                {busy === "publish" ? "Publicando…" : "Sí, publicar ahora"}
+              </Button>
+            </div>
+            {busy === "publish" ? <p className="text-xs text-lm-ink-2">Instagram procesa el archivo antes de publicarlo: un video puede tardar hasta un minuto. No cierres esta ventana.</p> : null}
+          </div>
+        ) : (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-lm-line pt-4">
+            {item && !published ? (
+              <Button type="button" variant="ghost" size="sm" disabled={busy !== null} onClick={handleDelete}>
+                {busy === "delete" ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+                Eliminar
+              </Button>
+            ) : (
+              <span />
+            )}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {PUBLISH_FROM_APP_ENABLED && item && !published ? (
+                <span className="text-xs text-lm-ink-2" title={publishProblem ?? undefined}>
+                  {publishProblem ? publishProblem : null}
+                </span>
+              ) : null}
+              <Button type="button" variant="ghost" onClick={onClose} disabled={busy !== null}>
+                Cancelar
+              </Button>
+              {item && !published && compatibleKinds ? (
+                <Button type="button" variant="secondary" disabled={busy !== null} onClick={() => setLinking(true)}>
+                  <Link2 className="size-3.5" />
+                  Ya la publiqué
+                </Button>
+              ) : null}
+              {PUBLISH_FROM_APP_ENABLED && item && !published ? (
+                <Button type="button" variant="secondary" disabled={busy !== null || publishProblem !== null} onClick={() => setConfirming(true)}>
+                  <Send className="size-3.5" />
+                  Publicar ahora
+                </Button>
+              ) : null}
+              <Button type="button" variant="primary" disabled={busy !== null || !title.trim()} onClick={handleSave}>
+                {busy === "save" ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" />}
+                {mode === "edit" ? "Guardar" : "Crear"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Dialog>
+      {confirmDialog}
+    </>
   );
 }

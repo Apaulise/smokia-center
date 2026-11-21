@@ -10,6 +10,7 @@ import {
   Megaphone,
   Menu,
   Receipt,
+  Search,
   Settings,
   Users,
   X,
@@ -24,15 +25,17 @@ import { MODULES, type NavModule } from "@/components/shell/nav";
 import { usePendingPath } from "@/components/shell/navigation-state";
 import { ProfileAvatar } from "@/components/shell/profile-avatar";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
+import { useCommandShortcuts } from "@/components/shell/use-command-shortcuts";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 /*
- * Shell de navegación (Design System Sidebar, "Señal y humo"): 240px
- * expandida / 64px colapsada (sólo íconos), marca vertical de 2px en
- * `signal` para el ítem activo. Es infraestructura compartida por todos los
- * módulos —incluida Marca personal—, no contenido de un módulo puntual, así
- * que se redibuja acá aunque Marca siga fuera de alcance (CLAUDE.md §2).
+ * Shell de navegación en "Vidrio" (CLAUDE.md §6): un panel flotante de 240px
+ * (60px colapsado). Colapsado es un riel de íconos redondos, uno por pantalla
+ * del módulo, como el de la referencia: por eso cada `NavChild` trae su ícono.
+ * El ítem activo es una pastilla de vidrio que se desliza, con el ícono en
+ * `signal`. Es infraestructura compartida por todos los módulos, no contenido
+ * de un módulo puntual.
  */
 const ICONS = {
   panel: LayoutGrid,
@@ -90,6 +93,8 @@ export function Sidebar({
   const activeModule = MODULES.find((module) => module.available && isModuleActive(currentPathname, module));
   const ActiveIcon = activeModule ? ICONS[activeModule.icon] : LayoutGrid;
   const collapsed = useSyncExternalStore(subscribeCollapsed, readCollapsed, () => false);
+  // G D, G C, N T…: los atajos de toda la app (commands.ts). Con ⌘K abierto manda la paleta.
+  useCommandShortcuts(!paletteOpen);
 
   // Cerrar el menú mobile al navegar: se ajusta durante el render, no en un
   // efecto, para no pagar un render extra con el menú todavía abierto.
@@ -128,39 +133,51 @@ export function Sidebar({
 
   return (
     <>
-      {/* Barra superior — sólo mobile/tablet (<1280). En mobile puro (<768) el
-          shell la reemplaza por el tab bar inferior, ver AppShellMobileNav. */}
-      <header className="flex items-center justify-between lm-glass border-b px-4 py-3 lg:hidden">
-        <span className="font-lm-sans text-sm font-semibold text-lm-ink">
-          Smok<span className="text-lm-ink-2">IA</span>
-        </span>
-        <button
-          type="button"
-          onClick={() => setOpen((value) => !value)}
-          className="rounded-lm-sm border border-lm-line-strong p-2 text-lm-ink-2"
-          aria-label={open ? "Cerrar menú" : "Abrir menú"}
-          aria-expanded={open}
-        >
-          {open ? <X className="size-4" /> : <Menu className="size-4" />}
-        </button>
+      {/* Barra superior — sólo mobile/tablet (<1024). Alto fijo de 56px: es el `--lm-shell-y` de mobile (globals.css). */}
+      <header className="lm-glass flex h-14 shrink-0 items-center justify-between border-b px-4 lg:hidden">
+        <Link href="/" className="flex items-center gap-2 font-lm-sans text-[15px] font-semibold text-lm-ink">
+          <Image src="/logo-mark.png" alt="" width={13} height={22} className="h-[22px] w-auto shrink-0" />
+          SmokIA
+        </Link>
+        <div className="flex items-center gap-1.5">
+          {/* En el celular no hay ⌘K: la búsqueda tiene que estar a un toque, sin abrir el menú. */}
+          <button
+            type="button"
+            onClick={() => setPaletteOpen(true)}
+            className="grid size-9 place-items-center rounded-full bg-lm-ink/5 text-lm-ink-2 transition-colors hover:bg-lm-ink/10 hover:text-lm-ink focus-visible:lm-focus"
+            aria-label="Buscar un lead, una lista o una pantalla"
+          >
+            <Search className="size-4" strokeWidth={1.5} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setOpen((value) => !value)}
+            className="grid size-9 place-items-center rounded-full bg-lm-ink/5 text-lm-ink-2 transition-colors hover:bg-lm-ink/10 hover:text-lm-ink focus-visible:lm-focus"
+            aria-label={open ? "Cerrar menú" : "Abrir menú"}
+            aria-expanded={open}
+          >
+            {open ? <X className="size-4" strokeWidth={1.5} /> : <Menu className="size-4" strokeWidth={1.5} />}
+          </button>
+        </div>
       </header>
 
       <aside
         className={cn(
           "lm-glass flex-col font-lm-sans",
-          "lg:sticky lg:top-0 lg:flex lg:h-dvh lg:shrink-0 lg:border-r lg:transition-[width] lg:duration-150",
-          collapsed ? "lg:w-16" : "lg:w-60",
+          "lg:sticky lg:top-(--lm-shell-gap) lg:flex lg:h-[calc(100dvh-var(--lm-shell-y))] lg:shrink-0 lg:overflow-hidden lg:rounded-lm-xl lg:border",
+          "lg:transition-[width] lg:duration-200 lg:ease-out motion-reduce:transition-none",
+          collapsed ? "lg:w-[60px]" : "lg:w-60",
           open ? "flex border-b" : "hidden",
         )}
       >
         <div
           className={cn(
-            "hidden h-14 items-center gap-2 px-4",
-            collapsed ? "lg:flex lg:justify-center lg:px-0" : "lg:flex lg:justify-between",
+            "hidden h-14 shrink-0 items-center gap-2 px-3",
+            collapsed ? "lg:flex lg:justify-center" : "lg:flex lg:justify-between lg:pl-4",
           )}
         >
           {collapsed ? null : (
-            <Link href="/" className="flex items-center gap-2 text-[15px] font-semibold text-lm-ink">
+            <Link href="/" className="flex items-center gap-2.5 text-[15px] font-semibold tracking-[-0.02em] text-lm-ink">
               {/* 230×400 real: declarar el ratio real evita el warning de Next por width/height que no matchean el CSS. */}
               <Image src="/logo-mark.png" alt="" width={15} height={26} className="h-[26px] w-auto shrink-0" priority />
               SmokIA
@@ -169,52 +186,54 @@ export function Sidebar({
           <button
             type="button"
             onClick={toggleCollapsed}
-            className="flex shrink-0 items-center justify-center rounded-lm-sm p-1.5 text-lm-ink-3 transition-colors hover:bg-lm-raised hover:text-lm-ink"
+            className={cn(RAIL_BUTTON, "size-9 shrink-0 text-lm-ink-3")}
             aria-label={collapsed ? "Expandir barra lateral" : "Colapsar barra lateral"}
             title={collapsed ? "Expandir barra lateral" : "Colapsar barra lateral"}
           >
-            {collapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
+            {collapsed ? <ChevronRight className="size-4" strokeWidth={1.5} /> : <ChevronLeft className="size-4" strokeWidth={1.5} />}
           </button>
         </div>
 
-        <div className={cn("px-2 pb-2", collapsed && "lg:hidden")}>
+        <div className={cn("px-3 pt-3 pb-2 lg:pt-0", collapsed && "lg:px-0 lg:pb-1")}>
           <button
             type="button"
             onClick={() => setPaletteOpen(true)}
-            className="flex h-8 w-full items-center gap-2 rounded-lm-sm border border-lm-line-strong bg-lm-raised px-2.5 text-left text-[13px] text-lm-ink-3 transition-colors hover:text-lm-ink-2"
+            title={collapsed ? "Buscar o ejecutar (⌘K)" : undefined}
+            aria-label="Buscar o ejecutar"
+            className={cn(
+              "flex h-9 w-full items-center gap-2 rounded-lm-sm border border-lm-line bg-lm-ink/5 px-2.5 text-left text-[13px] text-lm-ink-3 transition-colors hover:bg-lm-ink/10 hover:text-lm-ink-2 focus-visible:lm-focus",
+              collapsed && "lg:mx-auto lg:size-9 lg:justify-center lg:rounded-full lg:border-transparent lg:bg-transparent lg:px-0",
+            )}
           >
-            <span className="flex-1 truncate">Buscar o ejecutar…</span>
-            <span className="rounded-lm-xs border border-lm-line px-1 py-px font-mono text-[10.5px] text-lm-ink-3">
+            <Search className="size-4 shrink-0" strokeWidth={1.5} />
+            <span className={cn("flex-1 truncate", collapsed && "lg:hidden")}>Buscar o ejecutar…</span>
+            <span className={cn("rounded-lm-xs border border-lm-line px-1 py-px font-mono text-[10.5px] text-lm-ink-3", collapsed && "lg:hidden")}>
               ⌘K
             </span>
           </button>
         </div>
 
-        <nav className={cn("flex-1 space-y-0.5 overflow-y-auto px-2 py-1", collapsed && "lg:px-2")}>
+        <nav className={cn("flex-1 overflow-y-auto px-3 py-1", collapsed && "lg:px-3")} aria-label="Navegación">
           <Link
             href="/"
             title={collapsed ? "Todos los gestores" : undefined}
-            className={cn(
-              "flex h-8 items-center gap-2.5 rounded-lm-sm px-2 text-sm text-lm-ink-2 transition-colors hover:bg-lm-raised hover:text-lm-ink",
-              collapsed && "lg:justify-center lg:px-0",
-            )}
+            className={cn(RAIL_ROW, "text-lm-ink-2", collapsed && RAIL_ROW_COLLAPSED)}
           >
             <ArrowLeft className="size-4 shrink-0" strokeWidth={1.5} />
             <span className={cn("truncate", collapsed && "lg:hidden")}>Todos los gestores</span>
           </Link>
 
           {activeModule ? (
-            <div className="pt-2">
+            <div className="pt-3">
               <div
                 title={collapsed ? activeModule.label : undefined}
-                className={cn(
-                  "relative flex h-8 items-center gap-2.5 rounded-lm-sm px-2 text-sm text-lm-ink",
-                  collapsed && "lg:justify-center lg:px-0",
-                  "before:absolute before:top-1.5 before:bottom-1.5 before:left-[-8px] before:w-0.5 before:rounded-lm-xs before:bg-lm-signal",
-                )}
+                className={cn("flex h-9 items-center gap-2.5 px-1.5", collapsed && "lg:justify-center lg:px-0")}
               >
-                <ActiveIcon className="size-4 shrink-0 text-lm-signal-text" strokeWidth={1.5} />
-                <span className={cn("truncate", collapsed && "lg:hidden")}>{activeModule.label}</span>
+                {/* El módulo en el que se está: la ficha amarilla, como el ícono de marca de la referencia. */}
+                <span className="grid size-[26px] shrink-0 place-items-center rounded-lm-xs bg-lm-signal text-lm-on-signal">
+                  <ActiveIcon className="size-[15px]" strokeWidth={1.75} />
+                </span>
+                <span className={cn("truncate text-[13px] font-semibold text-lm-ink", collapsed && "lg:hidden")}>{activeModule.label}</span>
               </div>
 
               {activeModule.children ? (
@@ -224,17 +243,18 @@ export function Sidebar({
           ) : null}
         </nav>
 
-        <div className={cn("space-y-0.5 border-t border-lm-line px-2 py-2", collapsed && "lg:px-2")}>
+        <div className={cn("flex flex-col gap-1 border-t border-lm-line px-3 py-3", collapsed && "lg:px-3")}>
           <Link
             href="/configuracion"
             title={collapsed ? "Configuración" : undefined}
+            aria-current={pathname.startsWith("/configuracion") ? "page" : undefined}
             className={cn(
-              "flex h-8 items-center gap-2.5 rounded-lm-sm px-2 text-sm text-lm-ink-2 transition-colors",
-              collapsed && "lg:justify-center lg:px-0",
-              pathname.startsWith("/configuracion") ? "text-lm-ink" : "hover:bg-lm-raised hover:text-lm-ink",
+              RAIL_ROW,
+              pathname.startsWith("/configuracion") ? "bg-lm-ink/8 text-lm-ink" : "text-lm-ink-2",
+              collapsed && RAIL_ROW_COLLAPSED,
             )}
           >
-            <Settings className="size-4 shrink-0" strokeWidth={1.5} />
+            <Settings className={cn("size-4 shrink-0", pathname.startsWith("/configuracion") && "text-lm-signal-text")} strokeWidth={1.5} />
             <span className={cn(collapsed && "lg:hidden")}>Configuración</span>
           </Link>
 
@@ -242,26 +262,23 @@ export function Sidebar({
             type="button"
             onClick={signOut}
             title={collapsed ? "Salir" : undefined}
-            className={cn(
-              "flex h-8 w-full cursor-pointer items-center gap-2.5 rounded-lm-sm px-2 text-sm text-lm-ink-2 transition-colors hover:bg-lm-raised hover:text-lm-ink",
-              collapsed && "lg:justify-center lg:px-0",
-            )}
+            className={cn(RAIL_ROW, "w-full cursor-pointer text-lm-ink-2", collapsed && RAIL_ROW_COLLAPSED)}
           >
             <LogOut className="size-4 shrink-0" strokeWidth={1.5} />
             <span className={cn(collapsed && "lg:hidden")}>Salir</span>
           </button>
 
-          <div className={cn("px-2 pt-1", collapsed && "lg:hidden")}>
+          <div className={cn("pt-1", collapsed && "lg:hidden")}>
             <ThemeToggle />
           </div>
           {collapsed ? <ThemeToggle variant="icon" className="hidden lg:flex" /> : null}
 
           <div
-            className={cn("flex items-center gap-2.5 px-2 pt-2", collapsed && "lg:justify-center lg:px-0")}
+            className={cn("flex items-center gap-2.5 px-1.5 pt-2", collapsed && "lg:justify-center lg:px-0")}
             title={collapsed ? name : undefined}
           >
-            <ProfileAvatar url={avatarUrl} name={name} className="size-7 text-xs" />
-            <span className={cn("min-w-0 flex-1 truncate text-sm text-lm-ink", collapsed && "lg:hidden")}>{name}</span>
+            <ProfileAvatar url={avatarUrl} name={name} className="size-[30px] text-xs" />
+            <span className={cn("min-w-0 flex-1 truncate text-[13px] text-lm-ink", collapsed && "lg:hidden")}>{name}</span>
           </div>
         </div>
       </aside>
@@ -271,18 +288,26 @@ export function Sidebar({
   );
 }
 
-/** Alto de cada ítem (h-7 = 28px) + separación (gap-0.5 = 2px): lo que baja el indicador por ítem. */
-const CHILD_PITCH_PX = 30;
+/** Renglón del riel: 36px de alto; colapsado es un círculo de 36px centrado. */
+const RAIL_ROW =
+  "relative flex h-9 items-center gap-2.5 rounded-lm-md px-2.5 text-[13px] transition-colors duration-150 ease-out hover:bg-lm-ink/6 hover:text-lm-ink focus-visible:lm-focus";
+const RAIL_ROW_COLLAPSED = "lg:mx-auto lg:w-9 lg:justify-center lg:rounded-full lg:px-0";
+const RAIL_BUTTON =
+  "flex items-center justify-center rounded-full transition-colors duration-150 ease-out hover:bg-lm-ink/8 hover:text-lm-ink focus-visible:lm-focus";
+
+/** Alto de cada ítem (h-9 = 36px) + separación (gap-1 = 4px): lo que baja la pastilla por ítem. */
+const CHILD_PITCH_PX = 40;
 
 function isChildActive(pathname: string, child: { href: string; exact?: boolean }) {
   return child.exact ? pathname === child.href : pathname === child.href || pathname.startsWith(`${child.href}/`);
 }
 
 /**
- * Subítems del módulo activo. El fondo `raised` con la marca amarilla es un solo
- * elemento que se desliza hasta la pestaña elegida (transform, 200ms ease-out)
- * en vez de apagarse en una y encenderse en otra: se lee como un único foco que
- * se mueve. Sin movimiento reducido pasa instantáneo.
+ * Pantallas del módulo activo. La pastilla de vidrio del ítem elegido es un solo
+ * elemento que se desliza hasta la pestaña (transform, 200ms ease-out) en vez
+ * de apagarse en una y encenderse en otra: se lee como un único foco que se
+ * mueve. Con la barra colapsada la pastilla es un círculo y de cada pantalla
+ * queda su ícono (el nombre va en `title` y `aria-label`).
  */
 function ChildNav({
   module,
@@ -299,32 +324,45 @@ function ChildNav({
   const activeIndex = children.findIndex((child) => isChildActive(pathname, child));
 
   return (
-    <div className={cn("relative mt-0.5 ml-[13px] flex flex-col gap-0.5 border-l border-lm-line pl-[21px]", collapsed && "lg:hidden")}>
+    <div className="relative mt-1 flex flex-col gap-1">
       <span
         aria-hidden
         className={cn(
-          "pointer-events-none absolute top-0 right-0 left-[21px] h-7 rounded-lm-sm bg-lm-raised shadow-[inset_0_1px_0_var(--lm-glass-edge)]",
-          "before:absolute before:top-1.5 before:bottom-1.5 before:left-0 before:w-0.5 before:rounded-lm-xs before:bg-lm-signal",
+          "pointer-events-none absolute top-0 right-0 left-0 h-9 rounded-lm-md bg-lm-ink/8",
+          "shadow-[inset_0_1px_0_var(--lm-glass-edge),0_3px_8px_-4px_var(--lm-panel-shadow)]",
           "transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none",
+          collapsed && "lg:mx-auto lg:w-9 lg:rounded-full",
           activeIndex < 0 && "opacity-0",
         )}
         style={{ transform: `translateY(${Math.max(activeIndex, 0) * CHILD_PITCH_PX}px)` }}
       />
       {children.map((child, index) => {
         const badge = badges?.[child.href];
+        const active = index === activeIndex;
+        const Icon = child.icon;
 
         return (
           <Link
             key={child.href}
             href={child.href}
-            aria-current={index === activeIndex ? "page" : undefined}
+            aria-current={active ? "page" : undefined}
+            aria-label={collapsed ? child.label : undefined}
+            title={collapsed ? (badge ? `${child.label} · ${badge}` : child.label) : undefined}
             className={cn(
-              "relative flex h-7 items-center justify-between gap-2 rounded-lm-sm px-2 py-1.5 text-[13px] transition-colors duration-150",
-              index === activeIndex ? "text-lm-ink" : "text-lm-ink-2 hover:bg-lm-raised/50 hover:text-lm-ink",
+              RAIL_ROW,
+              active ? "font-medium text-lm-ink hover:bg-transparent" : "text-lm-ink-2",
+              collapsed && RAIL_ROW_COLLAPSED,
             )}
           >
-            <span className="truncate">{child.label}</span>
-            {badge ? <span className="shrink-0 font-mono text-xs text-lm-ink-3">{badge}</span> : null}
+            <Icon className={cn("size-4 shrink-0 transition-colors duration-150", active && "text-lm-signal-text")} strokeWidth={1.5} />
+            <span className={cn("min-w-0 flex-1 truncate", collapsed && "lg:hidden")}>{child.label}</span>
+            {badge ? (
+              <>
+                <span className={cn("shrink-0 font-mono text-[11px] text-lm-ink-3", collapsed && "lg:hidden")}>{badge}</span>
+                {/* Colapsado no entra el número: queda un punto que avisa que hay algo. */}
+                {collapsed ? <span className="absolute top-1.5 right-1.5 hidden size-1.5 rounded-full bg-lm-signal lg:block" aria-hidden /> : null}
+              </>
+            ) : null}
           </Link>
         );
       })}

@@ -14,7 +14,7 @@ import { LeadNav } from "@/components/leads/lead-nav";
 import { LeadNotesForm } from "@/components/leads/lead-notes-form";
 import { ScheduleDialog } from "@/components/leads/schedule-dialog";
 import { StageSelect } from "@/components/leads/stage-select";
-import { HeaderBar } from "@/components/leads/ui/page-header";
+import { HeaderBar } from "@/components/ui/page-header";
 import type { EnrichmentResult } from "@/lib/leads/ai/enrich";
 import type { LeadMemory } from "@/lib/leads/ai/prompts";
 import {

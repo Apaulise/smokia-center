@@ -9,19 +9,27 @@ import { ContactPanel, type AutomationSummary } from "@/components/leads/chats/c
 import { ConversationList } from "@/components/leads/chats/conversation-list";
 import type { ComposerQuickReplies } from "@/components/leads/chats/message-composer";
 import { useInboxRealtime } from "@/components/leads/chats/use-inbox-realtime";
-import { loadConversation, loadConversationList, loadOlderMessages, markConversationRead, pollInboxNow, sendChatAudio, sendChatText, setConversationArchived } from "@/lib/chats/actions";
+import { loadConversation, loadConversationList, loadOlderMessages, markConversationRead, pollInboxNow, sendChatAttachment, sendChatText, setConversationArchived } from "@/lib/chats/actions";
 import type { TagLabelRow } from "@/lib/chats/db";
 import { previewOf } from "@/lib/chats/format";
 import { applyConversationChange, filterCounts, filterItems, sortItems, tagsInUse, upsertThreadMessage, type ThreadMessage } from "@/lib/chats/inbox";
-import { createTextQuickReply, markQuickReplyUsed } from "@/lib/chats/inbox-actions";
+import { createTextQuickReply, deleteQuickReply, listQuickReplies, markQuickReplyUsed, renameQuickReply } from "@/lib/chats/inbox-actions";
 import type { ChatMessageView, ConversationDetail, ConversationFilter, ConversationListItem, ConversationScope, InboxList } from "@/lib/chats/queries";
-import type { QuickReplyView } from "@/lib/chats/quick-replies";
-import { labelMap } from "@/lib/chats/tag-view";
+import { uploadFileQuickReply } from "@/lib/chats/quick-reply-upload";
+import { fileKindOf, type QuickReplyView } from "@/lib/chats/quick-replies";
+import { filterTags, labelMap } from "@/lib/chats/tag-view";
 import { replyWindow } from "@/lib/chats/window";
 import { cn } from "@/lib/utils";
 
 const FILTER_VALUES: ConversationFilter[] = ["todas", "sin_leer", "por_responder", "ventana", "seguimiento", "archivadas"];
 const PANEL_KEY = "smokia.chats.panel";
+/**
+ * Las vistas previas de audios y archivos guardados son URLs firmadas que
+ * vencen a la hora (`PREVIEW_TTL_S`, inbox-actions.ts). Pasado este tiempo, al
+ * abrir el panel se piden de nuevo: con Chats abierto toda la tarde, escuchar
+ * un audio o ver una miniatura sigue funcionando.
+ */
+const PREVIEW_REFRESH_MS = 45 * 60_000;
 const MESSAGE_KEYS: Array<keyof ChatMessageView> = ["id", "direction", "origin", "sent_by", "body", "attachments", "delivery_status", "standby", "edited", "deleted", "occurred_at"];
 
 type UrlState = { c: string | null; f: ConversationFilter; q: string; t: string | null };
@@ -122,6 +130,9 @@ export function InboxClient({
   const [missing, setMissing] = useState<Set<string>>(() => new Set(initialSelectedId && !initialDetail ? [initialSelectedId] : []));
   const [panelOpen, setPanelOpen] = useState(true);
   const [quickReplies, setQuickReplies] = useState(initialQuickReplies.items);
+  // Cuándo se firmaron las URLs de las vistas previas: al cargar la pantalla (lo marca un efecto al montar).
+  const previewsSignedAt = useRef(0);
+  const refreshingPreviews = useRef(false);
   const [recorderOpen, setRecorderOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [listLoading, startListLoading] = useTransition();
@@ -334,7 +345,7 @@ export function InboxClient({
   }, [serverResults, scopeItems, filter, deferredSearch, tag, now]);
 
   const counts = useMemo(() => filterCounts(activeItems, now), [activeItems, now]);
-  const tags = useMemo(() => tagsInUse(scopeItems), [scopeItems]);
+  const tags = useMemo(() => filterTags(tagsInUse(scopeItems)), [scopeItems]);
 
   // ── Realtime ───────────────────────────────────────────────────────────────
 
@@ -465,12 +476,14 @@ export function InboxClient({
     );
   }
 
-  function sendAudio(conversationId: string, reply: QuickReplyView, clientId = crypto.randomUUID()) {
-    const attachments = [{ type: "audio" }];
+  /** Un guardado de las respuestas rápidas: audio, imagen o documento. */
+  function sendSaved(conversationId: string, reply: QuickReplyView, clientId = crypto.randomUUID()) {
+    const type = reply.kind === "AUDIO" ? "audio" : fileKindOf(reply.mime) === "image" ? "image" : "file";
+    const attachments = [type === "audio" ? { type } : { type, filename: reply.fileName ?? reply.title }];
     const local = { ...optimistic(conversationId, clientId, null, attachments), quickReplyId: reply.id } as ThreadMessage & { quickReplyId: string };
     pushLocal(conversationId, local);
     bumpPreview(conversationId, null, attachments);
-    void sendChatAudio({ conversationId, quickReplyId: reply.id, clientId }).then(
+    void sendChatAttachment({ conversationId, quickReplyId: reply.id, clientId }).then(
       (result) => settleLocal(conversationId, local.id, result),
       () => settleLocal(conversationId, local.id, { ok: false, message: "Se cortó la conexión. Reintentá." }),
     );
@@ -485,7 +498,7 @@ export function InboxClient({
     });
     const quickReplyId = (message as ThreadMessage & { quickReplyId?: string }).quickReplyId;
     const reply = quickReplyId ? quickReplies.find((entry) => entry.id === quickReplyId) : undefined;
-    if (reply) sendAudio(conversationId, reply, message.clientId);
+    if (reply) sendSaved(conversationId, reply, message.clientId);
     else if (message.body) sendText(conversationId, message.body, message.clientId);
   }
 
@@ -591,22 +604,61 @@ export function InboxClient({
 
   // ── Respuestas rápidas ─────────────────────────────────────────────────────
 
+  useEffect(() => {
+    previewsSignedAt.current = Date.now();
+  }, []);
+
+  const refreshPreviews = useCallback(() => {
+    if (refreshingPreviews.current || Date.now() - previewsSignedAt.current < PREVIEW_REFRESH_MS) return;
+    refreshingPreviews.current = true;
+    void listQuickReplies()
+      .then((result) => {
+        if (!result.ready) return;
+        previewsSignedAt.current = Date.now();
+        // Sólo las URLs: si mientras tanto se agregó o borró algo acá, eso se respeta.
+        const fresh = new Map(result.items.map((item) => [item.id, item.previewUrl]));
+        setQuickReplies((items) => items.map((item) => (fresh.has(item.id) ? { ...item, previewUrl: fresh.get(item.id) ?? null } : item)));
+      })
+      .catch(() => {
+        // Sin red: se reintenta la próxima vez que se abra el panel.
+      })
+      .finally(() => {
+        refreshingPreviews.current = false;
+      });
+  }, []);
+
   const composerQuickReplies: ComposerQuickReplies = {
     ready: initialQuickReplies.ready,
     items: quickReplies,
-    onSendAudio: (reply) => {
-      if (selectedId) sendAudio(selectedId, reply);
+    onSendAttachment: (reply) => {
+      if (selectedId) sendSaved(selectedId, reply);
     },
     onSaveText: async (title, body) => {
       const result = await createTextQuickReply({ title, body });
       if (result.ok && result.item) setQuickReplies((items) => [...items, result.item!]);
       return result;
     },
+    onUpdate: async (id, input) => {
+      const result = await renameQuickReply(id, input);
+      if (result.ok) setQuickReplies((items) => items.map((item) => (item.id === id ? { ...item, title: input.title, body: input.body !== undefined && item.kind === "TEXTO" ? input.body : item.body } : item)));
+      return result;
+    },
+    onDelete: async (id) => {
+      const result = await deleteQuickReply(id);
+      if (result.ok) setQuickReplies((items) => items.filter((item) => item.id !== id));
+      return result;
+    },
     onRecord: () => setRecorderOpen(true),
+    onUploadFile: async (file, title) => {
+      const result = await uploadFileQuickReply(file, title);
+      if (result.ok && result.item) setQuickReplies((items) => [...items, result.item!]);
+      return result;
+    },
     onUsed: (reply) => {
       setQuickReplies((items) => items.map((item) => (item.id === reply.id ? { ...item, useCount: item.useCount + 1 } : item)));
       if (reply.kind === "TEXTO") void markQuickReplyUsed(reply.id);
     },
+    onOpen: refreshPreviews,
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -734,7 +786,7 @@ function ThreadSkeleton({ item }: { item?: ConversationListItem }) {
           </div>
         ))}
       </div>
-      <div className="h-[74px] border-t border-lm-line bg-lm-surface" />
+      <div className="h-[74px] border-t border-lm-line" />
     </div>
   );
 }

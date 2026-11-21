@@ -2,13 +2,13 @@ import { ChartLegend, BrandLineChart, type LineChartPoint } from "@/components/b
 import { OpsFrame } from "@/components/ops/frame";
 import { ChangeList, ConclusionReview } from "@/components/weekly/review-form";
 import { WeekSelect } from "@/components/weekly/week-select";
-import { EmptyLine, EmptyState } from "@/components/leads/ui/feedback";
-import { Kpi, KpiRow } from "@/components/leads/ui/kpi-row";
-import { PageHeading } from "@/components/leads/ui/page-header";
-import { Section } from "@/components/leads/ui/section";
-import { Chip } from "@/components/leads/ui/status-badge";
-import { Table, Td, TdSub, Th, Tr } from "@/components/leads/ui/table";
-import { TabLink } from "@/components/leads/ui/tabs";
+import { EmptyLine, EmptyState } from "@/components/ui/feedback";
+import { Kpi, KpiRow } from "@/components/ui/kpi-row";
+import { PageHeading } from "@/components/ui/page-header";
+import { Section } from "@/components/ui/section";
+import { Chip } from "@/components/ui/status-badge";
+import { Table, Td, TdSub, Th, Tr } from "@/components/ui/table";
+import { TabLink, Tabs } from "@/components/ui/tabs";
 import { WEEKLY_AREAS } from "@/lib/weekly/areas";
 import { formatUpdatedAt } from "@/lib/ops/format";
 import type { WeeklyChart, WeeklyKpi, WeeklyPageModel, WeeklyTable as WeeklyTableModel } from "@/lib/weekly/types";
@@ -25,18 +25,17 @@ export function WeeklyAnalysis({ model }: { model: WeeklyPageModel }) {
         action={<WeekSelect area={model.area} value={model.weekStart} weeks={model.weeks} />}
       />
 
-      <nav className="flex gap-6 overflow-x-auto border-b border-lm-line" aria-label="Áreas">
+      <Tabs aria-label="Áreas">
         {WEEKLY_AREAS.map((area) => (
           <TabLink
             key={area.id}
-            className="shrink-0 whitespace-nowrap"
             href={`/operaciones/analisis?area=${area.id}&week=${model.weekStart}`}
             active={area.id === model.area}
           >
             {area.label}
           </TabLink>
         ))}
-      </nav>
+      </Tabs>
 
       {model.crmError ? <EmptyState title="No se pudieron leer los números" description={model.crmError} /> : null}
 

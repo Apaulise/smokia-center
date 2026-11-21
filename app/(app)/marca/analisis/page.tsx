@@ -7,10 +7,10 @@ import { RankedBars } from "@/components/brand/analysis/ranked-bars";
 import { RecommendationCard } from "@/components/brand/analysis/recommendation-card";
 import { ResultsList } from "@/components/brand/analysis/results-list";
 import { RetentionList } from "@/components/brand/analysis/retention-list";
-import { Card, CardBody, CardHeader, Crumbs, Eyebrow } from "@/components/brand/ui/card";
-import { ButtonLink } from "@/components/leads/ui/button";
-import { EmptyState } from "@/components/leads/ui/feedback";
-import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
+import { Card, CardBody, CardHeader, Crumbs, Eyebrow } from "@/components/ui/card";
+import { ButtonLink } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/feedback";
+import { HeaderBar, PageHeading } from "@/components/ui/page-header";
 import { BASELINE_WINDOW, computeBrandInsights, MIN_POSTS_FOR_ANALYSIS } from "@/lib/brand/insights";
 import {
   getBrandAccountSummary,

@@ -1,8 +1,8 @@
 import { ArrowRight } from "lucide-react";
 
 import { ListActionsMenu } from "@/components/leads/list-actions-menu";
-import { ButtonLink } from "@/components/leads/ui/button";
-import { StatusBadge, Chip } from "@/components/leads/ui/status-badge";
+import { ButtonLink } from "@/components/ui/button";
+import { StatusBadge, Chip } from "@/components/ui/status-badge";
 import { CSV_PROVIDER_META, getProvider } from "@/lib/providers/registry";
 import type { LeadListOverviewRow } from "@/lib/leads/queries";
 

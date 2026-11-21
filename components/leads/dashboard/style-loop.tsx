@@ -1,4 +1,4 @@
-import { EmptyLine } from "@/components/leads/ui/feedback";
+import { EmptyLine } from "@/components/ui/feedback";
 import type { StyleStats } from "@/lib/leads/ai/style/queries";
 
 /**

@@ -1,6 +1,6 @@
 import { SaveSignalButton } from "@/components/leads/copilot/save-signal-button";
-import { CopilotLabel } from "@/components/leads/ui/copilot";
-import { EmptyLine } from "@/components/leads/ui/feedback";
+import { CopilotLabel } from "@/components/ui/copilot";
+import { EmptyLine } from "@/components/ui/feedback";
 import type { LeadSignalRow } from "@/lib/leads/queries";
 
 const STATUS_LABEL: Record<LeadSignalRow["status"], string> = {

@@ -4,9 +4,9 @@ import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Card del Gestor de Marca Personal en "Señal y humo": borde fino, radio 8,
- * sin sombra ni glow. La cabecera lleva título 15px + subtítulo 12.5px y se
- * separa del cuerpo con una línea (handoff MARCA_PERSONAL.md, "Card").
+ * Card (nació en el Gestor de Marca Personal, la usa cualquier gestor): panel de vidrio (`.lm-glass-soft`, radio
+ * 17). La cabecera lleva título 15px + subtítulo 12.5px y se separa del cuerpo
+ * con una línea (handoff MARCA_PERSONAL.md, "Card").
  */
 export function Card({ className, ...props }: HTMLAttributes<HTMLElement>) {
   return <section className={cn("lm-glass-soft rounded-lm-lg border", className)} {...props} />;
@@ -122,7 +122,7 @@ export function Crumbs({ items }: { items: { label: string; href?: string }[] })
 }
 
 /**
- * Franja de métricas sin cards, con divisores verticales (igual que el
+ * Franja de métricas: un panel de vidrio con divisores adentro (igual que el
  * Dashboard de Leads). Una sola métrica puede ir en amarillo, con la marca de
  * 24×2px arriba: la que se mueve en el período.
  */
@@ -136,17 +136,17 @@ export function KpiStrip({
   return (
     <div
       className={cn(
-        "grid grid-cols-2 divide-lm-line border-y border-lm-line sm:grid-cols-3 lg:auto-cols-fr lg:grid-flow-col lg:divide-x",
+        "lm-glass-soft grid grid-cols-2 divide-lm-line overflow-hidden rounded-lm-lg border sm:grid-cols-3 lg:auto-cols-fr lg:grid-flow-col lg:divide-x",
         className,
       )}
     >
       {items.map((item, index) => (
         <div
           key={item.label}
-          className="lm-rise relative flex min-w-0 flex-col gap-2 px-5 py-[18px] first:pl-0 lg:first:pl-0"
+          className="lm-rise relative flex min-w-0 flex-col gap-2 px-5 py-[18px]"
           style={{ "--i": index } as CSSProperties}
         >
-          {item.accent ? <span className="absolute -top-px left-0 h-0.5 w-6 bg-lm-signal" /> : null}
+          {item.accent ? <span className="absolute top-0 left-5 h-0.5 w-6 rounded-b-full bg-lm-signal" /> : null}
           <Eyebrow dot={item.accent ? "signal" : "neutral"}>{item.label}</Eyebrow>
           <span
             className={cn(
@@ -167,7 +167,7 @@ export function KpiStrip({
 
 /**
  * Chip del sistema: `solid` = relleno `raised` (categoría, origen), `outline` =
- * borde 1px (estado, atributo). Siempre 4px de radio; nada de píldoras.
+ * borde 1px (estado, atributo). Radio de control (`rounded-lm-sm`).
  */
 export function Tag({
   children,

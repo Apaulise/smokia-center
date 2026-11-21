@@ -1,13 +1,9 @@
 import { ChevronLeft, ChevronRight, LayoutGrid, List, Rows3 } from "lucide-react";
 import Link from "next/link";
 
-import { ButtonLink as BrandButtonLink } from "@/components/ui/button";
-import { ButtonLink as LeadsButtonLink } from "@/components/leads/ui/button";
-import { cn } from "@/lib/utils";
+import { Segmented, SegmentedLink } from "@/components/ui/tabs";
 
 export type CalendarView = "mes" | "semana" | "lista";
-/** "brand" = Gestor de Marca Personal (tokens cyan/violeta, sin tocar); "signal" = Gestor de Leads ("Señal y humo"). */
-export type CalendarVariant = "brand" | "signal";
 
 const VIEW_OPTIONS: Array<{ value: CalendarView; label: string; icon: typeof LayoutGrid }> = [
   { value: "mes", label: "Mes", icon: LayoutGrid },
@@ -22,12 +18,14 @@ function calendarHref(basePath: string, values: Record<string, string>, extraPar
   return `${basePath}?${params.toString()}`;
 }
 
+const STEP =
+  "flex size-7 items-center justify-center rounded-[6px] text-lm-ink-2 transition-colors duration-150 ease-out hover:bg-lm-ink/8 hover:text-lm-ink focus-visible:lm-focus";
+
 /**
  * Navegación de un calendario por período: anterior / hoy / siguiente. La usan
  * la agenda de Leads y el planificador de Marca (Plans/01 §1.5, Plans/03
  * §3.7); el estado viaja en la URL (`?view=…&date=…`), así que recargar no
- * cambia de período. `variant` sólo cambia el tema visual — cada gestor sigue
- * el suyo (CLAUDE.md §2: no se toca Marca al redisenar Leads).
+ * cambia de período.
  */
 export function PeriodNav({
   basePath,
@@ -35,7 +33,6 @@ export function PeriodNav({
   prev,
   next,
   today,
-  variant = "brand",
   extraParams,
 }: {
   basePath: string;
@@ -43,59 +40,23 @@ export function PeriodNav({
   prev: string;
   next: string;
   today: string;
-  variant?: CalendarVariant;
   extraParams?: Record<string, string | undefined>;
 }) {
-  if (variant === "signal") {
-    return (
-      <div className="flex items-center gap-1 rounded-lm-sm border border-lm-line bg-lm-surface p-1">
-        <Link
-          href={calendarHref(basePath, { view, date: prev }, extraParams)}
-          aria-label="Período anterior"
-          className="flex size-7 items-center justify-center rounded-[3px] text-lm-ink-2 hover:bg-lm-raised hover:text-lm-ink"
-        >
-          <ChevronLeft className="size-4" strokeWidth={1.5} />
-        </Link>
-        <Link
-          href={calendarHref(basePath, { view, date: today }, extraParams)}
-          className="rounded-[3px] px-2.5 py-1 font-lm-sans text-[13px] text-lm-ink-2 hover:bg-lm-raised hover:text-lm-ink"
-        >
-          Hoy
-        </Link>
-        <Link
-          href={calendarHref(basePath, { view, date: next }, extraParams)}
-          aria-label="Período siguiente"
-          className="flex size-7 items-center justify-center rounded-[3px] text-lm-ink-2 hover:bg-lm-raised hover:text-lm-ink"
-        >
-          <ChevronRight className="size-4" strokeWidth={1.5} />
-        </Link>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex items-center gap-1 rounded-[12px] border border-line bg-surface/40 p-1">
-      <Link
-        href={calendarHref(basePath, { view, date: prev }, extraParams)}
-        aria-label="Período anterior"
-        className="flex size-8 items-center justify-center rounded-[10px] hover:bg-surface/60 hover:text-cyan"
-      >
-        <ChevronLeft className="size-4" />
+    <Segmented className="items-center">
+      <Link href={calendarHref(basePath, { view, date: prev }, extraParams)} aria-label="Período anterior" className={STEP}>
+        <ChevronLeft className="size-4" strokeWidth={1.5} />
       </Link>
       <Link
         href={calendarHref(basePath, { view, date: today }, extraParams)}
-        className="rounded-[10px] px-2.5 py-1 text-xs text-muted hover:bg-surface/60 hover:text-ink"
+        className="flex h-7 items-center rounded-[6px] px-2.5 font-lm-sans text-[13px] font-medium text-lm-ink-2 transition-colors duration-150 ease-out hover:bg-lm-ink/8 hover:text-lm-ink focus-visible:lm-focus"
       >
         Hoy
       </Link>
-      <Link
-        href={calendarHref(basePath, { view, date: next }, extraParams)}
-        aria-label="Período siguiente"
-        className="flex size-8 items-center justify-center rounded-[10px] hover:bg-surface/60 hover:text-cyan"
-      >
-        <ChevronRight className="size-4" />
+      <Link href={calendarHref(basePath, { view, date: next }, extraParams)} aria-label="Período siguiente" className={STEP}>
+        <ChevronRight className="size-4" strokeWidth={1.5} />
       </Link>
-    </div>
+    </Segmented>
   );
 }
 
@@ -105,50 +66,22 @@ export function ViewToggle({
   view,
   date,
   views = ["mes", "semana", "lista"],
-  variant = "brand",
   extraParams,
 }: {
   basePath: string;
   view: CalendarView;
   date: string;
   views?: CalendarView[];
-  variant?: CalendarVariant;
   extraParams?: Record<string, string | undefined>;
 }) {
-  const options = VIEW_OPTIONS.filter((option) => views.includes(option.value));
-
-  if (variant === "signal") {
-    return (
-      <div className="flex items-center gap-1 rounded-lm-sm border border-lm-line bg-lm-surface p-1">
-        {options.map(({ value, label, icon: Icon }) => (
-          <LeadsButtonLink
-            key={value}
-            href={calendarHref(basePath, { view: value, date }, extraParams)}
-            variant={view === value ? "secondary" : "ghost"}
-            size="sm"
-            className={cn("border-transparent", view === value && "bg-lm-raised")}
-          >
-            <Icon className="size-3.5" strokeWidth={1.5} />
-            {label}
-          </LeadsButtonLink>
-        ))}
-      </div>
-    );
-  }
-
   return (
-    <div className="flex items-center gap-1 rounded-[12px] border border-line bg-surface/40 p-1">
-      {options.map(({ value, label, icon: Icon }) => (
-        <BrandButtonLink
-          key={value}
-          href={calendarHref(basePath, { view: value, date }, extraParams)}
-          variant={view === value ? "secondary" : "ghost"}
-          size="sm"
-        >
-          <Icon className="size-3.5" />
+    <Segmented>
+      {VIEW_OPTIONS.filter((option) => views.includes(option.value)).map(({ value, label, icon: Icon }) => (
+        <SegmentedLink key={value} href={calendarHref(basePath, { view: value, date }, extraParams)} active={view === value} className="gap-1.5">
+          <Icon className="size-3.5" strokeWidth={1.5} />
           {label}
-        </BrandButtonLink>
+        </SegmentedLink>
       ))}
-    </div>
+    </Segmented>
   );
 }

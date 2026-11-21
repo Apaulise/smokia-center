@@ -26,8 +26,9 @@
   --color-warning: var(--color-lm-signal-text);
   --color-danger: var(--color-lm-danger);
 
-  --font-display: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* `font-display` y `font-sans` quedan como alias de la tipografía de la UI: sólo hay dos familias (Host Grotesk y JetBrains Mono). */
+  --font-display: var(--font-host-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-host-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 
   /* §6: radios 16–24px en contenedores */
@@ -79,10 +80,26 @@
   /* Host Grotesk para UI, JetBrains Mono para datos (ya existe --font-mono) */
   --font-lm-sans: var(--font-host-grotesk), ui-sans-serif, system-ui, sans-serif;
 
-  --radius-lm-xs: 2px;
-  --radius-lm-sm: 4px;
-  --radius-lm-md: 6px;
-  --radius-lm-lg: 8px;
+  /*
+   * Colores de las cuatro etiquetas predefinidas del inbox (verde, azul, rojo;
+   * el amarillo es `signal`). Un poco más de croma que success/info/danger para
+   * que a tamaño de chip se lean como verde/azul/rojo y no como grises.
+   */
+  --color-lm-tag-green: #7fcf9f;
+  --color-lm-tag-blue: #86b4f2;
+  --color-lm-tag-red: #f08f80;
+
+  /*
+   * Radios de "Vidrio" (2026-11-16, decisión del dueño: la referencia es el
+   * tablero de vidrio de 21st.dev). Suben de 2–8px a 6–27px: chips 6, controles
+   * 9, burbujas y popovers 12, paneles 17, flotantes 22 y el escenario 27.
+   */
+  --radius-lm-xs: 6px;
+  --radius-lm-sm: 9px;
+  --radius-lm-md: 12px;
+  --radius-lm-lg: 17px;
+  --radius-lm-xl: 22px;
+  --radius-lm-2xl: 27px;
 }
 
 /* Tema claro de "Señal y humo" (tokens.json del Design System). Especificidad
@@ -118,6 +135,10 @@
   --color-lm-smoke-3: #a2a19d;
   --color-lm-smoke-4: #7f7e7a;
   --color-lm-smoke-5: #5c5b57;
+
+  --color-lm-tag-green: #2c7a4b;
+  --color-lm-tag-blue: #2b62b5;
+  --color-lm-tag-red: #b5412f;
 }
 
 @layer base {
@@ -135,12 +156,16 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  /*
+   * Titulares: heredan la tipografía de la UI (Host Grotesk). Antes tomaban
+   * Sora (manual viejo) y cualquier h1–h3 sin `font-lm-sans` explícito —el
+   * título de un diálogo, por ejemplo— salía en otra fuente que el resto.
+   */
   h1,
   h2,
   h3 {
-    font-family: var(--font-display);
+    font-family: inherit;
     font-weight: 600;
-    /* §4: interlineado 1.35–1.5 en titulares */
     line-height: 1.35;
     letter-spacing: -0.015em;
   }
@@ -154,6 +179,18 @@
     background-color: var(--color-surface);
     color: var(--color-ink);
   }
+}
+
+/*
+ * Foco de teclado: anillo amarillo con separación. Va con `@utility` y no como
+ * una clase dentro de `@layer utilities`: en Tailwind v4 sólo una utilidad
+ * registrada así acepta variantes, y esta se usa siempre como
+ * `focus-visible:lm-focus`. Como clase suelta, la variante no generaba nada y
+ * el foco caía en el anillo por defecto del navegador.
+ */
+@utility lm-focus {
+  outline: 2px solid var(--color-lm-focus-ring);
+  outline-offset: 2px;
 }
 
 @layer utilities {
@@ -175,12 +212,6 @@
     box-shadow:
       0 12px 32px rgb(20 20 22 / 0.16),
       0 0 0 1px var(--color-lm-line);
-  }
-
-  /* Foco de teclado: anillo amarillo con separación, sin depender del ring de shadcn. */
-  .lm-focus {
-    outline: 2px solid var(--color-lm-focus-ring);
-    outline-offset: 2px;
   }
 
   /* Único gesto de movimiento del sistema: humo que se desplaza y se disipa. */
@@ -227,19 +258,26 @@
     );
   }
 
-  /* Entrada de bloques: 200ms ease-out con escalón de 45ms (`--i`). Sin rebote. */
+  /*
+   * Entrada de bloques, como en la referencia de vidrio: suben 10px y enfocan
+   * (de 3px de desenfoque a nítido) en 320ms, con escalón de 45ms (`--i`). Sin
+   * rebote. El estado final no deja `filter`: un filtro, aunque sea de 0, haría
+   * de contenedor de cualquier `position: fixed` que haya adentro.
+   */
   @keyframes lm-rise {
     from {
       opacity: 0;
-      transform: translate3d(0, 6px, 0);
+      transform: translate3d(0, 10px, 0);
+      filter: blur(3px);
     }
     to {
       opacity: 1;
       transform: translate3d(0, 0, 0);
+      filter: none;
     }
   }
   .lm-rise {
-    animation: lm-rise 200ms cubic-bezier(0, 0, 0.2, 1) both;
+    animation: lm-rise 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
     animation-delay: calc(var(--i, 0) * 45ms);
   }
 
@@ -400,6 +438,35 @@
   }
 }
 
+/*
+ * Cambio de tema. Con View Transition API (clase `lm-theme-wave`, la pone
+ * theme-toggle.tsx) la foto nueva se revela con un círculo animado por JS: acá
+ * sólo se apaga el cruce por defecto. Sin soporte (`lm-theme-fade`) se funden
+ * los colores con CSS, y sólo durante el cambio para no frenar el resto del uso.
+ */
+html.lm-theme-wave::view-transition-old(root),
+html.lm-theme-wave::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html.lm-theme-wave::view-transition-old(root) {
+  z-index: 1;
+}
+html.lm-theme-wave::view-transition-new(root) {
+  z-index: 2;
+}
+html.lm-theme-fade,
+html.lm-theme-fade *,
+html.lm-theme-fade *::before,
+html.lm-theme-fade *::after {
+  transition:
+    background-color 0.4s ease,
+    color 0.4s ease,
+    border-color 0.4s ease,
+    fill 0.4s ease,
+    stroke 0.4s ease !important;
+}
+
 /* Barra de progreso de navegación (components/shell/navigation-progress.tsx). */
 .lm-progress {
   position: fixed;
@@ -460,25 +527,66 @@
  * Capa "líquida" (2026-11-07, decisión del dueño: se levanta la prohibición de
  * degradados y glass de CLAUDE.md §6 para estos usos y sólo estos).
  *  - .lm-ambient: manchas de luz que flotan despacio detrás de todo. Es lo que
- *    el vidrio desenfoca; sin fondo con color, el glass no se nota.
- *  - .lm-glass / .lm-glass-soft: paneles de vidrio (blur + saturación + brillo
- *    en el borde superior). Todo sale de tokens `lm-`, así que sigue los dos temas.
+ *    se ve a través del vidrio; sin fondo con color, el glass no se nota.
  *  - .lm-btn-liquid: degradado amarillo que "corre" al pasar el mouse.
+ * Todo sale de tokens `lm-`, así que sigue los dos temas.
+ *
+ * "Vidrio" (2026-11-16, decisión del dueño): la app entera toma el material del
+ * tablero de vidrio de 21st.dev. El shell flota sobre el fondo —barra lateral y
+ * escenario separados, con aire alrededor— y adentro los bloques son paneles
+ * translúcidos con brillo en el borde superior y una sombra suave.
+ *  - .lm-stage: el escenario (el <main> de cada pantalla). Sin backdrop-filter:
+ *    lo único que tiene detrás son las manchas de .lm-ambient, que ya son
+ *    difusas, y desenfocar una capa del tamaño de la pantalla mientras el fondo
+ *    se mueve es lo más caro de pintar.
+ *  - .lm-glass-soft / .lm-tint: paneles dentro del escenario. Tampoco desenfocan.
+ *  - .lm-glass / .lm-glass-pop: lo que sí flota sobre contenido (barra lateral,
+ *    diálogos, ⌘K, popovers) y por eso sí desenfoca.
+ *  - .lm-pill-active: la pastilla clara del ítem elegido en un dock de pestañas.
+ * `--lm-shell-y` es el alto que ocupa el shell alrededor del escenario (barra
+ * superior en mobile, aire arriba y abajo en desktop): las pantallas de alto
+ * fijo (Chats) lo restan de 100dvh.
  */
 :root {
-  --lm-ambient-a: rgb(242 193 78 / 0.13);
-  --lm-ambient-b: rgb(138 141 146 / 0.14);
-  --lm-glass-fill: 58%;
-  --lm-glass-shine: rgb(255 255 255 / 0.07);
-  --lm-glass-edge: rgb(255 255 255 / 0.08);
+  --lm-ambient-a: rgb(242 193 78 / 0.2);
+  --lm-ambient-b: rgb(138 141 146 / 0.2);
+  --lm-ambient-c: rgb(214 160 52 / 0.1);
+  --lm-glass-fill: 56%;
+  --lm-stage-fill: 46%;
+  --lm-panel-color: var(--color-lm-raised);
+  --lm-panel-fill: 50%;
+  --lm-glass-shine: rgb(255 255 255 / 0.05);
+  --lm-glass-edge: rgb(255 255 255 / 0.1);
+  --lm-glass-ring: rgb(255 255 255 / 0.045);
+  --lm-glass-shadow: rgb(0 0 0 / 0.6);
+  --lm-panel-shadow: rgb(0 0 0 / 0.5);
+  --lm-pill-bg: #eceae5;
+  --lm-pill-ink: #17171a;
   --lm-signal-light: #f8dd9a;
+  --lm-shell-gap: 0px;
+  --lm-shell-y: 56px;
+}
+@media (min-width: 1024px) {
+  :root {
+    --lm-shell-gap: 12px;
+    --lm-shell-y: 24px;
+  }
 }
 :root[data-theme="light"] {
-  --lm-ambient-a: rgb(233 182 60 / 0.26);
-  --lm-ambient-b: rgb(127 126 122 / 0.16);
-  --lm-glass-fill: 66%;
-  --lm-glass-shine: rgb(255 255 255 / 0.55);
-  --lm-glass-edge: rgb(255 255 255 / 0.7);
+  --lm-ambient-a: rgb(233 182 60 / 0.3);
+  --lm-ambient-b: rgb(127 126 122 / 0.2);
+  --lm-ambient-c: rgb(233 182 60 / 0.14);
+  --lm-glass-fill: 62%;
+  --lm-stage-fill: 52%;
+  --lm-panel-color: var(--color-lm-surface);
+  --lm-panel-fill: 62%;
+  --lm-glass-shine: rgb(255 255 255 / 0.5);
+  --lm-glass-edge: rgb(255 255 255 / 0.85);
+  --lm-glass-ring: rgb(255 255 255 / 0.4);
+  --lm-glass-shadow: rgb(20 20 22 / 0.24);
+  --lm-panel-shadow: rgb(20 20 22 / 0.2);
+  --lm-pill-bg: #ffffff;
+  --lm-pill-ink: #17171a;
   --lm-signal-light: #f6d78a;
 }
 
@@ -488,6 +596,8 @@
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
+  /* Tercera luz, fija: un halo cálido arriba a la derecha, lejos de las dos que se mueven. */
+  background: radial-gradient(ellipse 60% 45% at 82% -6%, var(--lm-ambient-c), transparent 70%);
 }
 .lm-ambient::before,
 .lm-ambient::after {
@@ -521,33 +631,60 @@
   }
 }
 
-.lm-glass,
-.lm-glass-soft {
+/* Lo que flota sobre contenido: barra lateral, barra superior mobile. */
+.lm-glass {
   background-color: color-mix(in srgb, var(--color-lm-surface) var(--lm-glass-fill), transparent);
   background-image: linear-gradient(180deg, var(--lm-glass-shine), transparent 42%);
-  border-color: var(--color-lm-line-strong);
-  box-shadow: inset 0 1px 0 var(--lm-glass-edge);
-  -webkit-backdrop-filter: blur(22px) saturate(1.6);
-  backdrop-filter: blur(22px) saturate(1.6);
-}
-.lm-glass-soft {
-  background-color: color-mix(in srgb, var(--color-lm-surface) 42%, transparent);
   border-color: var(--color-lm-line);
-  -webkit-backdrop-filter: blur(12px) saturate(1.4);
-  backdrop-filter: blur(12px) saturate(1.4);
+  box-shadow:
+    inset 0 1px 0 var(--lm-glass-edge),
+    inset 0 0 0 1px var(--lm-glass-ring),
+    0 20px 52px -25px var(--lm-glass-shadow);
+  -webkit-backdrop-filter: blur(22px) saturate(1.3);
+  backdrop-filter: blur(22px) saturate(1.3);
 }
-/* Paneles flotantes (diálogo, ⌘K): más opacos para que el texto siempre se lea. */
+
+/* El escenario: el panel grande donde vive cada pantalla. */
+.lm-stage {
+  background-color: color-mix(in srgb, var(--color-lm-surface) var(--lm-stage-fill), transparent);
+  box-shadow:
+    inset 0 1px 0 var(--lm-glass-edge),
+    inset 0 0 0 1px var(--lm-glass-ring),
+    0 20px 52px -25px var(--lm-glass-shadow);
+}
+
+/* Paneles dentro del escenario (cards, filtros, calendario, franjas de métricas). */
+.lm-glass-soft {
+  background-color: color-mix(in srgb, var(--lm-panel-color) var(--lm-panel-fill), transparent);
+  border-color: var(--color-lm-line);
+  box-shadow:
+    inset 0 1px 0 var(--lm-glass-edge),
+    0 8px 22px -20px var(--lm-panel-shadow);
+}
+
+/* Paneles flotantes (diálogo, ⌘K, popovers): más opacos para que el texto siempre se lea. */
 .lm-glass-pop {
-  background-color: color-mix(in srgb, var(--color-lm-raised) 78%, transparent);
-  -webkit-backdrop-filter: blur(26px) saturate(1.7);
-  backdrop-filter: blur(26px) saturate(1.7);
+  background-color: color-mix(in srgb, var(--color-lm-raised) 80%, transparent);
+  -webkit-backdrop-filter: blur(26px) saturate(1.4);
+  backdrop-filter: blur(26px) saturate(1.4);
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .lm-glass,
-  .lm-glass-soft,
   .lm-glass-pop {
     background-color: var(--color-lm-surface);
   }
+}
+
+/* Pastilla clara del ítem elegido (dock de pestañas): lo más brillante del grupo. */
+.lm-pill-active {
+  background-color: var(--lm-pill-bg);
+  color: var(--lm-pill-ink);
+  box-shadow: 0 3px 7px rgb(0 0 0 / 0.14);
+}
+
+/* Alto mínimo de una pantalla dentro del escenario: el viewport menos lo que ocupa el shell. */
+.lm-page-min {
+  min-height: calc(100dvh - var(--lm-shell-y));
 }
 
 .lm-btn-liquid {
@@ -589,8 +726,7 @@
  * .lm-glass-soft, pero sin backdrop-filter, que es lo caro cuando hay decenas.
  */
 .lm-tint {
-  background-color: color-mix(in srgb, var(--color-lm-surface) 52%, transparent);
-  background-image: linear-gradient(180deg, var(--lm-glass-shine), transparent 42%);
+  background-color: color-mix(in srgb, var(--lm-panel-color) calc(var(--lm-panel-fill) - 12%), transparent);
   box-shadow: inset 0 1px 0 var(--lm-glass-edge);
 }
 .lm-tint-hover:hover {

@@ -7,10 +7,10 @@ import { AddCompetitorButton, RefreshAllButton } from "@/components/brand/compet
 import { OutlierBoard, type OutlierCardData } from "@/components/brand/competitors/outlier-board";
 import { TrendPoller } from "@/components/brand/trends/trend-poller";
 import { TrendSearchButton } from "@/components/brand/trends/trend-search-form";
-import { Crumbs, Eyebrow } from "@/components/brand/ui/card";
-import { ButtonLink } from "@/components/leads/ui/button";
-import { EmptyLine, EmptyState } from "@/components/leads/ui/feedback";
-import { HeaderBar, PageHeading } from "@/components/leads/ui/page-header";
+import { Crumbs, Eyebrow } from "@/components/ui/card";
+import { ButtonLink } from "@/components/ui/button";
+import { EmptyLine, EmptyState } from "@/components/ui/feedback";
+import { HeaderBar, PageHeading } from "@/components/ui/page-header";
 import {
   formatBaselines,
   formatCadenceBasis,
