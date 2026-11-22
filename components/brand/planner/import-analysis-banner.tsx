@@ -38,21 +38,22 @@ export function ImportAnalysisBanner({ pending, failed }: { pending: number; fai
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lm-lg border border-lm-line bg-lm-raised px-4 py-3">
-      <Sparkles className="size-4 shrink-0 text-lm-signal-text" aria-hidden />
+      <div className="flex min-w-0 flex-1 basis-full items-start gap-2.5 md:basis-56">
+      <Sparkles className="mt-0.5 size-4 shrink-0 text-lm-signal-text" aria-hidden />
       <p className="min-w-0 flex-1 text-[13px] leading-[1.5] text-lm-ink-2">
         {pending > 0
           ? `${pending} ${pending === 1 ? "reel importado espera" : "reels importados esperan"} que se lea su contenido (transcripción, hook e idea).`
           : "No quedan reels pendientes."}
         {failed > 0 ? ` ${failed} no se pudo${failed === 1 ? "" : "ieron"} analizar.` : null}
         {message ? <span className="ml-1.5 font-mono text-[12px] text-lm-ink-3">{message}</span> : null}
-      </p>
+      </p></div>
       {pending > 0 ? (
-        <Button type="button" variant="primary" className="h-8 px-3 text-[12.5px]" disabled={isPending} onClick={() => run(false)}>
+        <Button type="button" variant="primary" className="h-11 px-2.5 text-[12.5px] sm:h-8 sm:px-3" disabled={isPending} onClick={() => run(false)}>
           {isPending ? "Analizando…" : "Analizar ahora"}
         </Button>
       ) : null}
       {failed > 0 ? (
-        <Button type="button" className="h-8 px-3 text-[12.5px]" disabled={isPending} onClick={() => run(true)}>
+        <Button type="button" className="h-11 px-2.5 text-[12.5px] sm:h-8 sm:px-3" disabled={isPending} onClick={() => run(true)}>
           Reintentar fallidos
         </Button>
       ) : null}

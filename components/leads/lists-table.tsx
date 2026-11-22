@@ -23,7 +23,7 @@ const JOB_STATUS_GROUP: Record<LeadListOverviewRow["status"], "frio" | "curso" |
 /** Tabla densa de listas (Design System DataTable): default de /leads/lista. */
 export function ListsTable({ lists }: { lists: LeadListOverviewRow[] }) {
   return (
-    <Table>
+    <Table label="Listas de leads">
       <thead>
         <tr>
           <Th>Nombre</Th>

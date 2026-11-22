@@ -103,7 +103,7 @@ export function AgendaView({
             ))}
           </div>
         ) : <span />}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
         {!teamMode ? <IcsExportButton /> : null}
         <Button type="button" variant="primary" size="sm" onClick={() => setDialog({ mode: "create" })}>
           <Plus className="size-3.5" strokeWidth={1.5} />

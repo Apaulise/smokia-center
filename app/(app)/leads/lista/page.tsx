@@ -20,7 +20,7 @@ export default async function LeadsListaPage({
   searchParams: Promise<{ view?: string }>;
 }) {
   const { view: viewParam } = await searchParams;
-  const view = viewParam === "grilla" ? "grilla" : "tabla";
+  const view = viewParam === "grilla" || viewParam === "tabla" ? viewParam : "auto";
   const [lists, industries] = await Promise.all([listLeadListsOverview(), listIndustries()]);
 
   return (

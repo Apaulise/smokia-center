@@ -60,8 +60,8 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
     return (
       <>
         <HeaderBar breadcrumb="Gestor de Leads / Agenda" />
-        <div className="flex">
-          <div className="flex-1 px-6 py-8 lg:px-8">
+        <div className="flex min-w-0 flex-col xl:flex-row">
+          <div className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
             <PageHeading
               title="Agenda"
               description={scope === "team" ? "Próximos turnos de todo el equipo." : "Tus próximos turnos, sin salir de la app."}
@@ -89,8 +89,8 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
     return (
       <>
         <HeaderBar breadcrumb="Gestor de Leads / Agenda" />
-        <div className="flex">
-          <div className="flex-1 px-6 py-8 lg:px-8">
+        <div className="flex min-w-0 flex-col xl:flex-row">
+          <div className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
             <PageHeading
               title={weekLabel(days)}
               action={
@@ -122,8 +122,8 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
   return (
     <>
       <HeaderBar breadcrumb="Gestor de Leads / Agenda" />
-      <div className="flex">
-        <div className="flex-1 px-6 py-8 lg:px-8">
+      <div className="flex min-w-0 flex-col xl:flex-row">
+        <div className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
           <PageHeading
             title={monthLabel(monthStart)}
             action={

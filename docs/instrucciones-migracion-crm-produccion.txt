@@ -1,0 +1,136 @@
+INSTRUCTIVO PARA APLICAR LA MIGRACION DE CRM EN PRODUCCION
+
+Objetivo
+
+Aplicar la migración 20261122160000_crm_client_assignees.sql en la base de
+datos Supabase de producción. Esta migración habilita múltiples responsables
+por cliente y suma los estados En renovación, Finalizado y Archivado.
+
+Alcance
+
+- Trabajar sobre el proyecto Supabase que usa el despliegue Production de
+  smok ia-center en Vercel.
+- Aplicar solamente migraciones versionadas mediante Supabase CLI.
+- No ejecutar el SQL manualmente desde el SQL Editor de Supabase.
+- No usar --include-seed.
+
+Requisitos
+
+1. Tener acceso al repositorio y al proyecto Supabase de producción.
+2. Tener Node.js instalado.
+3. Abrir PowerShell dentro de esta carpeta:
+
+   C:\Users\matia\OneDrive\Escritorio\General\Mati\SmokeAI\smokia-center
+
+4. Confirmar que el repositorio contiene este archivo:
+
+   supabase\migrations\20261122160000_crm_client_assignees.sql
+
+5. Confirmar en Vercel que NEXT_PUBLIC_SUPABASE_URL, en el ambiente
+   Production, corresponde al proyecto que se va a modificar.
+
+Como obtener el project ref
+
+La variable de Vercel tiene esta forma:
+
+  https://abcdefghi.supabase.co
+
+El project ref es la parte entre https:// y .supabase.co:
+
+  abcdefghi
+
+Pasos
+
+1. Actualizar el repositorio a la versión que contiene la migración:
+
+   git fetch origin
+   git pull --ff-only origin main
+
+2. Verificar que la migración está presente:
+
+   Get-ChildItem supabase\migrations\20261122160000_crm_client_assignees.sql
+
+3. Iniciar sesión en Supabase. El navegador pedirá autorización:
+
+   npx supabase@2.120.0 login
+
+4. Vincular esta copia local con el proyecto de producción:
+
+   npx supabase@2.120.0 link --project-ref TU_PROJECT_REF
+
+   Reemplazar TU_PROJECT_REF por el valor obtenido de la URL de Supabase.
+
+5. Comparar el historial local y remoto:
+
+   npx supabase@2.120.0 migration list --linked
+
+6. Simular la publicación de migraciones:
+
+   npx supabase@2.120.0 db push --linked --dry-run --skip-vault
+
+Resultado esperado de la simulación
+
+- Debe aparecer la migración 20261122160000_crm_client_assignees.sql.
+- Si las migraciones 20261122120000, 20261122130000, 20261122140000,
+  20261122150000 y 20261122151000 no figuran como aplicadas remotamente,
+  la simulación también las mostrará. Es esperable sólo si todavía no se
+  aplicaron en producción.
+- Si aparece una migración inesperada, una diferencia de historial o un
+  error, no ejecutar el siguiente paso. Compartir la salida completa para
+  revisarla.
+
+7. Aplicar las migraciones luego de confirmar la simulación:
+
+   npx supabase@2.120.0 db push --linked --skip-vault
+
+   La CLI pedirá confirmación. Revisar que el destino sea el proyecto de
+   producción correcto antes de responder.
+
+8. Confirmar que quedaron registradas:
+
+   npx supabase@2.120.0 migration list --linked
+
+Verificación funcional después de aplicar
+
+1. Abrir la aplicación de producción.
+2. Ir a Gestor de Leads > Clientes.
+3. Crear o editar un cliente.
+4. Asignar dos responsables.
+5. Elegir el estado En renovación y guardar.
+6. Ingresar con la cuenta del socio.
+7. Filtrar Clientes por uno de los responsables y comprobar que el cliente
+   aparece.
+8. Editar el cliente desde la ficha y comprobar que ambos responsables y el
+   estado siguen guardados al recargar.
+
+Publicación del código
+
+La migración necesita publicarse junto con la versión de la aplicación que
+lee crm_client_additional_assignees. Incluir en el commit, como mínimo:
+
+- supabase/migrations/20261122160000_crm_client_assignees.sql
+- lib/supabase/database.types.ts
+- lib/crm/model.ts
+- lib/crm/queries.ts
+- lib/crm/actions.ts
+- components/leads/crm/client-editor.tsx
+- app/(app)/leads/clientes/page.tsx
+- app/(app)/leads/clientes/[id]/page.tsx
+
+Si Vercel todavía está desplegando una versión anterior, publicar el código
+después de que db push termine correctamente.
+
+Notas para Claude
+
+- No modificar ni reparar el historial de migraciones con
+  supabase migration repair salvo que se solicite explícitamente.
+- No usar supabase db reset contra producción.
+- No enviar contraseñas, tokens, project refs sensibles ni valores de variables
+  de entorno por chat.
+- Si el repositorio no tiene proyecto Supabase vinculado, supabase link crea
+  el vínculo local. No cambia el esquema remoto.
+
+Referencias oficiales
+
+https://supabase.com/docs/guides/deployment/database-migrations
+https://supabase.com/docs/reference/cli/supabase-db-push

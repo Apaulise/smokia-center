@@ -212,7 +212,7 @@ export function LeadsTable({
     <>
       <div className="flex flex-col gap-3">
         {statusError ? (
-          <div className="w-max">
+          <div className="w-fit max-w-full">
             <Toast tone="error">{statusError}</Toast>
           </div>
         ) : null}
@@ -220,8 +220,8 @@ export function LeadsTable({
           <div className="flex flex-wrap items-center gap-3 rounded-lm-md border border-lm-line-strong bg-lm-raised px-4 py-3">
             <span className="font-mono text-[13px] tabular-nums text-lm-ink">{selected.size} seleccionados</span>
 
-            <div className="flex items-center gap-1.5">
-              <Select className="h-8 w-40 text-xs" value={bulkIndustry} onChange={(event) => setBulkIndustry(event.target.value)}>
+            <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+              <Select aria-label="Asignar rubro a los leads seleccionados" className="min-w-0 flex-1 sm:w-40" value={bulkIndustry} onChange={(event) => setBulkIndustry(event.target.value)}>
                 <option value="">Asignar rubro…</option>
                 <option value="__none__">Sin rubro</option>
                 {industries.map((industry) => (
@@ -235,8 +235,8 @@ export function LeadsTable({
               </Button>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <Select className="h-8 w-40 text-xs" value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value as LeadStatus)}>
+            <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+              <Select aria-label="Cambiar estado de los leads seleccionados" className="min-w-0 flex-1 sm:w-40" value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value as LeadStatus)}>
                 <option value="">Cambiar estado…</option>
                 {LEAD_STATUSES.map((status) => (
                   <option key={status} value={status}>
@@ -271,7 +271,35 @@ export function LeadsTable({
           </div>
         ) : null}
 
-        <Table>
+        <div className="grid gap-3 md:hidden">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <label className="flex min-h-11 items-center gap-2 text-sm text-lm-ink-2">
+              <input type="checkbox" checked={allSelected} onChange={toggleAll} className="size-5 accent-lm-signal" />
+              Seleccionar todos
+            </label>
+            <div className="flex items-center gap-2">
+              <Select aria-label="Ordenar leads" value={sort} onChange={(event) => onSort(event.target.value as LeadsSortField)}>
+                <option value="created_at">Fecha de alta</option>
+                <option value="name">Nombre</option>
+                <option value="status">Estado</option>
+                <option value="last_contacted_at">Último contacto</option>
+                <option value="next_action_at">Próxima acción</option>
+              </Select>
+              <Button type="button" aria-label={ascending ? "Cambiar a orden descendente" : "Cambiar a orden ascendente"} onClick={() => onSort(sort)}>
+                {ascending ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />}
+              </Button>
+            </div>
+          </div>
+          <ul className="grid gap-2">
+            {leads.map((lead) => (
+              <MobileLeadRow key={lead.id} lead={lead} selected={selected.has(lead.id)}
+                onToggle={() => toggleOne(lead.id)} onStatusChange={(status) => handleRowStatusChange(lead.id, status)} />
+            ))}
+          </ul>
+        </div>
+
+        <div className="hidden md:block">
+        <Table label="Leads de la lista">
           <thead>
             <tr>
               <Th className="w-10">
@@ -312,9 +340,43 @@ export function LeadsTable({
             ))}
           </tbody>
         </Table>
+        </div>
       </div>
       {confirmDialog}
     </>
+  );
+}
+
+function MobileLeadRow({ lead, selected, onToggle, onStatusChange }: {
+  lead: LeadWithRelations;
+  selected: boolean;
+  onToggle: () => void;
+  onStatusChange: (status: LeadStatus) => void;
+}) {
+  const navQuery = navQueryString(useSearchParams());
+  const next = describeNextAction(lead);
+  return (
+    <li className={cn("grid min-w-0 gap-1 rounded-lm-lg border border-lm-line px-3 pb-3", selected && "bg-lm-signal-soft")}>
+      <div className="flex items-start gap-2">
+        <label className="grid size-11 shrink-0 place-items-center">
+          <input type="checkbox" checked={selected} onChange={onToggle} aria-label={`Seleccionar ${lead.name}`} className="size-5 accent-lm-signal" />
+        </label>
+        <Link href={leadHref(lead.id, navQuery)} className="flex min-h-11 min-w-0 flex-1 items-center font-medium wrap-anywhere text-lm-ink focus-visible:lm-focus">
+          {lead.name}
+        </Link>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-sm text-lm-ink-2">
+        {lead.industries ? <Chip color={lead.industries.color}>{lead.industries.name}</Chip> : null}
+        {lead.city ? <span>{lead.city}</span> : null}
+        {lead.rating != null ? <span>★ {lead.rating.toFixed(1)}</span> : null}
+        <InterestBars value={lead.interest_level} />
+      </div>
+      {lead.phone || lead.email ? <p className="text-sm wrap-anywhere text-lm-ink-2">{[lead.phone, lead.email].filter(Boolean).join(" · ")}</p> : null}
+      {next ? <p className="text-xs text-lm-ink-2">{next.label}</p> : null}
+      <Select aria-label={`Estado de ${lead.name}`} className="mt-1" value={lead.status} onChange={(event) => onStatusChange(event.target.value as LeadStatus)}>
+        {LEAD_STATUSES.map((status) => <option key={status} value={status}>{STATUS_LABEL[status]}</option>)}
+      </Select>
+    </li>
   );
 }
 

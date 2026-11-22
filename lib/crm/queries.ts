@@ -1,13 +1,19 @@
 import { cache } from "react";
 import { asChats } from "@/lib/chats/db";
 import { missingCrm, readCrmPages } from "@/lib/crm/db";
-import { columnColors, contextColumns, type ColumnColor, type ContextKind, type Task, type TaskContext } from "@/lib/crm/model";
+import { clientAssigneeIds, columnColors, contextColumns, type Client, type ColumnColor, type ContextKind, type Task, type TaskContext } from "@/lib/crm/model";
 import { getTeamDirectory } from "@/lib/leads/team/queries";
 import { createClient, requireUser } from "@/lib/supabase/server";
 
 type FilterContext = Pick<TaskContext, "kind" | "id">;
-const CLIENT_COLUMNS = "id,owner_id,assignee_id,source_lead_id,name,status,notes,created_at";
+const CLIENT_COLUMNS = "*,crm_client_additional_assignees(user_id)";
 const TASK_COLUMNS = "*,crm_task_assignees(user_id)";
+
+function toClient({ crm_client_additional_assignees, ...row }: Omit<Client, "assigneeIds"> & {
+  crm_client_additional_assignees: { user_id: string }[];
+}): Client {
+  return { ...row, assigneeIds: clientAssigneeIds(row.assignee_id, crm_client_additional_assignees) };
+}
 
 export const getTaskPeople = cache(async () => {
   const [user, team] = await Promise.all([requireUser(), getTeamDirectory()]);
@@ -28,7 +34,7 @@ export const listClients = cache(async () => {
   ]);
   const error = clients.error ?? contacts.error;
   if (error && !missingCrm(error)) throw new Error("No se pudieron cargar los clientes.");
-  return { ready: !error, clients: clients.data ?? [], contacts: contacts.data ?? [] };
+  return { ready: !error, clients: clients.data.map(toClient), contacts: contacts.data ?? [] };
 });
 
 export async function getClient(id: string) {
@@ -39,7 +45,7 @@ export async function getClient(id: string) {
   ]);
   const error = client.error ?? contacts.error;
   if (error && !missingCrm(error)) throw new Error("No se pudo cargar la ficha.");
-  return { ready: !error, client: client.data, contacts: contacts.data ?? [] };
+  return { ready: !error, client: client.data ? toClient(client.data) : null, contacts: contacts.data ?? [] };
 }
 
 export async function getClientForLead(id: string) {

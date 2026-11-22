@@ -45,10 +45,10 @@ export function HubCard({
         )}
       </div>
 
-      <div className="mt-4 flex-1">
+      <div className={cn("flex-1", disabledNote ? "mt-2 sm:mt-4" : "mt-4 hidden md:block")}>
         {disabledNote ? (
-          <div className="flex h-full min-h-40 items-center justify-center rounded-lm-md border border-dashed border-lm-line-strong p-4">
-            <p className="max-w-xs text-center text-[13px] leading-[1.5] text-lm-ink-3">{disabledNote}</p>
+          <div className="flex items-center rounded-lm-md pl-12 md:h-full md:min-h-40 md:justify-center md:border md:border-dashed md:border-lm-line-strong md:p-4">
+            <p className="max-w-xs text-[13px] leading-[1.5] text-lm-ink-3 md:text-center">{disabledNote}</p>
           </div>
         ) : (
           // El hover vive en el preview, no en la tarjeta (estilos en .hub-preview, globals.css).
@@ -60,7 +60,7 @@ export function HubCard({
     </>
   );
 
-  const base = "lm-glass-soft flex flex-col rounded-lm-lg border p-5";
+  const base = "lm-glass-soft flex min-w-0 flex-col rounded-lm-lg border p-4 md:p-5";
 
   if (disabledNote) {
     return (
@@ -73,7 +73,7 @@ export function HubCard({
   return (
     <Link
       href={href}
-      className={cn(base, "group transition-colors duration-500 hover:border-lm-line-strong")}
+      className={cn(base, "group transition-colors duration-150 active:bg-lm-raised hover:border-lm-line-strong focus-visible:lm-focus")}
     >
       {body}
     </Link>

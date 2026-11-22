@@ -23,15 +23,15 @@ export function TimelineEvent({
   muted?: boolean;
 }) {
   return (
-    <div className="grid grid-cols-[20px_1fr_auto] gap-3 border-b border-lm-line py-3 last:border-b-0">
+    <div className="grid grid-cols-[12px_minmax(0,1fr)] gap-x-2 gap-y-1 border-b border-lm-line py-3 last:border-b-0 sm:grid-cols-[20px_minmax(0,1fr)_auto] sm:gap-3">
       <span
         className={cn(
           "mx-auto mt-1.5 size-2 rounded-full",
           incoming ? "bg-lm-signal" : "bg-lm-smoke-4",
         )}
       />
-      <div className={cn("min-w-0 font-lm-sans text-[13px] text-lm-ink", muted && "text-lm-ink-3")}>{children}</div>
-      <span className="font-mono text-xs leading-5 whitespace-nowrap text-lm-ink-3">{time}</span>
+      <div className={cn("min-w-0 font-lm-sans text-[13px] wrap-anywhere text-lm-ink", muted && "text-lm-ink-3")}>{children}</div>
+      <span className="col-start-2 font-mono text-xs leading-5 whitespace-nowrap text-lm-ink-3 sm:col-auto">{time}</span>
     </div>
   );
 }

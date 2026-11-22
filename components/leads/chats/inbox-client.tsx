@@ -1,7 +1,7 @@
 "use client";
 
-import { MessageSquare } from "lucide-react";
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { ArrowLeft, MessageSquare } from "lucide-react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 
 import { AudioRecorderDialog } from "@/components/leads/chats/audio-recorder";
 import { ChatThread, type ThreadState } from "@/components/leads/chats/chat-thread";
@@ -9,6 +9,7 @@ import { ContactPanel, type AutomationSummary } from "@/components/leads/chats/c
 import { ConversationList } from "@/components/leads/chats/conversation-list";
 import type { ComposerQuickReplies } from "@/components/leads/chats/message-composer";
 import { useInboxRealtime } from "@/components/leads/chats/use-inbox-realtime";
+import { Dialog } from "@/components/ui/dialog";
 import { loadConversation, loadConversationList, loadOlderMessages, markConversationRead, pollInboxNow, sendChatAttachment, sendChatText, setConversationArchived } from "@/lib/chats/actions";
 import type { TagLabelRow } from "@/lib/chats/db";
 import { previewOf } from "@/lib/chats/format";
@@ -23,6 +24,17 @@ import { cn } from "@/lib/utils";
 
 const FILTER_VALUES: ConversationFilter[] = ["todas", "sin_leer", "por_responder", "ventana", "seguimiento", "archivadas"];
 const PANEL_KEY = "smokia.chats.panel";
+const WIDE_INBOX = "(min-width: 80rem)";
+
+function subscribeWideInbox(onChange: () => void) {
+  const media = window.matchMedia(WIDE_INBOX);
+  media.addEventListener("change", onChange);
+  return () => media.removeEventListener("change", onChange);
+}
+
+function isWideInbox() {
+  return window.matchMedia(WIDE_INBOX).matches;
+}
 /**
  * Las vistas previas de audios y archivos guardados son URLs firmadas que
  * vencen a la hora (`PREVIEW_TTL_S`, inbox-actions.ts). Pasado este tiempo, al
@@ -128,7 +140,10 @@ export function InboxClient({
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
   const [threads, setThreads] = useState<Record<string, ThreadState>>(() => (initialDetail ? { [initialDetail.conversation.id]: mergeThread(undefined, initialDetail) } : {}));
   const [missing, setMissing] = useState<Set<string>>(() => new Set(initialSelectedId && !initialDetail ? [initialSelectedId] : []));
-  const [panelOpen, setPanelOpen] = useState(true);
+  const wideInbox = useSyncExternalStore(subscribeWideInbox, isWideInbox, () => false);
+  const [desktopPanelOpen, setDesktopPanelOpen] = useState(true);
+  const [overlayConversation, setOverlayConversation] = useState<string | null>(null);
+  const panelOpen = wideInbox ? desktopPanelOpen : selectedId !== null && overlayConversation === selectedId;
   const [quickReplies, setQuickReplies] = useState(initialQuickReplies.items);
   // Cuándo se firmaron las URLs de las vistas previas: al cargar la pantalla (lo marca un efecto al montar).
   const previewsSignedAt = useRef(0);
@@ -139,8 +154,25 @@ export function InboxClient({
 
   const inflight = useRef(new Map<string, Promise<void>>());
   const searchRef = useRef<HTMLInputElement>(null);
+  const inboxRef = useRef<HTMLDivElement>(null);
   const labels = useMemo(() => labelMap(labelRows), [labelRows]);
   const automationById = useMemo(() => new Map(automations.map((automation) => [automation.id, automation])), [automations]);
+
+  useEffect(() => {
+    const frame = inboxRef.current?.parentElement;
+    const viewport = window.visualViewport;
+    if (!selectedId || !frame || !viewport) return;
+    const resize = () => {
+      if (viewport.scale === 1) frame.style.setProperty("--lm-chat-viewport", `${viewport.height}px`);
+      else frame.style.removeProperty("--lm-chat-viewport");
+    };
+    resize();
+    viewport.addEventListener("resize", resize);
+    return () => {
+      viewport.removeEventListener("resize", resize);
+      frame.style.removeProperty("--lm-chat-viewport");
+    };
+  }, [selectedId]);
 
   const scope: ConversationScope = filter === "archivadas" ? "archivadas" : "activas";
   const scopeItems = useMemo(() => (scope === "archivadas" ? (archivedItems ?? []) : activeItems), [scope, archivedItems, activeItems]);
@@ -155,14 +187,18 @@ export function InboxClient({
   useEffect(() => {
     try {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (window.localStorage.getItem(PANEL_KEY) === "cerrado") setPanelOpen(false);
+      if (window.localStorage.getItem(PANEL_KEY) === "cerrado") setDesktopPanelOpen(false);
     } catch {
       // Sin storage: queda abierto.
     }
   }, []);
 
   function togglePanel() {
-    setPanelOpen((open) => {
+    if (!wideInbox) {
+      setOverlayConversation(panelOpen ? null : selectedId);
+      return;
+    }
+    setDesktopPanelOpen((open) => {
       try {
         window.localStorage.setItem(PANEL_KEY, open ? "cerrado" : "abierto");
       } catch {
@@ -256,6 +292,7 @@ export function InboxClient({
   const select = useCallback(
     (id: string | null, mode: "push" | "replace" | "none" = "push") => {
       setSelectedId(id);
+      setOverlayConversation(null);
       if (mode !== "none") {
         const url = urlFor({ c: id, f: filter, q: search, t: tag });
         if (mode === "push") window.history.pushState(null, "", url);
@@ -289,6 +326,7 @@ export function InboxClient({
       setSearch(state.q);
       setTag(state.t);
       setSelectedId(state.c);
+      setOverlayConversation(null);
       if (state.c) void fetchThread(state.c);
       if (state.f === "archivadas") reloadList("archivadas");
     }
@@ -686,9 +724,27 @@ export function InboxClient({
                   : "No hay conversaciones archivadas."
                 : "Todavía no hay conversaciones.";
 
+  const contact = thread && panelConversation && panelOpen ? (
+    <ContactPanel
+      conversation={panelConversation}
+      lead={thread.detail.lead}
+      canLink={thread.detail.account.isOwner}
+      labels={labels}
+      allTags={tags.map((entry) => entry.tag)}
+      automation={panelConversation.source_automation_id ? (automationById.get(panelConversation.source_automation_id) ?? null) : null}
+      extrasReady={extrasReady && thread.detail.extrasReady}
+      onPatch={(patch) => patchConversation(panelConversation.id, patch)}
+      onLeadChanged={() => {
+        void fetchThread(panelConversation.id);
+        reloadList("activas");
+      }}
+      onClose={wideInbox ? togglePanel : undefined}
+    />
+  ) : null;
+
   return (
-    <div className={cn("grid min-h-0 flex-1 lg:grid-cols-[340px_minmax(0,1fr)]", showPanel && "xl:grid-cols-[340px_minmax(0,1fr)_300px]")}>
-      <aside className={cn("min-h-0 border-r border-lm-line", selectedId ? "hidden lg:block" : "")}>
+    <div ref={inboxRef} className={cn("grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] lg:grid-cols-[340px_minmax(0,1fr)]", selectedId && "lm-chat-active", showPanel && "xl:grid-cols-[340px_minmax(0,1fr)_300px]")}>
+      <aside className={cn("min-h-0 min-w-0 lg:border-r lg:border-lm-line", selectedId ? "hidden lg:block" : "")}>
         <ConversationList
           items={visible}
           selectedId={selectedId}
@@ -710,16 +766,16 @@ export function InboxClient({
         />
       </aside>
 
-      <section className={cn("min-h-0", selectedId ? "" : "hidden lg:block")}>
+      <section className={cn("min-h-0 min-w-0 max-lg:overflow-clip", selectedId ? "" : "hidden lg:block")}>
         {thread ? (
-          <div key={thread.detail.conversation.id} className="lm-rise h-full min-h-0">
+          <div key={thread.detail.conversation.id} className="lm-chat-thread h-full min-h-0">
             <ChatThread
               thread={thread}
               onSend={(text) => sendText(thread.detail.conversation.id, text)}
               onRetry={(message) => retry(thread.detail.conversation.id, message)}
               onLoadOlder={() => loadOlder(thread.detail.conversation.id)}
               onArchive={() => archive(thread.detail.conversation.id)}
-              onBack={() => select(null)}
+              onBack={() => select(null, "replace")}
               onTogglePanel={togglePanel}
               panelOpen={panelOpen}
               quickReplies={composerQuickReplies}
@@ -727,40 +783,25 @@ export function InboxClient({
             />
           </div>
         ) : selectedId && !missing.has(selectedId) ? (
-          <ThreadSkeleton item={selectedItem} />
+          <ThreadSkeleton item={selectedItem} onBack={() => select(null, "replace")} />
         ) : (
           <div className="grid h-full place-items-center px-6 text-center">
             <div className="flex max-w-xs flex-col items-center gap-2">
               <MessageSquare className="size-6 text-lm-ink-3" strokeWidth={1.5} />
               <p className="font-lm-sans text-[13.5px] text-lm-ink-2">{selectedId ? "No se encontró esa conversación." : "Elegí una conversación para leerla y responder."}</p>
-              <p className="text-xs text-lm-ink-3">J y K para moverte · / para buscar · E para archivar</p>
+              <p className="hidden text-xs text-lm-ink-3 lg:block">J y K para moverte · / para buscar · E para archivar</p>
+              {selectedId ? <MobileBack onBack={() => select(null, "replace")} /> : null}
             </div>
           </div>
         )}
       </section>
 
-      {thread && panelConversation && panelOpen ? (
-        <>
-          {/* Debajo de xl el panel flota sobre el hilo; desde xl es una columna fija. */}
-          <div className="fixed inset-0 z-30 bg-lm-scrim xl:hidden" onClick={togglePanel} aria-hidden />
-          <aside className="lm-glass-pop fixed inset-y-0 right-0 z-40 w-[min(320px,90vw)] border-l border-lm-line xl:static xl:z-auto xl:w-auto xl:bg-transparent xl:backdrop-blur-none">
-            <ContactPanel
-              conversation={panelConversation}
-              lead={thread.detail.lead}
-              canLink={thread.detail.account.isOwner}
-              labels={labels}
-              allTags={tags.map((entry) => entry.tag)}
-              automation={panelConversation.source_automation_id ? (automationById.get(panelConversation.source_automation_id) ?? null) : null}
-              extrasReady={extrasReady && thread.detail.extrasReady}
-              onPatch={(patch) => patchConversation(panelConversation.id, patch)}
-              onLeadChanged={() => {
-                void fetchThread(panelConversation.id);
-                reloadList("activas");
-              }}
-              onClose={togglePanel}
-            />
-          </aside>
-        </>
+      {contact ? wideInbox ? (
+        <aside className="min-h-0 min-w-0 border-l border-lm-line">{contact}</aside>
+      ) : (
+        <Dialog open sheet onClose={togglePanel} title="Contacto" className="h-[min(86dvh,44rem)] [&>div:last-child]:flex-1">
+          {contact}
+        </Dialog>
       ) : null}
 
       <AudioRecorderDialog open={recorderOpen} onClose={() => setRecorderOpen(false)} onSaved={(item) => setQuickReplies((items) => [...items, item])} />
@@ -769,10 +810,19 @@ export function InboxClient({
 }
 
 /** Mientras llega un hilo que no estaba en memoria: la forma real de la pantalla, con lo que ya se sabe. */
-function ThreadSkeleton({ item }: { item?: ConversationListItem }) {
+function MobileBack({ onBack }: { onBack: () => void }) {
+  return (
+    <button type="button" onClick={onBack} aria-label="Volver a los chats" className="grid size-11 shrink-0 place-items-center rounded-full active:bg-lm-ink/10 lg:hidden">
+      <ArrowLeft className="size-5" aria-hidden />
+    </button>
+  );
+}
+
+function ThreadSkeleton({ item, onBack }: { item?: ConversationListItem; onBack: () => void }) {
   return (
     <div className="flex h-full min-h-0 flex-col" role="status" aria-label="Cargando la conversación">
       <div className="flex items-center gap-3 border-b border-lm-line px-4 py-3">
+        <MobileBack onBack={onBack} />
         <div className="size-10 shrink-0 rounded-full bg-lm-raised" />
         <div className="flex flex-col gap-1.5">
           {item ? <span className="font-lm-sans text-[15px] font-semibold text-lm-ink">{item.participant_name || (item.participant_handle ? `@${item.participant_handle}` : "")}</span> : <div className="lm-smoke w-40" />}

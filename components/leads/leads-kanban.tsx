@@ -6,14 +6,13 @@ import Link from "next/link";
 import { useRef, useState, useTransition, type DragEvent } from "react";
 
 import { Toast } from "@/components/ui/feedback";
+import { Select } from "@/components/ui/field";
 import { Chip } from "@/components/ui/status-badge";
 import { leadHref, navQueryString } from "@/lib/leads/nav-params";
 import { updateLeadStatus } from "@/lib/leads/actions";
 import type { LeadWithRelations } from "@/lib/leads/queries";
 import { STAGE_GROUP, STAGE_GROUPS, STATUS_LABEL, stageGroupOf, type StageGroup } from "@/lib/leads/status";
 import { cn } from "@/lib/utils";
-
-const SCROLL_STEP = 320;
 
 /**
  * Kanban con drag & drop nativo del navegador — sin librería aparte (Plan
@@ -27,7 +26,7 @@ export function LeadsKanban({ leads }: { leads: LeadWithRelations[] }) {
   const navQuery = navQueryString(useSearchParams());
   const [items, setItems] = useState(leads);
   const [dragOverGroup, setDragOverGroup] = useState<StageGroup | null>(null);
-  const [, startTransition] = useTransition();
+  const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const errorTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -40,17 +39,24 @@ export function LeadsKanban({ leads }: { leads: LeadWithRelations[] }) {
   }
 
   function scrollBy(amount: number) {
-    scrollRef.current?.scrollBy({ left: amount, behavior: "smooth" });
+    const track = scrollRef.current;
+    const column = track?.firstElementChild;
+    if (!track || !column) return;
+    track.scrollBy({ left: amount * (column.clientWidth + 12), behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }
 
   function handleDrop(group: StageGroup, event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setDragOverGroup(null);
     const leadId = event.dataTransfer.getData("text/plain");
-    if (!leadId) return;
+    if (leadId) moveLead(leadId, group);
+  }
 
-    const status = STAGE_GROUP[group][0];
+  function moveLead(leadId: string, group: StageGroup) {
+    if (pending) return;
     const previous = items.find((lead) => lead.id === leadId)?.status;
+    if (!previous || stageGroupOf(previous) === group) return;
+    const status = STAGE_GROUP[group][0];
     setItems((current) => current.map((lead) => (lead.id === leadId ? { ...lead, status } : lead)));
     startTransition(async () => {
       const result = await updateLeadStatus(leadId, status);
@@ -65,30 +71,32 @@ export function LeadsKanban({ leads }: { leads: LeadWithRelations[] }) {
   }
 
   return (
-    <div className="relative">
+    <div className="relative min-w-0">
       {error ? (
-        <div className="absolute -top-2 left-1/2 z-20 w-max -translate-x-1/2 -translate-y-full">
+        <div className="mb-2" role="alert">
           <Toast tone="error">{error}</Toast>
         </div>
       ) : null}
-      <button
+      <div className="mb-2 flex items-center justify-between gap-2">
+      <span className="text-xs font-medium text-lm-ink-2">Etapas del tablero</span>
+      <div className="ml-auto flex gap-1.5"><button
         type="button"
         aria-label="Desplazar a la izquierda"
-        onClick={() => scrollBy(-SCROLL_STEP)}
-        className="lm-shadow-pop absolute top-1/2 -left-3 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full border border-lm-line-strong bg-lm-raised text-lm-ink-2 hover:text-lm-ink"
+        onClick={() => scrollBy(-1)}
+        className="grid size-11 place-items-center rounded-lm-md border border-lm-line-strong bg-lm-raised text-lm-ink-2 active:bg-lm-overlay sm:size-8"
       >
         <ChevronLeft className="size-4" strokeWidth={1.5} />
       </button>
       <button
         type="button"
         aria-label="Desplazar a la derecha"
-        onClick={() => scrollBy(SCROLL_STEP)}
-        className="lm-shadow-pop absolute top-1/2 -right-3 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full border border-lm-line-strong bg-lm-raised text-lm-ink-2 hover:text-lm-ink"
+        onClick={() => scrollBy(1)}
+        className="grid size-11 place-items-center rounded-lm-md border border-lm-line-strong bg-lm-raised text-lm-ink-2 active:bg-lm-overlay sm:size-8"
       >
         <ChevronRight className="size-4" strokeWidth={1.5} />
-      </button>
+      </button></div></div>
 
-      <div ref={scrollRef} className="scroll-smooth flex gap-3 overflow-x-auto pb-2">
+      <div ref={scrollRef} className="flex min-w-0 snap-x snap-mandatory items-start gap-3 overflow-x-auto overscroll-x-contain pb-2 md:snap-none md:items-stretch">
         {STAGE_GROUPS.map((group) => {
           const column = items.filter((lead) => stageGroupOf(lead.status) === group);
           return (
@@ -101,7 +109,7 @@ export function LeadsKanban({ leads }: { leads: LeadWithRelations[] }) {
               onDragLeave={() => setDragOverGroup((current) => (current === group ? null : current))}
               onDrop={(event) => handleDrop(group, event)}
               className={cn(
-                "flex w-72 shrink-0 flex-col gap-2 rounded-lm-lg border border-lm-line p-3 transition-colors",
+                "flex w-[min(19rem,90%)] shrink-0 snap-start flex-col gap-2 rounded-lm-lg border border-lm-line p-3 transition-colors md:w-72",
                 dragOverGroup === group ? "border-lm-signal bg-lm-signal-soft" : "lm-tint",
               )}
             >
@@ -111,12 +119,12 @@ export function LeadsKanban({ leads }: { leads: LeadWithRelations[] }) {
               </div>
               <div className="flex min-h-16 flex-col gap-2">
                 {column.map((lead) => (
+                  <article key={lead.id} className="min-w-0 rounded-lm-md border border-lm-line-strong bg-lm-raised">
                   <Link
-                    key={lead.id}
                     href={leadHref(lead.id, navQuery)}
                     draggable
                     onDragStart={(event) => event.dataTransfer.setData("text/plain", lead.id)}
-                    className="block cursor-grab rounded-lm-md border border-lm-line-strong bg-lm-raised p-3 text-[13px] transition-colors hover:bg-lm-overlay active:cursor-grabbing"
+                    className="block cursor-grab rounded-lm-md p-3 text-sm transition-colors hover:bg-lm-overlay active:bg-lm-overlay active:cursor-grabbing"
                   >
                     <p className="truncate font-medium text-lm-ink">{lead.name}</p>
                     <p className="mt-1 text-xs text-lm-ink-3">{STATUS_LABEL[lead.status]}</p>
@@ -127,6 +135,13 @@ export function LeadsKanban({ leads }: { leads: LeadWithRelations[] }) {
                       </Chip>
                     ) : null}
                   </Link>
+                  <div className="px-3 pb-3 md:hidden">
+                    <Select aria-label={`Mover de etapa: ${lead.name}`} value={group} disabled={pending}
+                      onChange={(event) => moveLead(lead.id, event.target.value as StageGroup)} className="w-full min-w-0">
+                      {STAGE_GROUPS.map((stage) => <option key={stage} value={stage}>{stage}</option>)}
+                    </Select>
+                  </div>
+                  </article>
                 ))}
               </div>
             </div>

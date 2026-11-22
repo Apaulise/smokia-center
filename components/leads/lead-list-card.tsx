@@ -33,7 +33,7 @@ export function LeadListCard({ list }: { list: LeadListOverviewRow }) {
     <div className="flex flex-col gap-3 lm-tint lm-tint-hover rounded-lm-lg border border-lm-line-strong p-4 outline-1 -outline-offset-1 outline-transparent transition-colors hover:outline-lm-line-strong">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="truncate font-lm-sans text-[15px] font-semibold text-lm-ink">{list.name}</h3>
+          <h3 className="font-lm-sans text-[15px] font-semibold [overflow-wrap:anywhere] text-lm-ink">{list.name}</h3>
           <p className="mt-0.5 font-mono text-xs text-lm-ink-3">
             {new Date(list.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })}
           </p>

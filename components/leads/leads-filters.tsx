@@ -37,8 +37,8 @@ export function LeadsFilters({
   }
 
   return (
-    <div className="flex flex-wrap items-end gap-3 lm-glass-soft rounded-lm-lg border p-4">
-      <div className="min-w-[200px] flex-1">
+    <div className="lm-glass-soft grid grid-cols-2 items-end gap-3 rounded-lm-lg border p-3 sm:flex sm:flex-wrap sm:p-4">
+      <div className="col-span-2 min-w-0 flex-1 sm:basis-48">
         <label className="mb-1.5 block text-xs text-lm-ink-2" htmlFor="q">
           Buscar
         </label>
@@ -52,6 +52,8 @@ export function LeadsFilters({
             placeholder="Nombre, teléfono, email o dirección"
             className="pr-9 pl-9"
             autoComplete="off"
+            type="search"
+            enterKeyHint="search"
           />
           {value.q ? (
             <button
@@ -66,7 +68,7 @@ export function LeadsFilters({
         </div>
       </div>
 
-      <div className="w-44">
+      <div className="min-w-0 sm:w-44">
         <label className="mb-1.5 block text-xs text-lm-ink-2" htmlFor="industryId">
           Rubro
         </label>
@@ -80,7 +82,7 @@ export function LeadsFilters({
         </Select>
       </div>
 
-      <div className="w-44">
+      <div className="min-w-0 sm:w-44">
         <label className="mb-1.5 block text-xs text-lm-ink-2" htmlFor="status">
           Estado
         </label>
@@ -94,7 +96,7 @@ export function LeadsFilters({
         </Select>
       </div>
 
-      <div className="w-40">
+      <div className="min-w-0 sm:w-40">
         <label className="mb-1.5 block text-xs text-lm-ink-2" htmlFor="city">
           Ciudad
         </label>
@@ -108,13 +110,13 @@ export function LeadsFilters({
         </Select>
       </div>
 
-      <div className="flex min-w-28 items-center justify-end pb-2 text-xs text-lm-ink-3">
+      <div className="flex min-h-11 items-center justify-end text-xs text-lm-ink-3 sm:min-h-0 sm:pb-2">
         {hasFilters ? (
-          <button type="button" onClick={() => onChange({ industryId: "", status: "", city: "", q: "" })} className="hover:text-lm-ink">
+          <button type="button" onClick={() => onChange({ industryId: "", status: "", city: "", q: "" })} className="active:text-lm-ink hover:text-lm-ink">
             Limpiar filtros
           </button>
         ) : (
-          <span>Filtros instantáneos</span>
+          null
         )}
       </div>
     </div>

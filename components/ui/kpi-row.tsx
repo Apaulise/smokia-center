@@ -13,8 +13,8 @@ export function KpiRow({ children, className }: { children: ReactNode; className
       className={cn(
         "lm-glass-soft grid overflow-hidden rounded-lm-lg border",
         // Mobile: dos por fila (en una sola fila los números se cortaban). Desde sm, todas en una fila.
-        "grid-cols-2 max-sm:[&>*]:border-lm-line max-sm:[&>*:nth-child(even)]:border-l max-sm:[&>*:nth-child(n+3)]:border-t",
-        "sm:auto-cols-fr sm:grid-flow-col sm:grid-cols-none sm:divide-x sm:divide-lm-line",
+        "grid-cols-2 max-xl:[&>*]:border-lm-line max-xl:[&>*:nth-child(even)]:border-l max-xl:[&>*:nth-child(n+3)]:border-t",
+        "xl:auto-cols-fr xl:grid-flow-col xl:grid-cols-none xl:divide-x xl:divide-lm-line",
         className,
       )}
     >
@@ -46,14 +46,14 @@ export function Kpi({
   className?: string;
 }) {
   return (
-    <div className={cn("relative flex min-w-0 flex-col gap-2 px-5 py-4", muted && "opacity-50", className)}>
+    <div className={cn("relative flex min-w-0 flex-col gap-2 px-3 py-4 sm:px-5", muted && "opacity-50", className)}>
       {mark ? <span className="absolute top-0 left-5 h-0.5 w-6 rounded-b-full bg-lm-signal" aria-hidden="true" /> : null}
-      <span className="truncate font-lm-sans text-[11px] leading-[14px] font-semibold tracking-[0.1em] text-lm-ink-3 uppercase">
+      <span className="font-lm-sans text-[11px] leading-[14px] font-semibold tracking-[0.1em] wrap-anywhere text-lm-ink-3 uppercase">
         {label}
       </span>
       <span
         className={cn(
-          "font-mono text-[32px] leading-9 font-medium tracking-[-0.04em] tabular-nums",
+          "font-mono text-2xl leading-tight font-medium tracking-[-0.04em] wrap-anywhere tabular-nums sm:text-[32px]",
           signal ? "text-lm-signal-text" : "text-lm-ink",
         )}
       >

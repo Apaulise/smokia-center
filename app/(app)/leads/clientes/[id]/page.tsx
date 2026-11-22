@@ -28,9 +28,8 @@ export default async function ClientPage({ params }: PageProps<"/leads/clientes/
   const source = sources[0]?.id;
   const chats = source ? await listConversationsForLead(source) : [];
   const leadHref = source ? contextHref("lead", source) : null;
-  const responsible = client.assignee_id
-    ? people.find((person) => person.id === client.assignee_id)?.label ?? "Fuera del equipo"
-    : "Sin responsable";
+  const responsible = client.assigneeIds.map((id) =>
+    people.find((person) => person.id === id)?.label ?? "Fuera del equipo").join(", ") || "Sin responsables";
 
   return (
     <>
@@ -52,7 +51,7 @@ export default async function ClientPage({ params }: PageProps<"/leads/clientes/
             <section className="rounded-lm-lg border border-lm-line p-4">
               <h2 className="font-semibold text-lm-ink">Información comercial</h2>
               <dl className="mt-3 grid gap-3 text-sm text-lm-ink-2">
-                <div><dt className="font-medium text-lm-ink">Responsable</dt><dd>{responsible}</dd></div>
+                <div><dt className="font-medium text-lm-ink">Responsables</dt><dd>{responsible}</dd></div>
                 <div><dt className="font-medium text-lm-ink">Origen</dt><dd>{client.source_lead_id ? "Lead ganado" : "Alta manual"}</dd></div>
                 <div><dt className="font-medium text-lm-ink">Notas</dt><dd className="whitespace-pre-wrap wrap-anywhere">{client.notes || "Sin notas"}</dd></div>
               </dl>

@@ -24,7 +24,8 @@ function refreshCrm() {
   revalidatePath("/leads", "layout");
 }
 
-const clientFields = z.object({ name: label, status: z.enum(clientStatuses), notes: note(5000), assignee_id: optionalId });
+const clientFields = z.object({ name: label, status: z.enum(clientStatuses), notes: note(5000), assignees: z.array(uuid) });
+const readClientFields = (form: FormData) => ({ ...fields(form), assignees: form.getAll("assignees") });
 const createClientFields = clientFields.extend({
   source: optionalId, contact: note(160), email, phone: note(80), job_title: note(120),
 }).refine(({ contact, email, phone, job_title }) => Boolean(contact) || (!email && !phone && !job_title), {
@@ -33,10 +34,11 @@ const createClientFields = clientFields.extend({
 
 export async function createCrmClient(_previous: CrmResult | null, form: FormData): Promise<CrmResult> {
   await requireUser();
-  const parsed = createClientFields.safeParse(fields(form));
+  const parsed = createClientFields.safeParse(readClientFields(form));
   if (!parsed.success) return invalid(parsed.error);
   const input = parsed.data;
-  const { data, error } = await (await createClient()).rpc("crm_create_client", {
+  const { data, error } = await (await createClient()).rpc("crm_write_client", {
+    p_id: null,
     p_name: input.name,
     p_status: input.status,
     p_source: input.source ?? undefined,
@@ -44,9 +46,10 @@ export async function createCrmClient(_previous: CrmResult | null, form: FormDat
     p_contact_name: input.contact ?? undefined,
     p_email: input.email ?? undefined,
     p_phone: input.phone ?? undefined,
-    p_assignee: input.assignee_id,
+    p_assignees: input.assignees,
     p_job_title: input.job_title ?? undefined,
   });
+  if (error?.message === "Responsable fuera del equipo") return failed("Elegí responsables de tu equipo.");
   if (error || !data) return failed("No se pudo crear el cliente. Si viene de un lead, revisá que siga ganado.");
   refreshCrm();
   redirect(`/leads/clientes/${data}`);
@@ -54,11 +57,14 @@ export async function createCrmClient(_previous: CrmResult | null, form: FormDat
 
 export async function saveCrmClient(id: string, _previous: CrmResult | null, form: FormData): Promise<CrmResult> {
   await requireUser();
-  const parsed = clientFields.safeParse(fields(form));
+  const parsed = clientFields.safeParse(readClientFields(form));
   if (!parsed.success) return invalid(parsed.error);
   if (!uuid.safeParse(id).success) return failed("El cliente no está disponible.");
-  const { data, error } = await (await createClient()).from("crm_clients").update(parsed.data)
-    .eq("id", id).select("id").maybeSingle();
+  const { data, error } = await (await createClient()).rpc("crm_write_client", {
+    p_id: id, p_name: parsed.data.name, p_status: parsed.data.status,
+    p_notes: parsed.data.notes ?? undefined, p_assignees: parsed.data.assignees,
+  });
+  if (error?.message === "Responsable fuera del equipo") return failed("Elegí responsables de tu equipo.");
   if (error || !data) return failed("No se pudo guardar el cliente.");
   refreshCrm();
   return done("Cliente guardado.");

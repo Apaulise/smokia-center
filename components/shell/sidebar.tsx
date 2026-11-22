@@ -13,7 +13,6 @@ import {
   Search,
   Settings,
   Users,
-  X,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -26,6 +25,7 @@ import { usePendingPath } from "@/components/shell/navigation-state";
 import { ProfileAvatar } from "@/components/shell/profile-avatar";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { useCommandShortcuts } from "@/components/shell/use-command-shortcuts";
+import { Dialog } from "@/components/ui/dialog";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -131,45 +131,8 @@ export function Sidebar({
     router.refresh();
   }
 
-  return (
+  const navigation = (
     <>
-      {/* Barra superior — sólo mobile/tablet (<1024). Alto fijo de 56px: es el `--lm-shell-y` de mobile (globals.css). */}
-      <header className="lm-glass flex h-14 shrink-0 items-center justify-between border-b px-4 lg:hidden">
-        <Link href="/" className="flex items-center gap-2 font-lm-sans text-[15px] font-semibold text-lm-ink">
-          <Image src="/logo-mark.png" alt="" width={13} height={22} className="h-[22px] w-auto shrink-0" />
-          SmokIA
-        </Link>
-        <div className="flex items-center gap-1.5">
-          {/* En el celular no hay ⌘K: la búsqueda tiene que estar a un toque, sin abrir el menú. */}
-          <button
-            type="button"
-            onClick={() => setPaletteOpen(true)}
-            className="grid size-9 place-items-center rounded-full bg-lm-ink/5 text-lm-ink-2 transition-colors hover:bg-lm-ink/10 hover:text-lm-ink focus-visible:lm-focus"
-            aria-label="Buscar un lead, una lista o una pantalla"
-          >
-            <Search className="size-4" strokeWidth={1.5} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setOpen((value) => !value)}
-            className="grid size-9 place-items-center rounded-full bg-lm-ink/5 text-lm-ink-2 transition-colors hover:bg-lm-ink/10 hover:text-lm-ink focus-visible:lm-focus"
-            aria-label={open ? "Cerrar menú" : "Abrir menú"}
-            aria-expanded={open}
-          >
-            {open ? <X className="size-4" strokeWidth={1.5} /> : <Menu className="size-4" strokeWidth={1.5} />}
-          </button>
-        </div>
-      </header>
-
-      <aside
-        className={cn(
-          "lm-glass flex-col font-lm-sans",
-          "lg:sticky lg:top-(--lm-shell-gap) lg:flex lg:h-[calc(100dvh-var(--lm-shell-y))] lg:shrink-0 lg:overflow-hidden lg:rounded-lm-xl lg:border",
-          "lg:transition-[width] lg:duration-200 lg:ease-out motion-reduce:transition-none",
-          collapsed ? "lg:w-[60px]" : "lg:w-60",
-          open ? "flex border-b" : "hidden",
-        )}
-      >
         <div
           className={cn(
             "hidden h-14 shrink-0 items-center gap-2 px-3",
@@ -197,7 +160,7 @@ export function Sidebar({
         <div className={cn("px-3 pt-3 pb-2 lg:pt-0", collapsed && "lg:px-0 lg:pb-1")}>
           <button
             type="button"
-            onClick={() => setPaletteOpen(true)}
+            onClick={() => { setOpen(false); setPaletteOpen(true); }}
             title={collapsed ? "Buscar o ejecutar (⌘K)" : undefined}
             aria-label="Buscar o ejecutar"
             className={cn(
@@ -213,7 +176,7 @@ export function Sidebar({
           </button>
         </div>
 
-        <nav className={cn("flex-1 overflow-y-auto px-3 py-1", collapsed && "lg:px-3")} aria-label="Navegación">
+        <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-1" aria-label="Navegación">
           <Link
             href="/"
             title={collapsed ? "Todos los gestores" : undefined}
@@ -237,7 +200,7 @@ export function Sidebar({
               </div>
 
               {activeModule.children ? (
-                <ChildNav module={activeModule} pathname={pathname} badges={badges} collapsed={collapsed} />
+                <ChildNav module={activeModule} pathname={pathname} badges={badges} collapsed={collapsed} onNavigate={() => setOpen(false)} />
               ) : null}
             </div>
           ) : null}
@@ -281,8 +244,37 @@ export function Sidebar({
             <span className={cn("min-w-0 flex-1 truncate text-[13px] text-lm-ink", collapsed && "lg:hidden")}>{name}</span>
           </div>
         </div>
-      </aside>
+    </>
+  );
 
+  return (
+    <>
+      <header className="lm-mobile-header flex shrink-0 items-center justify-between border-b border-lm-line bg-lm-surface px-4 lg:hidden">
+        <Link href="/" className="flex min-h-11 items-center gap-2 font-lm-sans text-[15px] font-semibold text-lm-ink">
+          <Image src="/logo-mark.png" alt="" width={13} height={22} className="h-[22px] w-auto shrink-0" />
+          SmokIA
+        </Link>
+        <div className="flex items-center gap-1.5">
+          <button type="button" onClick={() => setPaletteOpen(true)} aria-label="Buscar un lead, una lista o una pantalla"
+            className="grid size-11 place-items-center rounded-full bg-lm-ink/5 text-lm-ink-2 active:bg-lm-ink/15 focus-visible:lm-focus">
+            <Search className="size-4" strokeWidth={1.5} />
+          </button>
+          <button type="button" onClick={() => setOpen(true)} aria-label="Abrir menú" aria-expanded={open}
+            className="grid size-11 place-items-center rounded-full bg-lm-ink/5 text-lm-ink-2 active:bg-lm-ink/15 focus-visible:lm-focus">
+            <Menu className="size-5" strokeWidth={1.5} />
+          </button>
+        </div>
+      </header>
+      <aside className={cn(
+        "lm-glass hidden min-h-0 flex-col font-lm-sans",
+        "lg:sticky lg:top-(--lm-shell-gap) lg:flex lg:h-[calc(100dvh-var(--lm-shell-y))] lg:shrink-0 lg:overflow-hidden lg:rounded-lm-xl lg:border",
+        "lg:transition-[width] lg:duration-200 lg:ease-out motion-reduce:transition-none",
+        collapsed ? "lg:w-[60px]" : "lg:w-60",
+      )}>{navigation}</aside>
+      <Dialog open={open && !paletteOpen} onClose={() => setOpen(false)} sheet title="Navegación" overlayClassName="lg:hidden"
+        className="[&_nav_a]:min-h-11 [&_nav_span.pointer-events-none]:hidden [&_a[aria-current=page]]:bg-lm-ink/8">
+        {navigation}
+      </Dialog>
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </>
   );
@@ -314,11 +306,13 @@ function ChildNav({
   pathname,
   badges,
   collapsed,
+  onNavigate,
 }: {
   module: NavModule;
   pathname: string;
   badges?: Record<string, number>;
   collapsed: boolean;
+  onNavigate: () => void;
 }) {
   const children = module.children ?? [];
   const activeIndex = children.findIndex((child) => isChildActive(pathname, child));
@@ -345,6 +339,7 @@ function ChildNav({
           <Link
             key={child.href}
             href={child.href}
+            onClick={onNavigate}
             aria-current={active ? "page" : undefined}
             aria-label={collapsed ? child.label : undefined}
             title={collapsed ? (badge ? `${child.label} · ${badge}` : child.label) : undefined}

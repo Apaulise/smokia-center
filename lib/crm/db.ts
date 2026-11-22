@@ -1,5 +1,5 @@
 export function missingCrm(error: { code: string } | null) {
-  return error?.code === "42P01" || error?.code === "42703" || error?.code === "PGRST205" || error?.code === "PGRST202";
+  return error?.code === "42P01" || error?.code === "42703" || error?.code === "PGRST205" || error?.code === "PGRST202" || error?.code === "PGRST200";
 }
 
 const PAGE_SIZE = 500;

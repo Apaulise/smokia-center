@@ -7,7 +7,7 @@ import { CrmUnavailable } from "@/components/leads/crm/sections";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { HeaderBar, PageHeading } from "@/components/ui/page-header";
-import { clientStatuses, clientStatusLabels, type Contact } from "@/lib/crm/model";
+import { clientStatuses, clientStatusLabels, matchesAssignee, type Contact } from "@/lib/crm/model";
 import { getTaskPeople, listClients } from "@/lib/crm/queries";
 
 export const metadata = { title: "Clientes · SmokIA" };
@@ -31,7 +31,7 @@ export default async function ClientsPage({ searchParams }: PageProps<"/leads/cl
   const term = normalize(query);
   const filtered = clients.filter((client) =>
     (!status || client.status === status) &&
-    (!assignee || (assignee === "sin-responsable" ? !client.assignee_id : client.assignee_id === assignee)) && (
+    matchesAssignee(client.assigneeIds, assignee ?? "") && (
       !term || normalize(client.name).includes(term) || byClient.get(client.id)?.some((contact) => normalize(contact.name).includes(term))
     ),
   );
@@ -71,7 +71,7 @@ export default async function ClientsPage({ searchParams }: PageProps<"/leads/cl
                         <span className="grid size-9 place-items-center rounded-lm-md bg-lm-signal-soft text-lm-signal-text"><Building2 size={17} aria-hidden /></span>
                         <span className="min-w-0">
                           <span className="block font-semibold wrap-anywhere text-lm-ink">{client.name}</span>
-                          <span className="mt-1 block text-xs wrap-anywhere text-lm-ink-2">{clientStatusLabels[client.status]} · {client.assignee_id ? names.get(client.assignee_id) ?? "Responsable fuera del equipo" : "Sin responsable"} · {people[0]?.name ?? "Sin contacto"}{people.length > 1 ? ` y ${people.length - 1} más` : ""}</span>
+                          <span className="mt-1 block text-xs wrap-anywhere text-lm-ink-2">{clientStatusLabels[client.status]} · {client.assigneeIds.map((id) => names.get(id) ?? "Fuera del equipo").join(", ") || "Sin responsables"} · {people[0]?.name ?? "Sin contacto"}{people.length > 1 ? ` y ${people.length - 1} más` : ""}</span>
                         </span>
                         <ArrowUpRight size={16} className="text-lm-ink-2" aria-hidden />
                       </Link>

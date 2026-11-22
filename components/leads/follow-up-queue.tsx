@@ -45,7 +45,26 @@ function reasonLabel(lead: FollowUpQueueLead): string {
 
 function QueueTable({ leads }: { leads: FollowUpQueueLead[] }) {
   return (
-    <Table>
+    <>
+    <ul className="grid gap-3 md:hidden">
+      {leads.map((lead) => (
+        <li key={lead.id} className="lm-glass-soft min-w-0 rounded-lm-lg border px-4 pt-1 pb-2">
+          <Link href={`/leads/${lead.id}`} className="inline-flex min-h-11 items-center font-medium wrap-anywhere text-lm-ink focus-visible:lm-focus">
+            {lead.name}
+          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge group={STATUS_TEMPERATURE_GROUP[lead.status]}>{STATUS_LABEL[lead.status]}</StatusBadge>
+            {lead.industries ? <Chip color={lead.industries.color ?? undefined}>{lead.industries.name}</Chip> : null}
+          </div>
+          <p className="mt-2 text-xs text-lm-ink-2">{reasonLabel(lead)} · Último contacto: {lastContactLabel(lead)}</p>
+          <Link href={`/leads/${lead.id}?modo=seguimiento`} className="mt-1 inline-flex min-h-11 items-center text-sm font-medium text-lm-signal-text focus-visible:lm-focus">
+            Hacer seguimiento
+          </Link>
+        </li>
+      ))}
+    </ul>
+    <div className="hidden md:block">
+    <Table label="Cola de seguimiento">
       <thead>
         <Tr>
           <Th>Lead</Th>
@@ -85,6 +104,8 @@ function QueueTable({ leads }: { leads: FollowUpQueueLead[] }) {
         })}
       </tbody>
     </Table>
+    </div>
+    </>
   );
 }
 

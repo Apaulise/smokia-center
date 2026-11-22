@@ -111,7 +111,7 @@ export default async function ObjetivoPage({ searchParams }: { searchParams: Pro
             definedBy ? ` Definido por ${definedBy}.` : ""
           }`}
           action={
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <Segmented>
                 {(Object.keys(PERIODS) as Period[]).map((key) => (
                   <SegmentedLink key={key} href={`/leads/objetivo?period=${key}`} active={key === period}>

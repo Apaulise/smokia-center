@@ -65,7 +65,7 @@ export default async function ChatsPage({
 
   return (
     <>
-      <HeaderBar
+      <div className="lm-inbox-crumb"><HeaderBar
         breadcrumb="Gestor de Leads / Chats"
         meta={
           ownsAccount ? (
@@ -75,7 +75,7 @@ export default async function ChatsPage({
             </Link>
           ) : null
         }
-      />
+      /></div>
 
       {!ready ? (
         <div className="px-6 py-8 lg:px-8">
@@ -99,7 +99,7 @@ export default async function ChatsPage({
           />
         </div>
       ) : (
-        <div className="flex h-[calc(100dvh-3.5rem-var(--lm-shell-y))] min-h-0 flex-col">
+        <div className="lm-inbox-frame flex h-[calc(100dvh-3.5rem-var(--lm-shell-y))] min-h-0 min-w-0 flex-col">
           {brokenAccounts.length > 0 ? (
             <p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-lm-line bg-lm-ink/5 px-6 py-2 text-[13px] text-lm-ink-2" role="status">
               <AlertTriangle className="size-4 shrink-0 text-lm-signal-text" strokeWidth={1.5} />

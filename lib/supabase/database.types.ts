@@ -1649,6 +1649,13 @@ export type Database = {
           },
         ]
       }
+      crm_client_additional_assignees: {
+        Row: { client_id: string; user_id: string }
+        ComputedFields: never
+        Insert: { client_id: string; user_id: string }
+        Update: { client_id?: string; user_id?: string }
+        Relationships: [{ foreignKeyName: "crm_client_additional_assignees_client_id_fkey"; columns: ["client_id"]; referencedRelation: "crm_clients"; referencedColumns: ["id"] }]
+      }
       crm_clients: {
         Row: {
           assignee_id: string | null
@@ -2996,6 +3003,21 @@ export type Database = {
         Args: { p_id: string | null; p_project: Json; p_stages: Json; p_assignees: string[] }
         Returns: string | null
       }
+      crm_write_client: {
+        Args: {
+          p_id: string | null
+          p_name: string
+          p_status: Database["public"]["Enums"]["crm_client_status"]
+          p_assignees: string[]
+          p_notes?: string
+          p_source?: string
+          p_contact_name?: string
+          p_email?: string
+          p_phone?: string
+          p_job_title?: string
+        }
+        Returns: string
+      }
       crm_create_client: {
         Args: {
           p_assignee?: string | null
@@ -3260,7 +3282,7 @@ export type Database = {
       brand_recommendation_kind: "REPETIR" | "CORTAR" | "PROBAR"
       brand_recommendation_objective: "ALCANCE" | "AUTORIDAD" | "CONVERSION"
       brand_recommendation_status: "NUEVA" | "APLICADA" | "DESCARTADA"
-      crm_client_status: "onboarding" | "active" | "paused"
+      crm_client_status: "onboarding" | "active" | "paused" | "renewal" | "completed" | "archived"
       crm_task_priority: "high" | "normal" | "low"
       crm_task_status: "pending" | "in_progress" | "done"
       crm_project_status: "planned" | "in_progress" | "paused" | "done"
@@ -3524,7 +3546,7 @@ export const Constants = {
       brand_recommendation_kind: ["REPETIR", "CORTAR", "PROBAR"],
       brand_recommendation_objective: ["ALCANCE", "AUTORIDAD", "CONVERSION"],
       brand_recommendation_status: ["NUEVA", "APLICADA", "DESCARTADA"],
-      crm_client_status: ["onboarding", "active", "paused"],
+      crm_client_status: ["onboarding", "active", "paused", "renewal", "completed", "archived"],
       crm_task_priority: ["high", "normal", "low"],
       crm_task_status: ["pending", "in_progress", "done"],
       crm_project_status: ["planned", "in_progress", "paused", "done"],

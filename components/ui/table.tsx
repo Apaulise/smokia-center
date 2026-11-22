@@ -13,9 +13,9 @@ import { cn } from "@/lib/utils";
  * divisores finos, sin cebrado. Encabezados en eyebrow, números en mono a la
  * derecha. Fila seleccionada en `signal-soft`, hover en `raised`.
  */
-export function Table({ className, children }: { className?: string; children: ReactNode }) {
+export function Table({ className, children, label = "Tabla de resultados" }: { className?: string; children: ReactNode; label?: string }) {
   return (
-    <div className="overflow-x-auto">
+    <div role="region" aria-label={label} tabIndex={0} className="relative min-w-0 max-w-full overflow-x-auto overscroll-x-contain focus-visible:lm-focus">
       <table className={cn("w-full min-w-full border-collapse font-lm-sans text-[13px]", className)}>
         {children}
       </table>
@@ -86,7 +86,7 @@ export function RowMenuTrigger({ className, ...props }: ButtonHTMLAttributes<HTM
     <button
       type="button"
       className={cn(
-        "flex size-7 items-center justify-center rounded-lm-sm text-lm-ink-3 opacity-0 transition-opacity hover:bg-lm-overlay hover:text-lm-ink group-hover:opacity-100 focus-visible:opacity-100",
+        "flex size-7 items-center justify-center rounded-lm-sm text-lm-ink-3 transition-opacity hover:bg-lm-overlay hover:text-lm-ink pointer-coarse:min-w-11 pointer-fine:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100",
         className,
       )}
       {...props}

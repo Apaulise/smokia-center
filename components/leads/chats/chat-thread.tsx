@@ -76,7 +76,7 @@ const Bubble = memo(function Bubble({
     <div className={cn("flex flex-col gap-1", outgoing ? "items-end" : "items-start", message.local === "sending" && "opacity-70")}>
       <div
         className={cn(
-          "max-w-[min(34rem,85%)] rounded-lm-md px-3 py-2 text-[13.5px] leading-[1.45] break-words whitespace-pre-wrap",
+          "min-w-0 max-w-[min(34rem,88%)] rounded-lm-md px-3 py-2 text-[15px] leading-[1.45] whitespace-pre-wrap wrap-anywhere lg:max-w-[min(34rem,85%)] lg:text-[13.5px]",
           outgoing ? "rounded-br-lm-xs bg-lm-signal-soft text-lm-ink" : "rounded-bl-lm-xs bg-lm-ink/8 text-lm-ink",
           message.local === "failed" && "ring-1 ring-lm-danger",
         )}
@@ -196,23 +196,25 @@ export function ChatThread({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex items-center justify-between gap-3 border-b border-lm-line px-3 py-2.5 sm:px-4">
+      <header className="flex shrink-0 items-center justify-between gap-1 border-b border-lm-line bg-lm-surface px-2 py-2 sm:gap-3 sm:px-4 lg:bg-transparent">
         <div className="flex min-w-0 items-center gap-2.5">
-          <IconButton size="sm" aria-label="Volver a los chats" onClick={onBack} className="border-transparent bg-transparent lg:hidden">
+          <IconButton size="sm" aria-label="Volver a los chats" onClick={onBack} className="size-11 shrink-0 rounded-full border-transparent bg-transparent active:bg-lm-ink/10 lg:hidden">
             <ArrowLeft className="size-4" strokeWidth={1.5} />
           </IconButton>
-          <Avatar name={conversation.participant_name} handle={conversation.participant_handle} picture={conversation.participant_picture} size="lg" />
+          <div className="shrink-0">
+            <Avatar name={conversation.participant_name} handle={conversation.participant_handle} picture={conversation.participant_picture} size="lg" />
+          </div>
           <div className="min-w-0">
             <h2 className="flex items-center gap-1.5 truncate font-lm-sans text-[15px] font-semibold text-lm-ink">
               <span className="truncate">{title}</span>
               {profile.isVerified ? <BadgeCheck className="size-4 shrink-0 text-lm-info" strokeWidth={1.5} aria-label="Verificado" /> : null}
             </h2>
             <p className="flex flex-wrap items-center gap-x-2 text-xs text-lm-ink-3">
-              {conversation.participant_handle ? <span>@{conversation.participant_handle}</span> : null}
-              {profile.isFollower === true ? <span>Te sigue</span> : null}
-              {profile.followerCount != null ? <span className="font-mono">{profile.followerCount.toLocaleString("es-AR")} seguidores</span> : null}
+              {conversation.participant_handle ? <span className="min-w-0 truncate">@{conversation.participant_handle}</span> : null}
+              {profile.isFollower === true ? <span className="hidden sm:inline">Te sigue</span> : null}
+              {profile.followerCount != null ? <span className="hidden font-mono sm:inline">{profile.followerCount.toLocaleString("es-AR")} seguidores</span> : null}
               <span
-                className={cn("inline-flex items-center gap-1", reply.state === "open" && reply.msLeft <= 2 * 3_600_000 && "text-lm-danger")}
+                className={cn("inline-flex min-w-0 items-center gap-1", reply.state === "open" && reply.msLeft <= 2 * 3_600_000 && "text-lm-danger")}
                 title="Ventana para responder, contada desde su último mensaje"
               >
                 <Clock className="size-3" strokeWidth={1.5} />
@@ -226,7 +228,7 @@ export function ChatThread({
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <IconButton size="sm" aria-label={archived ? "Volver a la bandeja" : "Archivar (E)"} title={archived ? "Volver a la bandeja" : "Archivar · E"} onClick={onArchive}>
+          <IconButton size="sm" aria-label={archived ? "Volver a la bandeja" : "Archivar (E)"} title={archived ? "Volver a la bandeja" : "Archivar · E"} onClick={onArchive} className="max-lg:size-11 max-lg:rounded-full">
             {archived ? <ArchiveRestore className="size-3.5" strokeWidth={1.5} /> : <Archive className="size-3.5" strokeWidth={1.5} />}
           </IconButton>
           <IconButton
@@ -235,7 +237,7 @@ export function ChatThread({
             aria-pressed={panelOpen}
             title="Contacto, etiquetas y seguimiento"
             onClick={onTogglePanel}
-            className={cn(panelOpen && "bg-lm-raised text-lm-ink")}
+            className={cn("max-lg:size-11 max-lg:rounded-full", panelOpen && "bg-lm-raised text-lm-ink")}
           >
             <PanelRight className="size-3.5" strokeWidth={1.5} />
           </IconButton>

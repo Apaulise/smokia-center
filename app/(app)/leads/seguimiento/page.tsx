@@ -13,14 +13,14 @@ export default async function SeguimientoPage() {
   return (
     <>
       <HeaderBar breadcrumb="Gestor de Leads / Seguimiento" />
-      <div className="flex flex-col gap-6 px-6 py-8 lg:px-8">
+      <div className="flex min-w-0 flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
         <PageHeading
           title="Seguimiento"
           description="Leads ya contactados que siguen sin cerrar, con los más estancados primero."
         />
         <FollowUpTabs active="prospectos" />
-        <FollowUpMetricsPanel metrics={metrics} />
         <FollowUpQueue leads={leads} />
+        <FollowUpMetricsPanel metrics={metrics} />
       </div>
     </>
   );

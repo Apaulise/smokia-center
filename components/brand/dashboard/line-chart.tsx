@@ -57,7 +57,7 @@ function buildPath(coords: [number, number][]) {
 /** Leyenda para la cabecera de la card (el mock la pone arriba a la derecha, no dentro del gráfico). */
 export function ChartLegend({ series }: { series: LineChartSeries[] }) {
   return (
-    <div className="flex gap-3.5 pt-[3px] text-[11.5px] text-lm-ink-2">
+    <div className="flex flex-wrap gap-x-3.5 gap-y-1 pt-[3px] text-[11.5px] text-lm-ink-2">
       {series.map((s) => (
         <span key={s.key} className="flex items-center gap-1.5">
           <span
@@ -147,17 +147,21 @@ export function BrandLineChart({
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <div ref={wrapRef} className="relative">
+    <div className="flex min-w-0 flex-col gap-2">
+      <div ref={wrapRef} className="relative min-w-0">
         <svg
           width={width}
           height={HEIGHT}
           viewBox={`0 0 ${width} ${HEIGHT}`}
-          className="block touch-none"
+          preserveAspectRatio="none"
+          className="block w-full touch-pan-y"
           role="img"
           aria-label={series.map((s) => s.label).join(" y ")}
           onPointerMove={handlePointerMove}
-          onPointerLeave={() => setHoverIndex(null)}
+          onPointerDown={handlePointerMove}
+          onPointerLeave={(event) => {
+            if (event.pointerType === "mouse") setHoverIndex(null);
+          }}
         >
           <defs>
             {series.map((s, i) =>
@@ -239,8 +243,8 @@ export function BrandLineChart({
 
         {hovered ? (
           <div
-            className="lm-shadow-pop pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-lm-md bg-lm-raised px-3 py-2 text-xs"
-            style={{ left: `${Math.min(Math.max(tooltipLeftPct, 12), 88)}%` }}
+            className="lm-shadow-pop pointer-events-none absolute inset-s-0 top-0 z-10 max-w-full rounded-lm-md bg-lm-raised px-3 py-2 text-xs pointer-fine:start-(--chart-tooltip-position) pointer-fine:-translate-x-1/2"
+            style={{ "--chart-tooltip-position": `${Math.min(Math.max(tooltipLeftPct, 12), 88)}%` } as React.CSSProperties}
           >
             <p className="mb-1 font-medium text-lm-ink">{formatDayLong(hovered.day)}</p>
             {series.map((s) => {

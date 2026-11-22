@@ -43,7 +43,9 @@ export function ClientEditor({ client, source, existingId, people }: { client?: 
   const id = useId();
   if (existingId) return <ButtonLink className={actionSize} href={`/leads/clientes/${existingId}`}>Abrir ficha de cliente</ButtonLink>;
   const title = client ? "Editar cliente" : source ? "Crear cliente desde este lead" : "Nuevo cliente";
-  const assignee = client ? people.find((person) => person.id === client.assignee_id)?.id : people[0]?.id;
+  const assignees = client
+    ? client.assigneeIds.filter((id) => people.some((person) => person.id === id))
+    : people.slice(0, 1).map((person) => person.id);
   return (
     <CrmEditor title={title} description={source ? "Confirmá los datos. La ficha quedará vinculada al lead ganado." : undefined}
       trigger={client || source ? title : <><Plus size={16} aria-hidden />{title}</>}
@@ -58,9 +60,9 @@ export function ClientEditor({ client, source, existingId, people }: { client?: 
         <CrmPicker label="Estado" id={`${id}-status`} name="status" initial={client?.status ?? "onboarding"}
           options={clientStatuses.map((value) => ({ value, label: clientStatusLabels[value] }))} />
       </Field>
-      <Field label="Responsable" htmlFor={`${id}-assignee`}>
-        <CrmPicker label="Responsable" id={`${id}-assignee`} name="assignee_id" initial={assignee ?? ""}
-          options={[{ value: "", label: "Sin responsable" }, ...people.map((person) => ({ value: person.id, label: person.label }))]} />
+      <Field label="Responsables" htmlFor={`${id}-assignee`}>
+        <CrmPicker multiple label="Responsables" id={`${id}-assignee`} name="assignees" initial={assignees}
+          placeholder="Sin responsables" options={people.map((person) => ({ value: person.id, label: person.label }))} />
       </Field>
       <Field label="Notas" htmlFor={`${id}-notes`}>
         <Textarea className="text-base sm:text-sm" id={`${id}-notes`} name="notes" maxLength={5000} defaultValue={client?.notes ?? ""} />

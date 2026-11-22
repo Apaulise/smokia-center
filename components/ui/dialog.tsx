@@ -26,6 +26,8 @@ export function Dialog({
   description,
   children,
   className,
+  sheet = false,
+  overlayClassName,
 }: {
   open: boolean;
   onClose: () => void;
@@ -33,6 +35,8 @@ export function Dialog({
   description?: ReactNode;
   children: ReactNode;
   className?: string;
+  sheet?: boolean;
+  overlayClassName?: string;
 }) {
   const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
@@ -78,14 +82,14 @@ export function Dialog({
   useEffect(() => {
     if (!open || !mounted) return;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    if (panel.current && !panel.current.contains(document.activeElement)) panel.current.focus();
-    return () => previous?.focus();
+    if (panel.current && !panel.current.contains(document.activeElement)) panel.current.focus({ preventScroll: true });
+    return () => previous?.focus({ preventScroll: true });
   }, [open, mounted]);
 
   if (!open || !mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className={cn("fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4", sheet ? "p-0" : "p-2", overlayClassName)}>
       <div className="absolute inset-0 bg-lm-scrim backdrop-blur-[3px]" onClick={onClose} aria-hidden />
       <div
         ref={panel}
@@ -94,7 +98,8 @@ export function Dialog({
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cn(
-          "lm-shadow-pop lm-rise relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lm-xl border border-lm-line-strong lm-glass-pop font-lm-sans focus:outline-none",
+          "lm-touch-controls lm-shadow-pop relative flex max-h-[calc(100dvh-1rem)] w-full max-w-lg flex-col overflow-hidden rounded-lm-xl border border-lm-line-strong font-lm-sans focus:outline-none sm:max-h-[90dvh]",
+          sheet ? "lm-sheet-in max-sm:rounded-b-none bg-lm-surface" : "lm-rise lm-glass-pop",
           className,
         )}
       >
@@ -109,12 +114,12 @@ export function Dialog({
             type="button"
             onClick={onClose}
             aria-label="Cerrar"
-            className="shrink-0 rounded-full p-1.5 text-lm-ink-3 hover:bg-lm-ink/10 hover:text-lm-ink focus-visible:lm-focus"
+            className="grid size-11 shrink-0 place-items-center rounded-full text-lm-ink-3 active:bg-lm-ink/10 hover:bg-lm-ink/10 hover:text-lm-ink focus-visible:lm-focus sm:size-8"
           >
             <X className="size-4" />
           </button>
         </div>
-        <div className="overflow-y-auto p-5">{children}</div>
+        <div className={cn("min-h-0 overflow-y-auto overscroll-contain", sheet ? "pb-[env(safe-area-inset-bottom,0px)]" : "p-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:p-5")}>{children}</div>
       </div>
     </div>,
     document.body,

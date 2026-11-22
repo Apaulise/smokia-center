@@ -173,7 +173,7 @@ export function MessageComposer({
   }
 
   return (
-    <div className="relative border-t border-lm-line px-3 py-3 sm:px-4">
+    <div className="relative shrink-0 border-t border-lm-line bg-lm-surface px-3 py-2 sm:px-4 lg:bg-transparent lg:py-3">
       {showPicker ? (
         <QuickRepliesPanel
           tab={activeTab}
@@ -224,7 +224,7 @@ export function MessageComposer({
           aria-expanded={showPicker}
           title={quickReplies.ready ? "Respuestas rápidas · escribí / al principio" : "Falta aplicar la migración de respuestas rápidas"}
           className={cn(
-            "grid size-9 shrink-0 place-items-center rounded-full bg-lm-ink/6 text-lm-ink-2 transition-colors duration-150 ease-out hover:bg-lm-ink/12 hover:text-lm-ink focus-visible:lm-focus disabled:opacity-45",
+            "grid size-11 shrink-0 place-items-center rounded-full bg-lm-ink/6 text-lm-ink-2 transition-colors duration-150 ease-out active:bg-lm-ink/15 hover:bg-lm-ink/12 hover:text-lm-ink focus-visible:lm-focus disabled:opacity-45 lg:size-9",
             showPicker && "bg-lm-ink/12 text-lm-ink",
           )}
         >
@@ -273,16 +273,17 @@ export function MessageComposer({
             }
           }}
           rows={1}
-          placeholder="Escribí tu respuesta… (/ para respuestas rápidas)"
+          placeholder="Escribí un mensaje…"
+          enterKeyHint="send"
           aria-label="Respuesta"
-          className="max-h-40 min-h-9 flex-1 resize-none rounded-lm-md border border-lm-line-strong bg-lm-ink/5 px-3 py-2 font-lm-sans text-[13.5px] leading-[1.35] text-lm-ink [field-sizing:content] placeholder:text-lm-ink-3 focus:border-lm-signal focus:outline-none"
+          className="max-h-40 min-h-11 min-w-0 flex-1 resize-none rounded-lm-md border border-lm-line-strong bg-lm-ink/5 px-3 py-2 font-lm-sans text-base leading-[1.35] text-lm-ink [field-sizing:content] placeholder:text-lm-ink-3 focus:border-lm-signal focus:outline-none lg:min-h-9 lg:text-[13.5px]"
         />
-        <Button type="submit" variant="primary" disabled={!text.trim() || tooLong || slashQuery !== null} className="h-9">
+        <Button type="submit" variant="primary" aria-label="Enviar mensaje" disabled={!text.trim() || tooLong || slashQuery !== null} className="h-9 max-sm:size-11 max-sm:rounded-full max-sm:p-0">
           <Send className="size-3.5" strokeWidth={1.5} />
           <span className="hidden sm:inline">Enviar</span>
         </Button>
       </form>
-      <div className="mt-1.5 flex items-center justify-between gap-3 text-xs">
+      <div className={cn("mt-1.5 flex items-center justify-between gap-3 text-xs", !text.length && !saveState && "max-sm:hidden")}>
         <span className={cn(saveState ? (saveState.ok ? "text-lm-success" : "text-lm-danger") : "text-lm-ink-3")} role="status">
           {saveState?.message ?? (
             <span className="hidden sm:inline">Enter envía · Shift+Enter, salto de línea · ↑↓ J K para moverte · E archiva</span>

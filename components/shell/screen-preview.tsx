@@ -73,7 +73,7 @@ export function ScreenPreview({ src, title }: { src: string; title: string }) {
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!entry.isIntersecting || cancelQueue) return;
+        if (!entry.isIntersecting || entry.boundingClientRect.width === 0 || cancelQueue) return;
         observer.disconnect();
         cancelQueue = requestSlot(() => {
           holding.current = true;

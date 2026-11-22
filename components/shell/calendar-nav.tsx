@@ -19,7 +19,7 @@ function calendarHref(basePath: string, values: Record<string, string>, extraPar
 }
 
 const STEP =
-  "flex size-7 items-center justify-center rounded-[6px] text-lm-ink-2 transition-colors duration-150 ease-out hover:bg-lm-ink/8 hover:text-lm-ink focus-visible:lm-focus";
+  "flex size-10 items-center justify-center rounded-[6px] text-lm-ink-2 transition-colors duration-150 ease-out active:bg-lm-ink/15 hover:bg-lm-ink/8 hover:text-lm-ink focus-visible:lm-focus sm:size-7";
 
 /**
  * Navegación de un calendario por período: anterior / hoy / siguiente. La usan
@@ -49,7 +49,7 @@ export function PeriodNav({
       </Link>
       <Link
         href={calendarHref(basePath, { view, date: today }, extraParams)}
-        className="flex h-7 items-center rounded-[6px] px-2.5 font-lm-sans text-[13px] font-medium text-lm-ink-2 transition-colors duration-150 ease-out hover:bg-lm-ink/8 hover:text-lm-ink focus-visible:lm-focus"
+        className="flex h-10 items-center rounded-[6px] px-2.5 font-lm-sans text-[13px] font-medium text-lm-ink-2 transition-colors duration-150 ease-out active:bg-lm-ink/15 hover:bg-lm-ink/8 hover:text-lm-ink focus-visible:lm-focus sm:h-7"
       >
         Hoy
       </Link>
@@ -77,7 +77,7 @@ export function ViewToggle({
   return (
     <Segmented>
       {VIEW_OPTIONS.filter((option) => views.includes(option.value)).map(({ value, label, icon: Icon }) => (
-        <SegmentedLink key={value} href={calendarHref(basePath, { view: value, date }, extraParams)} active={view === value} className="gap-1.5">
+        <SegmentedLink key={value} href={calendarHref(basePath, { view: value, date }, extraParams)} active={view === value} aria-current={view === value ? "page" : undefined} className="h-10 gap-1.5 active:bg-lm-ink/15 sm:h-7">
           <Icon className="size-3.5" strokeWidth={1.5} />
           {label}
         </SegmentedLink>

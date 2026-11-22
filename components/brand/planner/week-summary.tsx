@@ -42,8 +42,8 @@ export function WeekSummaryStrip({
     <div className="border-y border-lm-line">
       <div className="grid grid-cols-1 sm:grid-cols-2">
         <div className="flex flex-col gap-2 py-4 sm:pr-5">
-          <Eyebrow>Reels de la semana · {weekLabel}</Eyebrow>
-          <div className="flex items-baseline gap-3">
+          <Eyebrow className="[&>span]:whitespace-normal">Reels de la semana · {weekLabel}</Eyebrow>
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span className="font-mono text-[26px] leading-none tracking-[-0.02em] tabular-nums">
               {reels}{" "}
               <span className="text-[15px] text-lm-ink-3">
@@ -56,7 +56,7 @@ export function WeekSummaryStrip({
 
         <div className="flex flex-col gap-2 border-t border-lm-line py-4 sm:border-t-0 sm:border-l sm:px-5">
           <Eyebrow>Exploración / explotación</Eyebrow>
-          <div className="flex items-baseline gap-3">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span className="font-mono text-[26px] leading-none tracking-[-0.02em] tabular-nums">
               {experiments} <span className="text-[15px] text-lm-ink-3">nuevas ·</span> {variants}{" "}
               <span className="text-[15px] text-lm-ink-3">variantes</span>

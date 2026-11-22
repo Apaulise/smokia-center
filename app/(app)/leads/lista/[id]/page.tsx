@@ -55,13 +55,13 @@ export default async function LeadListaDetallePage({ params, searchParams }: { p
   return (
     <>
       <HeaderBar breadcrumb={`Gestor de Leads / Listas / ${list.name}`} />
-      <div className="px-6 pt-8 lg:px-8">
+      <div className="px-4 pt-6 sm:px-6 lg:px-8">
         <PageHeading
           title={list.name}
           description="Filtrá por rubro, estado o ciudad y hacé seguimiento hasta el cierre."
           action={
-            <div className="flex items-center gap-3">
-              <ButtonLink href="/leads/lista" variant="ghost" size="sm">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <ButtonLink href="/leads/lista" variant="ghost" size="sm" className="max-sm:min-h-11">
                 <ArrowLeft className="size-3.5" strokeWidth={1.5} />
                 Volver a listas
               </ButtonLink>
@@ -71,7 +71,7 @@ export default async function LeadListaDetallePage({ params, searchParams }: { p
           }
         />
       </div>
-      <div className="px-6 py-8 lg:px-8">
+      <div className="min-w-0 px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
         <LeadListResults
           leads={leads}
           industries={industries}

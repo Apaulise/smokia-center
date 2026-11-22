@@ -28,8 +28,8 @@ export default async function HubPage() {
   return (
     <>
       <div className="hub-backdrop" aria-hidden="true" />
-      <div className="mx-auto flex min-h-dvh max-w-6xl flex-col gap-10 px-6 py-8 lg:py-12">
-        <header className="flex items-center gap-4">
+      <div className="mx-auto flex min-h-dvh max-w-6xl flex-col gap-6 px-4 pb-[max(2rem,env(safe-area-inset-bottom,0px))] pt-[max(1.5rem,env(safe-area-inset-top,0px))] sm:gap-10 sm:px-6 sm:py-8 lg:py-12">
+        <header className="flex flex-wrap items-center gap-x-3 gap-y-4 sm:gap-4">
           <ProfileEditor
             userId={user.id}
             name={name}
@@ -44,11 +44,12 @@ export default async function HubPage() {
               {name}
             </p>
           </div>
-          <nav className="flex shrink-0 items-center gap-1">
-            <ThemeToggle className="mr-2 w-[168px]" />
+          <nav aria-label="Cuenta" className="flex basis-full flex-wrap items-center gap-1 rounded-lm-lg border border-lm-line px-2 py-1 sm:basis-auto sm:border-0 sm:p-0">
+            <ThemeToggle className="mr-auto min-w-0 sm:mr-2 sm:w-[168px]" />
             <Link
               href="/configuracion"
-              className="flex h-8 items-center gap-2 rounded-lm-sm px-2.5 text-sm text-lm-ink-2 transition-colors hover:bg-lm-raised hover:text-lm-ink"
+              aria-label="Configuración"
+              className="flex h-11 items-center gap-2 rounded-lm-sm px-2.5 text-sm text-lm-ink-2 transition-colors active:bg-lm-raised hover:bg-lm-raised hover:text-lm-ink sm:h-8"
             >
               <Settings className="size-4" strokeWidth={1.5} />
               <span className="hidden sm:inline">Configuración</span>
@@ -57,9 +58,10 @@ export default async function HubPage() {
           </nav>
         </header>
 
+        <h1 className="text-2xl font-semibold tracking-tight sm:sr-only">Todos los gestores</h1>
         <section
           aria-label="Gestores"
-          className="grid grid-cols-1 gap-6 md:grid-cols-2"
+          className="grid grid-cols-[minmax(0,1fr)] gap-3 md:grid-cols-2 md:gap-6"
         >
           <HubCard
             eyebrow="Fase 3"

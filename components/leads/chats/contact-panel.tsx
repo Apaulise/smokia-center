@@ -18,7 +18,7 @@ const TIME_ZONE = "America/Argentina/Buenos_Aires";
 
 function Block({ title, icon, action, children }: { title: string; icon: ReactNode; action?: ReactNode; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-2 border-b border-lm-line px-4 py-3.5">
+    <section className="flex min-w-0 flex-col gap-2.5 border-b border-lm-line px-4 py-4 xl:gap-2 xl:py-3.5">
       <div className="flex items-center justify-between gap-2">
         <h3 className="inline-flex items-center gap-1.5 font-lm-sans text-[11px] font-semibold tracking-[0.08em] text-lm-ink-3 uppercase">
           {icon}
@@ -79,7 +79,7 @@ export function ContactPanel({
   extrasReady: boolean;
   onPatch: (patch: Partial<ConversationListItem>) => void;
   onLeadChanged: () => void;
-  onClose: () => void;
+  onClose?: () => void;
 }) {
   const [draft, setDraft] = useState("");
   const [tagError, setTagError] = useState<string | null>(null);
@@ -150,15 +150,15 @@ export function ContactPanel({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center justify-between gap-2 border-b border-lm-line px-4 py-2.5">
+    <div className="lm-contact-panel flex h-full min-h-0 min-w-0 flex-col">
+      {onClose ? <div className="flex items-center justify-between gap-2 border-b border-lm-line px-4 py-2.5">
         <span className="font-lm-sans text-[13px] font-semibold text-lm-ink">Contacto</span>
         <button type="button" onClick={onClose} aria-label="Cerrar el panel" className="grid size-7 place-items-center rounded-lm-sm text-lm-ink-3 hover:bg-lm-raised hover:text-lm-ink focus-visible:lm-focus">
           <X className="size-4" strokeWidth={1.5} />
         </button>
-      </div>
+      </div> : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {!extrasReady ? (
           <p className="border-b border-lm-line px-4 py-3 text-[12.5px] text-lm-ink-2">
             Falta aplicar las migraciones de §1.26 (`npm run db:push`) para ver etiquetas, seguimiento y de qué pieza llegó cada persona.
@@ -195,7 +195,7 @@ export function ContactPanel({
                   disabled={!extrasReady || tagPending}
                   onClick={() => (applied ? changeTags([], [preset.tag]) : changeTags([preset.tag], []))}
                   className={cn(
-                    "inline-flex h-8 items-center gap-2 rounded-lm-sm border px-2.5 font-lm-sans text-[12.5px] transition-colors duration-150 ease-out focus-visible:lm-focus disabled:opacity-55",
+                    "inline-flex min-h-11 items-center gap-2 rounded-lm-sm border px-2.5 font-lm-sans text-[13px] transition-colors duration-150 ease-out active:bg-lm-ink/10 focus-visible:lm-focus disabled:opacity-55 xl:min-h-8 xl:text-[12.5px]",
                     applied ? cn(TAG_TONE[preset.color], "font-medium") : "border-lm-line text-lm-ink-2 hover:border-lm-line-strong hover:text-lm-ink",
                   )}
                 >
@@ -261,14 +261,17 @@ export function ContactPanel({
               {conversation.follow_up_note ? <span className="text-lm-ink-2"> · {conversation.follow_up_note}</span> : null}
             </p>
           ) : null}
-          <input
+          <label htmlFor="chat-follow-note" className="text-xs font-medium text-lm-ink-2">Nota del seguimiento</label>
+          <textarea
+            id="chat-follow-note"
             value={note}
             onChange={(event) => setNote(event.target.value)}
             maxLength={280}
             placeholder="Nota (opcional): qué le tenés que decir"
             aria-label="Nota del seguimiento"
             disabled={!extrasReady}
-            className="h-7 rounded-lm-sm border border-lm-line-strong bg-lm-raised px-2 font-lm-sans text-[12.5px] text-lm-ink placeholder:text-lm-ink-3 focus:border-lm-signal focus:outline-none disabled:opacity-50"
+            rows={2}
+            className="w-full min-w-0 resize-y rounded-lm-sm border border-lm-line-strong bg-lm-raised px-3 py-2 font-lm-sans text-base text-lm-ink placeholder:text-lm-ink-3 focus:border-lm-signal focus:outline-none disabled:opacity-50 xl:text-[12.5px]"
           />
           <div className="flex flex-wrap gap-1.5">
             {[
@@ -295,7 +298,7 @@ export function ContactPanel({
               onChange={(event) => {
                 if (event.target.value) schedule(new Date(event.target.value).toISOString());
               }}
-              className="h-7 rounded-lm-sm border border-lm-line-strong bg-lm-raised px-1.5 font-mono text-[11.5px] text-lm-ink-2 focus:border-lm-signal focus:outline-none disabled:opacity-45"
+              className="h-7 min-w-0 max-w-full rounded-lm-sm border border-lm-line-strong bg-lm-raised px-1.5 font-mono text-[11.5px] text-lm-ink-2 focus:border-lm-signal focus:outline-none disabled:opacity-45"
             />
             {conversation.follow_up_at ? (
               <button type="button" disabled={followPending} onClick={() => schedule(null)} className="h-7 rounded-lm-sm px-2 font-lm-sans text-[12px] text-lm-ink-3 hover:text-lm-danger focus-visible:lm-focus">

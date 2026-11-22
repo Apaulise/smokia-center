@@ -564,7 +564,35 @@ html.lm-theme-fade *::after {
   --lm-pill-ink: #17171a;
   --lm-signal-light: #f8dd9a;
   --lm-shell-gap: 0px;
-  --lm-shell-y: 56px;
+  --lm-shell-y: calc(56px + env(safe-area-inset-top, 0px));
+  --lm-ease-mobile: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@keyframes lm-sheet-in {
+  from { transform: translateY(18px); opacity: 0; }
+}
+@keyframes lm-thread-in {
+  from { transform: translateX(10px); opacity: 0.65; }
+}
+
+@media (max-width: 63.999rem) {
+  .lm-app-shell { padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px); }
+  .lm-mobile-header { height: var(--lm-shell-y); padding-top: env(safe-area-inset-top, 0px); }
+  .lm-app-shell:has(.lm-chat-active) .lm-mobile-header,
+  .lm-app-shell:has(.lm-chat-active) .lm-inbox-crumb { display: none; }
+  .lm-inbox-frame:has(.lm-chat-active) {
+    height: var(--lm-chat-viewport, 100dvh);
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .lm-inbox-frame { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .lm-chat-thread { animation: lm-thread-in 170ms var(--lm-ease-mobile) both; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lm-sheet-in { animation: lm-sheet-in 220ms var(--lm-ease-mobile) both; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lm-chat-thread { animation: none; }
 }
 @media (min-width: 1024px) {
   :root {
@@ -651,6 +679,20 @@ html.lm-theme-fade *::after {
     inset 0 1px 0 var(--lm-glass-edge),
     inset 0 0 0 1px var(--lm-glass-ring),
     0 20px 52px -25px var(--lm-glass-shadow);
+}
+
+@media (pointer: coarse) {
+  .lm-touch-controls :where(button, a, [role="button"]) {
+    touch-action: manipulation;
+  }
+
+  .lm-touch-controls :where(button:not([role="switch"]), select, input:not([type="checkbox"], [type="radio"], [type="hidden"]), nav a) {
+    min-block-size: 44px;
+  }
+
+  .lm-touch-controls :where(input:not([type="checkbox"], [type="radio"], [type="hidden"]), select, textarea) {
+    font-size: max(1rem, 1em);
+  }
 }
 
 /* Paneles dentro del escenario (cards, filtros, calendario, franjas de métricas). */

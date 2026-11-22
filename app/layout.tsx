@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Host_Grotesk, JetBrains_Mono } from "next/font/google";
 
 import { NavigationProgress } from "@/components/shell/navigation-progress";
@@ -27,6 +27,11 @@ const hostGrotesk = Host_Grotesk({
 export const metadata: Metadata = {
   title: "SmokIA",
   description: "Panel de gestión de SmokIA",
+};
+
+export const viewport: Viewport = {
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

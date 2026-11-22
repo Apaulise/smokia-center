@@ -130,9 +130,9 @@ export function PlannerView({
   }
 
   return (
-    <div className="flex flex-col gap-6 px-6 py-7 lg:px-8 lg:pb-10">
+    <div className="flex min-w-0 flex-col gap-5 px-4 py-6 sm:gap-6 sm:px-6 lg:px-8 lg:pb-10">
       <div className="flex flex-wrap items-end gap-2.5">
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <div className="flex min-w-0 flex-1 basis-full flex-col gap-1.5 md:basis-auto">
           <Eyebrow>{eyebrow}</Eyebrow>
           <div className="flex flex-wrap items-center gap-3.5">
             <h1 className="font-lm-sans text-[28px] leading-8 font-medium tracking-[-0.02em] first-letter:uppercase">{title}</h1>
@@ -140,7 +140,7 @@ export function PlannerView({
           </div>
         </div>
         {toggle}
-        <Button type="button" variant="primary" className="h-[34px] px-3.5 text-[13px]" onClick={() => setDialog({ mode: "create" })}>
+        <Button type="button" variant="primary" className="h-11 px-3.5 text-[13px] sm:h-[34px]" onClick={() => setDialog({ mode: "create" })}>
           <Plus className="size-3.5" />
           Nueva pieza
         </Button>
@@ -152,7 +152,24 @@ export function PlannerView({
 
       {moveError ? <p className="text-sm text-lm-danger">{moveError}</p> : null}
 
-      <div className="grid items-start gap-5 xl:grid-cols-[240px_minmax(0,1fr)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 xl:grid-cols-[240px_minmax(0,1fr)]">
+        <div className="min-w-0 xl:col-start-2 xl:row-start-1">
+          <CalendarGrid
+            mode={mode}
+            days={days}
+            items={items}
+            getDay={itemDay}
+            getDragTime={itemTime}
+            canDrag={itemCanDrag}
+            chipClassName={itemChipClass}
+            renderChip={ItemChip}
+            currentMonth={currentMonth}
+            today={today}
+            onCreateAt={(dateIso) => setDialog({ mode: "create", defaultDate: dateIso })}
+            onEdit={(item) => setDialog({ mode: "edit", item })}
+            onMove={handleGridMove}
+          />
+        </div>
         <aside
           onDragOver={(event) => {
             event.preventDefault();
@@ -161,7 +178,7 @@ export function PlannerView({
           onDragLeave={() => setTrayHover(false)}
           onDrop={handleTrayDrop}
           className={cn(
-            "flex h-fit flex-col gap-2.5 rounded-lm-lg border border-dashed border-lm-line-strong p-4 transition-colors",
+            "flex h-fit min-w-0 flex-col gap-2.5 rounded-lm-lg border border-dashed border-lm-line-strong p-4 transition-colors xl:col-start-1 xl:row-start-1",
             trayHover && "border-lm-signal/60 bg-lm-signal-soft",
           )}
         >
@@ -172,7 +189,7 @@ export function PlannerView({
 
           {unscheduled.length === 0 ? (
             <p className="text-[12.5px] leading-[1.55] text-lm-ink-3">
-              Las ideas que guardes desde el chat aparecen acá. Arrastralas a un día para planificarlas.
+              Las ideas que guardes desde el chat aparecen acá. Abrí una para elegir su fecha.
             </p>
           ) : (
             <ul className="flex flex-col gap-1.5">
@@ -181,35 +198,22 @@ export function PlannerView({
                   key={item.id}
                   draggable
                   onDragStart={(event) => event.dataTransfer.setData("text/plain", item.id)}
-                  onClick={() => setDialog({ mode: "edit", item })}
-                  className="cursor-grab rounded-lm-md border border-lm-line bg-lm-raised p-2.5 transition-colors hover:border-lm-line-strong active:cursor-grabbing"
+                  className="cursor-grab rounded-lm-md border border-lm-line bg-lm-raised transition-colors hover:border-lm-line-strong active:cursor-grabbing"
                 >
-                  <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                  <button type="button" onClick={() => setDialog({ mode: "edit", item })}
+                    className="block min-h-11 w-full rounded-lm-md p-2.5 text-left active:bg-lm-ink/10 focus-visible:lm-focus">
+                  <span className="mb-1.5 flex flex-wrap items-center gap-1.5">
                     <Tag tone="solid">{KIND_LABEL[item.kind]}</Tag>
                     <Tag>{STATUS_LABEL[item.status]}</Tag>
-                  </div>
-                  <p className="line-clamp-2 text-[13px] leading-[1.4] text-lm-ink">{item.title}</p>
+                  </span>
+                  <span className="line-clamp-2 text-[13px] leading-[1.4] text-lm-ink">{item.title}</span>
+                  </button>
                 </li>
               ))}
             </ul>
           )}
         </aside>
 
-        <CalendarGrid
-          mode={mode}
-          days={days}
-          items={items}
-          getDay={itemDay}
-          getDragTime={itemTime}
-          canDrag={itemCanDrag}
-          chipClassName={itemChipClass}
-          renderChip={ItemChip}
-          currentMonth={currentMonth}
-          today={today}
-          onCreateAt={(dateIso) => setDialog({ mode: "create", defaultDate: dateIso })}
-          onEdit={(item) => setDialog({ mode: "edit", item })}
-          onMove={handleGridMove}
-        />
       </div>
 
       {dialog ? (

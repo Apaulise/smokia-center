@@ -103,7 +103,7 @@ export function LeadListResults({
   function changePage(next: number) {
     setPage(next);
     replaceUrl(filters, sort, ascending, next);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }
 
   const from = filtered.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
@@ -120,7 +120,7 @@ export function LeadListResults({
       )}
 
       {view === "tabla" && filtered.length > 0 ? (
-        <div className="flex items-center justify-between text-[13px] text-lm-ink-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-[13px] text-lm-ink-2">
           <span className="font-mono tabular-nums">Mostrando {from}–{to} de {filtered.length}</span>
           <div className="flex items-center gap-2">
             <PageButton disabled={currentPage <= 1} label="Página anterior" onClick={() => changePage(currentPage - 1)}>

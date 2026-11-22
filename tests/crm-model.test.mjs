@@ -39,6 +39,16 @@ test("el filtro por responsable incluye tareas compartidas y distingue las sin a
   assert.equal(model.matchesAssignee([], ""), true);
 });
 
+test("el cliente conserva su responsable original y agrega responsables únicos", () => {
+  assert.deepEqual(model.clientAssigneeIds("yo", [{ user_id: "socio" }, { user_id: "yo" }]), ["yo", "socio"]);
+  assert.deepEqual(model.clientAssigneeIds(null, [{ user_id: "socio" }]), ["socio"]);
+  assert.deepEqual(model.clientAssigneeIds(null, []), []);
+  for (const status of ["renewal", "completed", "archived"]) {
+    assert.ok(model.clientStatuses.includes(status));
+    assert.ok(model.clientStatusLabels[status]);
+  }
+});
+
 test("las lecturas recuperan más de 1000 filas y propagan errores sin datos parciales", async () => {
   const rows = Array.from({ length: 1001 }, (_, index) => index);
   const read = (from, to) => Promise.resolve({ data: rows.slice(from, to + 1), error: null });

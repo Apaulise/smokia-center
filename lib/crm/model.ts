@@ -1,11 +1,14 @@
 import type { Enums, Tables } from "@/lib/supabase/database.types";
 
-export const clientStatuses = ["onboarding", "active", "paused"] as const;
+export const clientStatuses = ["onboarding", "active", "renewal", "paused", "completed", "archived"] as const;
 export type ClientStatus = Enums<"crm_client_status">;
 export const clientStatusLabels: Record<ClientStatus, string> = {
   onboarding: "En onboarding",
   active: "Activo",
   paused: "Pausado",
+  renewal: "En renovación",
+  completed: "Finalizado",
+  archived: "Archivado",
 };
 
 export const priorities = ["high", "normal", "low"] as const;
@@ -32,9 +35,13 @@ export type TaskContext = { kind: ContextKind; id: string; label: string };
 export type PersonOption = { id: string; label: string };
 export type ProjectOption = { id: string; label: string; clientId: string };
 
-export type Client = Tables<"crm_clients">;
+export type Client = Tables<"crm_clients"> & { assigneeIds: string[] };
 export type Contact = Tables<"crm_client_contacts">;
 export type Task = Tables<"crm_tasks"> & { assigneeIds: string[] };
+
+export function clientAssigneeIds(primary: string | null, additional: { user_id: string }[]) {
+  return [...new Set([...(primary ? [primary] : []), ...additional.map(({ user_id }) => user_id)])];
+}
 
 export function matchesAssignee(assigneeIds: string[], filter: string) {
   if (!filter) return true;

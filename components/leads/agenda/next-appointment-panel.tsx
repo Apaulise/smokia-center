@@ -34,7 +34,7 @@ export function NextAppointmentPanel({ briefing }: { briefing: NextAppointmentBr
   const endTime = new Date(appointment.endsAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
 
   return (
-    <aside className="flex w-full shrink-0 flex-col gap-6 border-l border-lm-line px-6 py-6 lg:w-[300px]">
+    <aside className="flex w-full min-w-0 shrink-0 flex-col gap-6 border-t border-lm-line px-4 py-6 sm:px-6 xl:w-[300px] xl:border-t-0 xl:border-l">
       <div className="flex flex-col gap-3">
         <p className="font-lm-sans text-[11px] font-semibold tracking-[0.1em] text-lm-ink-3 uppercase">
           Próxima · {relativeDayLabel(appointment.startsAt)}

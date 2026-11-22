@@ -66,8 +66,8 @@ export function ConversationList({
   now: number;
 }) {
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex flex-col gap-2.5 border-b border-lm-line p-3">
+    <div className="flex h-full min-h-0 min-w-0 flex-col">
+      <div className="flex min-w-0 shrink-0 flex-col gap-2.5 border-b border-lm-line p-3">
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-lm-ink-3" strokeWidth={1.5} />
           <input
@@ -81,8 +81,10 @@ export function ConversationList({
               }
             }}
             placeholder="Buscar por nombre, @usuario o etiqueta"
+            type="search"
+            enterKeyHint="search"
             aria-label="Buscar conversaciones"
-            className="h-8 w-full rounded-lm-sm border border-lm-line-strong bg-lm-raised pr-8 pl-8 font-lm-sans text-[13px] text-lm-ink placeholder:text-lm-ink-3 focus:border-lm-signal focus:outline-none"
+            className="h-11 w-full min-w-0 rounded-lm-md border border-lm-line-strong bg-lm-raised pr-11 pl-8 font-lm-sans text-base text-lm-ink placeholder:text-lm-ink-3 focus:border-lm-signal focus:outline-none [&::-webkit-search-cancel-button]:hidden lg:h-8 lg:text-[13px]"
           />
           {loading ? (
             <Loader2 className="absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 animate-spin text-lm-ink-3" aria-label="Buscando" />
@@ -91,12 +93,12 @@ export function ConversationList({
               type="button"
               onClick={() => onSearchChange("")}
               aria-label="Borrar la búsqueda"
-              className="absolute top-1/2 right-1.5 grid size-5 -translate-y-1/2 place-items-center rounded-lm-xs text-lm-ink-3 hover:text-lm-ink"
+              className="absolute top-1/2 right-0 grid size-11 -translate-y-1/2 place-items-center rounded-lm-xs text-lm-ink-3 active:text-lm-ink lg:right-1.5 lg:size-5"
             >
               <X className="size-3.5" strokeWidth={1.5} />
             </button>
           ) : (
-            <kbd className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded-lm-xs border border-lm-line px-1 font-mono text-[10.5px] text-lm-ink-3">
+            <kbd className="pointer-events-none absolute top-1/2 right-2 hidden -translate-y-1/2 rounded-lm-xs border border-lm-line px-1 font-mono text-[10.5px] text-lm-ink-3 lg:block">
               /
             </kbd>
           )}
@@ -104,7 +106,7 @@ export function ConversationList({
 
         {/* flex-wrap, no scroll horizontal: con la barra oculta no había ninguna señal de que
             quedaban filtros a la derecha, y si el deslizar no respondía quedaban inalcanzables. */}
-        <div className="flex flex-wrap gap-1" role="tablist" aria-label="Filtrar conversaciones">
+        <div className="flex min-w-0 gap-1 overflow-x-auto overscroll-x-contain lg:flex-wrap" role="group" aria-label="Filtrar conversaciones">
           {FILTER_OPTIONS.map((option) => {
             const active = filter === option.value;
             const count = counts[option.value];
@@ -112,12 +114,11 @@ export function ConversationList({
               <button
                 key={option.value}
                 type="button"
-                role="tab"
-                aria-selected={active}
+                aria-pressed={active}
                 title={option.hint}
                 onClick={() => onFilterChange(option.value)}
                 className={cn(
-                  "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lm-sm border px-2.5 font-lm-sans text-[12.5px] font-medium transition-colors duration-150 ease-out focus-visible:lm-focus",
+                  "inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lm-sm border px-2.5 font-lm-sans text-[13px] font-medium transition-colors duration-150 ease-out active:bg-lm-ink/10 focus-visible:lm-focus lg:h-7 lg:text-[12.5px]",
                   active ? "border-lm-line-strong bg-lm-raised text-lm-ink" : "border-transparent text-lm-ink-2 hover:text-lm-ink",
                 )}
               >
@@ -130,7 +131,7 @@ export function ConversationList({
 
         {/* Las cuatro predefinidas están siempre (con su color); después, las demás que haya en la bandeja.
             Tocar la elegida la saca: no hace falta buscar una X. */}
-        <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Filtrar por etiqueta">
+        <div className="flex min-w-0 items-center gap-1 overflow-x-auto overscroll-x-contain lg:flex-wrap" role="group" aria-label="Filtrar por etiqueta">
           {tags.slice(0, 12).map(({ tag: value, count }) => {
             const view = describeTag(value, labels);
             const active = tag === value;
@@ -142,7 +143,7 @@ export function ConversationList({
                 title={active ? "Quitar el filtro" : `Ver sólo «${view.label}»`}
                 onClick={() => onTagChange(active ? null : value)}
                 className={cn(
-                  "inline-flex h-6 shrink-0 items-center gap-1.5 rounded-lm-xs border px-1.5 font-lm-sans text-[11.5px] transition-colors duration-150 ease-out focus-visible:lm-focus",
+                  "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lm-sm border px-2 font-lm-sans text-xs transition-colors duration-150 ease-out active:bg-lm-ink/10 focus-visible:lm-focus lg:h-6 lg:px-1.5 lg:text-[11.5px]",
                   active
                     ? view.color
                       ? cn(TAG_TONE[view.color], "font-medium")
@@ -207,7 +208,7 @@ const ConversationRow = memo(function ConversationRow({
   const due = followUpDue(item.follow_up_at, now);
 
   return (
-    <li role="option" aria-selected={active}>
+    <li role="option" aria-selected={active} className="min-w-0">
       <button
         type="button"
         data-conversation-id={item.id}
@@ -216,14 +217,14 @@ const ConversationRow = memo(function ConversationRow({
         onFocus={() => onPrefetch(item.id)}
         aria-current={active ? "true" : undefined}
         className={cn(
-          "flex w-full gap-3 border-b border-lm-line px-3 py-3 text-left transition-colors duration-150 ease-out focus-visible:lm-focus focus-visible:-outline-offset-2",
+          "flex w-full min-w-0 gap-3 border-b border-lm-line px-4 py-3 text-left transition-colors duration-150 ease-out active:bg-lm-raised focus-visible:lm-focus focus-visible:-outline-offset-2 lg:px-3",
           active ? "bg-lm-raised" : "hover:bg-lm-raised/60",
         )}
       >
         <Avatar name={item.participant_name} handle={item.participant_handle} picture={item.participant_picture} />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
-            <span className={cn("truncate font-lm-sans text-[13.5px] text-lm-ink", unread ? "font-semibold" : "font-medium")}>{title}</span>
+            <span className={cn("truncate font-lm-sans text-[15px] text-lm-ink lg:text-[13.5px]", unread ? "font-semibold" : "font-medium")}>{title}</span>
             <span className="shrink-0 font-mono text-[11px] text-lm-ink-3">{formatChatTime(item.last_message_at)}</span>
           </div>
           <div className="mt-0.5 flex items-center justify-between gap-2">

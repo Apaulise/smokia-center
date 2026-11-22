@@ -37,13 +37,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col lg:flex-row lg:gap-(--lm-shell-gap) lg:p-(--lm-shell-gap)">
+    <div className="lm-app-shell flex min-h-dvh w-full min-w-0 flex-col lg:flex-row lg:gap-(--lm-shell-gap) lg:p-(--lm-shell-gap)">
       <div className="lm-ambient" aria-hidden />
       <Suspense fallback={<SidebarFallback />}>
         <SidebarData email={user.email} />
       </Suspense>
       {/* overflow-clip y no hidden: recorta las esquinas sin volverse contenedor de scroll, así `sticky` sigue pegándose a la ventana. */}
-      <main className="lm-stage min-w-0 flex-1 lg:overflow-clip lg:rounded-lm-2xl">{children}</main>
+      <main className="lm-stage lm-touch-controls min-w-0 flex-1 lg:overflow-clip lg:rounded-lm-2xl">{children}</main>
     </div>
   );
 }

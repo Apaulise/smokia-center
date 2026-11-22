@@ -10,6 +10,7 @@ import { Tabs, TabButton } from "@/components/ui/tabs";
 import { Timeline, TimelineEvent, TimelineMessage } from "@/components/ui/timeline";
 import { EmptyLine } from "@/components/ui/feedback";
 import { ANGLE_LABEL, type SalesAngle } from "@/lib/leads/ai/angles";
+import { BUSINESS_TIME_ZONE } from "@/lib/leads/calendar";
 import { mergeConversation, type ThreadItem } from "@/lib/leads/conversation";
 import { updateLeadMessageContent } from "@/lib/leads/message-actions";
 import { messageAnalysisDetails } from "@/lib/leads/message-analysis";
@@ -25,8 +26,14 @@ const CHANNEL_LABEL: Record<Database["public"]["Enums"]["message_channel"], stri
   INSTAGRAM: "Instagram",
 };
 
+const timelineDate = new Intl.DateTimeFormat("es-AR", {
+  dateStyle: "short",
+  timeStyle: "short",
+  timeZone: BUSINESS_TIME_ZONE,
+});
+
 function formatTime(iso: string) {
-  return new Date(iso).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" });
+  return timelineDate.format(new Date(iso)).replace(/[\u00a0\u202f]/g, " ");
 }
 
 type Filter = "todo" | "mensajes" | "ia";

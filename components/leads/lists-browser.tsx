@@ -28,7 +28,7 @@ export function ListsBrowser({
   industries,
 }: {
   lists: LeadListOverviewRow[];
-  view: "tabla" | "grilla";
+  view: "tabla" | "grilla" | "auto";
   industries: Industry[];
 }) {
   const [query, setQuery] = useState("");
@@ -44,12 +44,13 @@ export function ListsBrowser({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-end gap-3">
-        <div className="relative w-56">
+        <div className="relative w-full sm:w-56">
           <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-lm-ink-3" strokeWidth={1.5} />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Filtrar listas"
+            aria-label="Filtrar listas por nombre"
             className="h-8 pl-8 text-[13px]"
           />
         </div>
@@ -78,14 +79,19 @@ export function ListsBrowser({
 
       {filtered.length === 0 ? (
         <p className="py-8 text-center text-[13px] text-lm-ink-3">Ninguna lista coincide con “{query}”.</p>
-      ) : view === "grilla" ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((list) => (
-            <LeadListCard key={list.id} list={list} />
-          ))}
-        </div>
       ) : (
-        <ListsTable lists={filtered} />
+        <>
+          {view !== "tabla" ? (
+            <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 ${view === "auto" ? "lg:hidden" : ""}`}>
+              {filtered.map((list) => <LeadListCard key={list.id} list={list} />)}
+            </div>
+          ) : null}
+          {view !== "grilla" ? (
+            <div className={view === "auto" ? "hidden lg:block" : undefined}>
+              <ListsTable lists={filtered} />
+            </div>
+          ) : null}
+        </>
       )}
 
       {creatingList ? <CreateListDialog industries={industries} onClose={() => setCreatingList(false)} /> : null}
