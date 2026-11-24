@@ -44,6 +44,7 @@ const SHORTCUT: Record<string, string> = {
 
 const KEYWORDS: Record<string, string> = {
   "/leads/chats": "instagram mensajes inbox dm bandeja",
+  "/leads/correo": "gmail mail email mensajes bandeja",
   "/leads/seguimiento": "follow up pendientes",
   "/leads/agenda": "turnos reuniones calendario",
   "/leads/generar": "apify scraper nueva lista",

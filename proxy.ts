@@ -68,7 +68,13 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     // Para volver a donde quería entrar, después del login.
-    url.searchParams.set("next", pathname);
+    if (pathname === "/leads/correo/oauth/callback") {
+      // El código de Google sólo corresponde a la sesión que inició el flujo.
+      url.search = "";
+      url.searchParams.set("next", "/configuracion");
+    } else {
+      url.searchParams.set("next", pathname);
+    }
     return NextResponse.redirect(url);
   }
 

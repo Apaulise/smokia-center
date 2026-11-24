@@ -1,4 +1,4 @@
-import { Bot, KeyRound, MessageSquare, Sparkles, Tags, UserRound } from "lucide-react";
+import { Bot, KeyRound, Mail, MessageSquare, Sparkles, Tags, UserRound } from "lucide-react";
 
 import { ActorOverridesForm } from "@/components/settings/actor-overrides-form";
 import { ApifyKeyForm } from "@/components/settings/apify-key-form";
@@ -8,6 +8,8 @@ import { IndustriesManager } from "@/components/settings/industries-manager";
 import { SalesProfileForm } from "@/components/settings/sales-profile-form";
 import { InstagramConnection } from "@/components/settings/instagram-connection";
 import { ZernioConnection } from "@/components/settings/zernio-connection";
+import { GmailConnection } from "@/components/settings/gmail-connection";
+import { mailboxStatus } from "@/lib/mail/connection";
 import { listChannelAccounts } from "@/lib/chats/queries";
 import { HeaderBar, PageHeading } from "@/components/ui/page-header";
 import { Panel, Section } from "@/components/ui/section";
@@ -23,8 +25,8 @@ import {
 
 export const metadata = { title: "Configuración · SmokIA" };
 
-export default async function ConfiguracionPage() {
-  const [apifyStatus, geminiStatus, huaweiMaasStatus, salesProfile, industries, actorOverrides, instagramStatus, chatsStatus] =
+export default async function ConfiguracionPage({ searchParams }: { searchParams: Promise<{ gmail?: string }> }) {
+  const [apifyStatus, geminiStatus, huaweiMaasStatus, salesProfile, industries, actorOverrides, instagramStatus, chatsStatus, gmailStatus, query] =
     await Promise.all([
       getApifyKeyStatus(),
       getGeminiKeyStatus(),
@@ -34,6 +36,8 @@ export default async function ConfiguracionPage() {
       getActorOverrides(),
       getInstagramConnectionStatus(),
       listChannelAccounts(),
+      mailboxStatus(),
+      searchParams,
     ]);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
   const webhookReachable = Boolean(appUrl) && !/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(appUrl);
@@ -101,6 +105,15 @@ export default async function ConfiguracionPage() {
               />
             </Panel>
           </Section>
+
+          <div id="gmail" className="scroll-mt-16">
+            <Section
+              title={<span className="flex items-center gap-2"><Mail className="size-4 text-lm-ink-2" /> Correo de la empresa</span>}
+              description="Conectá la cuenta de Gmail que querés usar en Correo. Podés compartirla con tu socio desde acá."
+            >
+              <Panel className="p-4"><GmailConnection status={gmailStatus} notice={query.gmail} /></Panel>
+            </Section>
+          </div>
 
           <Section
             title={

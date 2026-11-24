@@ -52,6 +52,7 @@ export const getCurrentUser = cache(async function getCurrentUser() {
   return {
     id: data.claims.sub as string,
     email: data.claims.email as string | undefined,
+    sessionId: typeof data.claims.session_id === "string" ? data.claims.session_id : undefined,
   };
 });
 

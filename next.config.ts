@@ -8,8 +8,11 @@ const nextConfig: NextConfig = {
   // corre Claude Code para chequear que compila) fija esta variable y compila
   // aparte en `.next-verify`, así nunca pisa la carpeta del dev server.
   distDir: process.env.NEXT_BUILD_DIST_DIR || ".next",
+  // Las búsquedas de Correo y el retorno OAuth incluyen datos privados.
+  logging: { incomingRequests: { ignore: [/^\/leads\/correo(?:[/?]|$)/] } },
   experimental: {
     agentUpgrade: "security",
+    serverActions: { bodySizeLimit: "4mb" },
     // Volver a una pestaña que se visitó hace menos de 30s es instantáneo: el
     // router reusa la pantalla en vez de pedirla otra vez al servidor. Los
     // Server Actions que mutan datos invalidan esta caché solos; lo que cambia

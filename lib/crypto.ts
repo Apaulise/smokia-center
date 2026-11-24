@@ -33,9 +33,10 @@ function getKey(): Buffer {
  *
  * Formato: base64( iv[12] · authTag[16] · ciphertext )
  */
-export function encrypt(plaintext: string): string {
+export function encrypt(plaintext: string, binding?: string): string {
   const iv = randomBytes(IV_BYTES);
   const cipher = createCipheriv(ALGORITHM, getKey(), iv);
+  if (binding !== undefined) cipher.setAAD(Buffer.from(binding));
   const ciphertext = Buffer.concat([
     cipher.update(plaintext, "utf8"),
     cipher.final(),
@@ -44,7 +45,7 @@ export function encrypt(plaintext: string): string {
 }
 
 /** Descifra un valor producido por encrypt(). Lanza si fue alterado. */
-export function decrypt(payload: string): string {
+export function decrypt(payload: string, binding?: string): string {
   const buffer = Buffer.from(payload, "base64");
   if (buffer.length <= IV_BYTES + TAG_BYTES) {
     throw new Error("Valor cifrado inválido");
@@ -55,6 +56,7 @@ export function decrypt(payload: string): string {
   const ciphertext = buffer.subarray(IV_BYTES + TAG_BYTES);
 
   const decipher = createDecipheriv(ALGORITHM, getKey(), iv);
+  if (binding !== undefined) decipher.setAAD(Buffer.from(binding));
   decipher.setAuthTag(authTag);
   return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString(
     "utf8",

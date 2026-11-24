@@ -164,7 +164,7 @@ export function Sidebar({
             title={collapsed ? "Buscar o ejecutar (⌘K)" : undefined}
             aria-label="Buscar o ejecutar"
             className={cn(
-              "flex h-9 w-full items-center gap-2 rounded-lm-sm border border-lm-line bg-lm-ink/5 px-2.5 text-left text-[13px] text-lm-ink-3 transition-colors hover:bg-lm-ink/10 hover:text-lm-ink-2 focus-visible:lm-focus",
+              "flex h-9 w-full items-center gap-2 rounded-lm-sm border border-lm-line bg-lm-ink/5 px-2.5 text-left text-[13px] text-lm-ink-3 transition-colors active:bg-lm-ink/12 hover:bg-lm-ink/10 hover:text-lm-ink-2 focus-visible:lm-focus max-lg:min-h-11",
               collapsed && "lg:mx-auto lg:size-9 lg:justify-center lg:rounded-full lg:border-transparent lg:bg-transparent lg:px-0",
             )}
           >
@@ -179,6 +179,7 @@ export function Sidebar({
         <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-1" aria-label="Navegación">
           <Link
             href="/"
+            onClick={() => setOpen(false)}
             title={collapsed ? "Todos los gestores" : undefined}
             className={cn(RAIL_ROW, "text-lm-ink-2", collapsed && RAIL_ROW_COLLAPSED)}
           >
@@ -209,6 +210,7 @@ export function Sidebar({
         <div className={cn("flex flex-col gap-1 border-t border-lm-line px-3 py-3", collapsed && "lg:px-3")}>
           <Link
             href="/configuracion"
+            onClick={() => setOpen(false)}
             title={collapsed ? "Configuración" : undefined}
             aria-current={pathname.startsWith("/configuracion") ? "page" : undefined}
             className={cn(
@@ -225,7 +227,7 @@ export function Sidebar({
             type="button"
             onClick={signOut}
             title={collapsed ? "Salir" : undefined}
-            className={cn(RAIL_ROW, "w-full cursor-pointer text-lm-ink-2", collapsed && RAIL_ROW_COLLAPSED)}
+            className={cn(RAIL_ROW, "w-full cursor-pointer text-lm-ink-2 max-lg:min-h-11", collapsed && RAIL_ROW_COLLAPSED)}
           >
             <LogOut className="size-4 shrink-0" strokeWidth={1.5} />
             <span className={cn(collapsed && "lg:hidden")}>Salir</span>
@@ -272,7 +274,7 @@ export function Sidebar({
         collapsed ? "lg:w-[60px]" : "lg:w-60",
       )}>{navigation}</aside>
       <Dialog open={open && !paletteOpen} onClose={() => setOpen(false)} sheet title="Navegación" overlayClassName="lg:hidden"
-        className="[&_nav_a]:min-h-11 [&_nav_span.pointer-events-none]:hidden [&_a[aria-current=page]]:bg-lm-ink/8">
+        className="[&_a]:min-h-11 [&_nav_span.pointer-events-none]:hidden [&_a[aria-current=page]]:bg-lm-ink/8">
         {navigation}
       </Dialog>
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
@@ -282,7 +284,7 @@ export function Sidebar({
 
 /** Renglón del riel: 36px de alto; colapsado es un círculo de 36px centrado. */
 const RAIL_ROW =
-  "relative flex h-9 items-center gap-2.5 rounded-lm-md px-2.5 text-[13px] transition-colors duration-150 ease-out hover:bg-lm-ink/6 hover:text-lm-ink focus-visible:lm-focus";
+  "relative flex h-9 touch-manipulation items-center gap-2.5 rounded-lm-md px-2.5 text-[13px] transition-colors duration-150 ease-out active:bg-lm-ink/12 hover:bg-lm-ink/6 hover:text-lm-ink focus-visible:lm-focus";
 const RAIL_ROW_COLLAPSED = "lg:mx-auto lg:w-9 lg:justify-center lg:rounded-full lg:px-0";
 const RAIL_BUTTON =
   "flex items-center justify-center rounded-full transition-colors duration-150 ease-out hover:bg-lm-ink/8 hover:text-lm-ink focus-visible:lm-focus";
