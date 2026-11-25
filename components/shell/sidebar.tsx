@@ -284,7 +284,7 @@ export function Sidebar({
 
 /** Renglón del riel: 36px de alto; colapsado es un círculo de 36px centrado. */
 const RAIL_ROW =
-  "relative flex h-9 touch-manipulation items-center gap-2.5 rounded-lm-md px-2.5 text-[13px] transition-colors duration-150 ease-out active:bg-lm-ink/12 hover:bg-lm-ink/6 hover:text-lm-ink focus-visible:lm-focus";
+  "group relative flex h-9 touch-manipulation items-center gap-2.5 rounded-lm-md px-2.5 text-[13px] transition-colors duration-150 ease-out active:bg-lm-ink/12 hover:bg-lm-ink/6 hover:text-lm-ink focus-visible:lm-focus";
 const RAIL_ROW_COLLAPSED = "lg:mx-auto lg:w-9 lg:justify-center lg:rounded-full lg:px-0";
 const RAIL_BUTTON =
   "flex items-center justify-center rounded-full transition-colors duration-150 ease-out hover:bg-lm-ink/8 hover:text-lm-ink focus-visible:lm-focus";
@@ -335,7 +335,27 @@ function ChildNav({
       {children.map((child, index) => {
         const badge = badges?.[child.href];
         const active = index === activeIndex;
-        const Icon = child.icon;
+
+        if (child.soon) {
+          // Todavía no construida: se ve con su logo, apagada, sin link (CLAUDE.md §2).
+          const SoonIcon = child.brand ?? child.icon;
+          return (
+            <span
+              key={child.href}
+              aria-disabled="true"
+              title={collapsed ? `${child.label} · próximamente` : "Próximamente"}
+              className={cn(RAIL_ROW, "cursor-not-allowed text-lm-ink-3 opacity-60 hover:bg-transparent", collapsed && RAIL_ROW_COLLAPSED)}
+            >
+              <SoonIcon className="size-5 shrink-0 grayscale" strokeWidth={1.5} />
+              <span className={cn("min-w-0 flex-1 truncate", collapsed && "lg:hidden")}>{child.label}</span>
+              <span className={cn("shrink-0 font-mono text-[10.5px] tracking-wide text-lm-ink-3 uppercase", collapsed && "lg:hidden")}>Pronto</span>
+            </span>
+          );
+        }
+
+        // El logo de la integración (Instagram, Google Calendar…) reemplaza al ícono genérico donde la hay.
+        const Icon = child.brand ?? child.icon;
+        const isBrand = child.brand !== undefined;
 
         return (
           <Link
@@ -351,7 +371,16 @@ function ChildNav({
               collapsed && RAIL_ROW_COLLAPSED,
             )}
           >
-            <Icon className={cn("size-4 shrink-0 transition-colors duration-150", active && "text-lm-signal-text")} strokeWidth={1.5} />
+            {/* El ícono se mueve al pasar el mouse (y al estar activo): la barra responde al cursor sin cambiar de forma. */}
+            <Icon
+              className={cn(
+                "shrink-0 transition-[transform,color] duration-200 ease-out group-hover:-translate-y-px group-hover:scale-110 motion-reduce:transform-none",
+                isBrand ? "size-5" : "size-4",
+                !isBrand && active && "text-lm-signal-text",
+                active && "scale-110",
+              )}
+              strokeWidth={1.5}
+            />
             <span className={cn("min-w-0 flex-1 truncate", collapsed && "lg:hidden")}>{child.label}</span>
             {badge ? (
               <>

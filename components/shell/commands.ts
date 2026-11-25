@@ -58,7 +58,7 @@ const KEYWORDS: Record<string, string> = {
 export const COMMANDS: Command[] = [
   { key: "inicio", group: "IR A", label: "Todos los gestores", section: "Inicio", href: "/", icon: LayoutGrid, shortcut: "G I", keywords: "inicio home" },
   ...MODULES.filter((module) => module.available).flatMap((module) =>
-    (module.children ?? []).map<Command>((child) => ({
+    (module.children ?? []).filter((child) => !child.soon).map<Command>((child) => ({
       key: child.href,
       group: "IR A",
       label: child.label,
