@@ -1,0 +1,9 @@
+{
+  "id": "evt_run_1",
+  "event": "workflow.run.completed",
+  "timestamp": "2026-11-25T13:10:00.000Z",
+  "workflow": { "id": "wf_tofu_1", "name": "TOFU calificación" },
+  "execution": { "id": "ex_1", "status": "completed" },
+  "conversation": { "id": "zc_1", "platformConversationId": "t_100" },
+  "contact": { "id": "ct_100", "username": "estudio.demo" }
+}

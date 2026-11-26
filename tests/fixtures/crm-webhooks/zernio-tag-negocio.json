@@ -1,0 +1,12 @@
+{
+  "id": "evt_negocio_1",
+  "event": "contact.tag_added",
+  "timestamp": "2026-11-25T13:00:00.000Z",
+  "contact": {
+    "id": "ct_100",
+    "name": "Sofía Pérez",
+    "username": "estudio.demo"
+  },
+  "tag": "negocio",
+  "source": "workflow"
+}

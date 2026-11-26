@@ -120,22 +120,43 @@ const accountEventSchema = z.looseObject({
   account: accountSchema,
 });
 
+const contactRefSchema = z
+  .looseObject({
+    id: z.string().optional(),
+    name: z.string().nullish(),
+    username: z.string().nullish(),
+    handle: z.string().nullish(),
+    platformIdentifier: z.string().nullish(),
+  })
+  .nullish();
+
 const contactTagEventSchema = z.looseObject({
+  id: z.string().optional(),
   event: z.string(),
-  contact: z.looseObject({ id: z.string().optional() }).nullish(),
+  contact: contactRefSchema,
   contactId: z.string().optional(),
   tag: z.string().nullish(),
 });
 
+const contactFieldEventSchema = z.looseObject({
+  id: z.string().optional(),
+  event: z.string(),
+  contact: contactRefSchema,
+  contactId: z.string().optional(),
+  field: z.string().optional(),
+  value: z.unknown().optional(),
+});
+
 const workflowRunEventSchema = z.looseObject({
+  id: z.string().optional(),
   event: z.string(),
   timestamp: z.string().optional(),
   workflow: z.looseObject({ id: z.string().optional() }).nullish(),
   workflowId: z.string().optional(),
-  execution: z.looseObject({ id: z.string().optional() }).nullish(),
+  execution: z.looseObject({ id: z.string().optional(), status: z.string().optional() }).nullish(),
   executionId: z.string().optional(),
   conversation: z.looseObject({ id: z.string().optional(), platformConversationId: z.string().optional() }).nullish(),
-  contact: z.looseObject({ id: z.string().optional() }).nullish(),
+  contact: contactRefSchema,
 });
 
 // ── Resultado ───────────────────────────────────────────────────────────────
@@ -193,16 +214,41 @@ export type ParsedWebhook =
    * contactos son del perfil): el dueño sale del secreto que validó la firma.
    * Se trata como señal: la ingesta vuelve a pedir el contacto y reemplaza el set.
    */
-  | { kind: "contact_tags"; contactId: string; tag: string | null; added: boolean }
+  | {
+      kind: "contact_tags";
+      eventId: string | null;
+      contactId: string;
+      tag: string | null;
+      added: boolean;
+      handle: string | null;
+      name: string | null;
+      platformIdentifier: string | null;
+    }
+  /** Cambió un campo custom (`tarea`, por ejemplo). Tampoco trae la cuenta. */
+  | {
+      kind: "contact_field";
+      eventId: string | null;
+      contactId: string;
+      field: string;
+      value: string | null;
+      handle: string | null;
+      name: string | null;
+      platformIdentifier: string | null;
+    }
   /** §1.26: empezó, terminó o falló una ejecución de un workflow. Tampoco trae la cuenta. */
   | {
       kind: "workflow_run";
+      eventId: string | null;
       workflowId: string;
       executionId: string;
       status: "running" | "completed" | "failed";
+      executionStatus: string;
       conversationId: string | null;
       contactId: string | null;
       occurredAt: string;
+      handle: string | null;
+      name: string | null;
+      platformIdentifier: string | null;
     }
   | { kind: "ignored"; event: string }
   | { kind: "invalid"; event: string; reason: string };
@@ -361,7 +407,37 @@ export function parseWebhookEvent(json: unknown): ParsedWebhook {
     if (!parsed.success) return fail(name, parsed.error);
     const contactId = parsed.data.contact?.id ?? parsed.data.contactId ?? null;
     if (!contactId) return fail(name, "Falta el contacto.");
-    return { kind: "contact_tags", contactId, tag: parsed.data.tag ?? null, added: name === "contact.tag_added" };
+    const contact = parsed.data.contact;
+    return {
+      kind: "contact_tags",
+      eventId: parsed.data.id ?? null,
+      contactId,
+      tag: parsed.data.tag ?? null,
+      added: name === "contact.tag_added",
+      handle: normalizeInstagramHandle(contact?.username ?? contact?.handle),
+      name: contact?.name ?? null,
+      platformIdentifier: contact?.platformIdentifier ?? null,
+    };
+  }
+
+  if (name === "contact.field_changed") {
+    const parsed = contactFieldEventSchema.safeParse(json);
+    if (!parsed.success) return fail(name, parsed.error);
+    const contactId = parsed.data.contact?.id ?? parsed.data.contactId ?? null;
+    if (!contactId || !parsed.data.field) return fail(name, "Falta el contacto o el campo.");
+    const contact = parsed.data.contact;
+    const raw = parsed.data.value;
+    const value = typeof raw === "string" ? raw.trim() || null : typeof raw === "number" || typeof raw === "boolean" ? String(raw) : null;
+    return {
+      kind: "contact_field",
+      eventId: parsed.data.id ?? null,
+      contactId,
+      field: parsed.data.field,
+      value,
+      handle: normalizeInstagramHandle(contact?.username ?? contact?.handle),
+      name: contact?.name ?? null,
+      platformIdentifier: contact?.platformIdentifier ?? null,
+    };
   }
 
   if (name === "workflow.run.started" || name === "workflow.run.completed" || name === "workflow.run.failed") {
@@ -371,14 +447,28 @@ export function parseWebhookEvent(json: unknown): ParsedWebhook {
     const executionId = parsed.data.execution?.id ?? parsed.data.executionId ?? null;
     if (!workflowId || !executionId) return fail(name, "Falta el workflow o la ejecución.");
     const conversation = parsed.data.conversation;
+    const contact = parsed.data.contact;
+    const executionStatus =
+      parsed.data.execution?.status && ["running", "waiting", "completed", "exited", "failed"].includes(parsed.data.execution.status)
+        ? parsed.data.execution.status
+        : name === "workflow.run.started"
+          ? "running"
+          : name === "workflow.run.failed"
+            ? "failed"
+            : "completed";
     return {
       kind: "workflow_run",
+      eventId: parsed.data.id ?? null,
       workflowId,
       executionId,
       status: name === "workflow.run.started" ? "running" : name === "workflow.run.completed" ? "completed" : "failed",
-      conversationId: conversation?.id ?? conversation?.platformConversationId ?? null,
-      contactId: parsed.data.contact?.id ?? null,
+      executionStatus,
+      conversationId: conversation?.platformConversationId ?? conversation?.id ?? null,
+      contactId: contact?.id ?? null,
       occurredAt: (parsed.data.timestamp && validDate(parsed.data.timestamp)) || new Date().toISOString(),
+      handle: normalizeInstagramHandle(contact?.username ?? contact?.handle),
+      name: contact?.name ?? null,
+      platformIdentifier: contact?.platformIdentifier ?? null,
     };
   }
 
@@ -386,6 +476,8 @@ export function parseWebhookEvent(json: unknown): ParsedWebhook {
 }
 
 /** Los eventos que no traen la cuenta: el webhook resuelve el dueño por el secreto que validó la firma. */
-export function isAccountlessEvent(event: ParsedWebhook): event is Extract<ParsedWebhook, { kind: "contact_tags" | "workflow_run" }> {
-  return event.kind === "contact_tags" || event.kind === "workflow_run";
+export function isAccountlessEvent(
+  event: ParsedWebhook,
+): event is Extract<ParsedWebhook, { kind: "contact_tags" | "contact_field" | "workflow_run" }> {
+  return event.kind === "contact_tags" || event.kind === "contact_field" || event.kind === "workflow_run";
 }

@@ -1,0 +1,10 @@
+{
+  "id": "evt_tarea_1",
+  "event": "contact.field_changed",
+  "timestamp": "2026-11-25T13:05:00.000Z",
+  "contact": { "id": "ct_100", "username": "estudio.demo" },
+  "field": "tareas",
+  "previousValue": null,
+  "value": "responder consultas",
+  "source": "workflow"
+}

@@ -23,8 +23,9 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 
+import { applyZernioCrmEvent, bodyEventId, contactHintFromZernio, parseZernioCrmBody } from "@/lib/automation/zernio-crm";
 import { asChats, type ChatChannel } from "@/lib/chats/db";
-import { ingestWebhookEvent, type AccountContext } from "@/lib/chats/ingest";
+import { ingestWebhookEvent, type AccountContext, type IngestResult } from "@/lib/chats/ingest";
 import { applyContactTagEvent, recordWorkflowRun } from "@/lib/chats/tags";
 import { extractAccountId, isAccountlessEvent, parseWebhookEvent, verifySignature } from "@/lib/chats/webhook";
 import { decrypt } from "@/lib/crypto";
@@ -47,7 +48,8 @@ export async function POST(request: NextRequest) {
   const signature = request.headers.get("x-zernio-signature");
   if (!signature) return unauthorized();
 
-  const db = asChats(createAdminClient());
+  const admin = createAdminClient();
+  const db = asChats(admin);
   const zernioAccountId = extractAccountId(rawBody);
 
   let account: AccountContext | null = null;
@@ -143,34 +145,52 @@ export async function POST(request: NextRequest) {
     // Con cuenta en el body también sirve (por si Zernio la agrega): se usa esa y su secreto.
     const contexts = account ? [account] : signedBy.map((entry) => entry.context);
     if (contexts.length === 0) return unauthorized();
-    let result;
-    if (event.kind === "contact_tags") {
-      let apiKey: string | null = null;
-      try {
-        if (account) {
-          const { data } = await db
-            .from("channel_secrets")
-            .select("api_key_encrypted")
-            .eq("channel_account_id", account.id)
-            .eq("owner_id", account.ownerId)
-            .maybeSingle();
-          apiKey = data ? decrypt(data.api_key_encrypted) : null;
-        } else {
-          const encrypted = signedBy.find((entry) => entry.apiKeyEncrypted)?.apiKeyEncrypted;
-          apiKey = encrypted ? decrypt(encrypted) : null;
-        }
-      } catch {
-        apiKey = null;
+    const ownerId = contexts[0].ownerId;
+    let apiKey: string | null = null;
+    try {
+      if (account) {
+        const { data } = await db
+          .from("channel_secrets")
+          .select("api_key_encrypted")
+          .eq("channel_account_id", account.id)
+          .eq("owner_id", account.ownerId)
+          .maybeSingle();
+        apiKey = data ? decrypt(data.api_key_encrypted) : null;
+      } else {
+        const encrypted = signedBy.find((entry) => entry.apiKeyEncrypted)?.apiKeyEncrypted;
+        apiKey = encrypted ? decrypt(encrypted) : null;
       }
+    } catch {
+      apiKey = null;
+    }
+
+    let result: IngestResult = { ok: true, changed: false };
+    if (event.kind === "contact_tags") {
       if (!apiKey) return NextResponse.json({ error: "No se pudo leer la API key." }, { status: 500 });
       result = await applyContactTagEvent(db, contexts, apiKey, event.contactId);
-    } else {
+    } else if (event.kind === "workflow_run") {
       result = await recordWorkflowRun(db, contexts, event);
     }
     if (!result.ok) {
       console.error("zernio webhook: no se pudo procesar", event.kind, result.error);
       return NextResponse.json({ error: result.error }, { status: 500 });
     }
+
+    // La misma entrega puede crear el lead (etiqueta de calificación, respuesta
+    // de tareas) o anotar la corrida. Si falta la migración, el inbox igual
+    // responde 200: los mensajes y las etiquetas no dependen de esa tabla.
+    const crm = parseZernioCrmBody(json, bodyEventId(rawBody));
+    if (crm.kind === "action") {
+      const applied = await applyZernioCrmEvent(admin, ownerId, crm.action, {
+        lookup: apiKey ? (contactId) => contactHintFromZernio(apiKey, contactId) : undefined,
+      });
+      if (!applied.ok && applied.reason === "error") {
+        console.error("zernio webhook: no se pudo pasar al CRM", applied.message);
+        return NextResponse.json({ error: applied.message }, { status: 500 });
+      }
+      if (!applied.ok) console.error("zernio webhook: CRM en espera de migración");
+    }
+
     return NextResponse.json({ ok: true, changed: result.changed });
   }
 

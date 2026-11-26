@@ -1,0 +1,13 @@
+{
+  "triggerEvent": "BOOKING_CANCELLED",
+  "createdAt": "2026-11-25T16:00:00.000Z",
+  "payload": {
+    "uid": "book_101",
+    "title": "Diagnóstico SmokIA",
+    "startTime": "2026-11-27T13:00:00.000Z",
+    "endTime": "2026-11-27T13:30:00.000Z",
+    "cancellationReason": "Se le complicó",
+    "organizer": { "email": "agustin@smokia.site" },
+    "attendees": [{ "name": "Sofía Pérez", "email": "sofia@estudio.dev" }]
+  }
+}

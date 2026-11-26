@@ -9,6 +9,8 @@
 
 import { z } from "zod";
 
+import { normalizeInstagramHandle } from "@/lib/automation/instagram-intake";
+
 export const ZERNIO_BASE_URL = "https://zernio.com/api/v1";
 const REQUEST_TIMEOUT_MS = 20_000;
 
@@ -334,6 +336,7 @@ export const WEBHOOK_EVENTS = [
   // §1.26: etiquetas que ponen los workflows y ejecuciones de cada pieza.
   "contact.tag_added",
   "contact.tag_removed",
+  "contact.field_changed",
   "workflow.run.started",
   "workflow.run.completed",
   "workflow.run.failed",
@@ -373,17 +376,31 @@ const contactSchema = z.looseObject({
   id: z.string().optional(),
   _id: z.string().optional(),
   name: z.string().nullish(),
+  username: z.string().nullish(),
+  handle: z.string().nullish(),
   tags: z.array(z.string()).nullish(),
   platform: z.string().nullish(),
   platformIdentifier: z.string().nullish(),
 });
 
-export type ZernioContact = { id: string; tags: string[]; platformIdentifier: string | null; name: string | null };
+export type ZernioContact = {
+  id: string;
+  tags: string[];
+  platformIdentifier: string | null;
+  name: string | null;
+  handle: string | null;
+};
 
 function toContact(raw: z.infer<typeof contactSchema>): ZernioContact | null {
   const id = raw.id ?? raw._id;
   if (!id) return null;
-  return { id, tags: raw.tags ?? [], platformIdentifier: raw.platformIdentifier ?? null, name: raw.name ?? null };
+  return {
+    id,
+    tags: raw.tags ?? [],
+    platformIdentifier: raw.platformIdentifier ?? null,
+    name: raw.name ?? null,
+    handle: normalizeInstagramHandle(raw.username ?? raw.handle),
+  };
 }
 
 const contactsListSchema = z.looseObject({
