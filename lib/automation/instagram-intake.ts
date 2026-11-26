@@ -96,6 +96,10 @@ export type InstagramIntakeInput = {
   /** Campos del flujo, con las mismas claves que el body. Sólo los que vinieron con valor. */
   fields: Record<string, string>;
   utm: Record<string, string>;
+  /** Contacto de Zernio. El alta de ManyChat lo deja en null. */
+  zernioContactId: string | null;
+  /** Etiqueta o respuesta que disparó esta llamada (`negocio`, `tarea`…). */
+  signal: string | null;
 };
 
 const FLOW_FIELDS = ["rubro", "rubro_libre", "tarea", "tarea_libre", "tamano", "volumen", "keyword", "pieza_origen"] as const;
@@ -137,11 +141,15 @@ export function toInstagramIntakeInput(body: InstagramIntakeBody): InstagramInta
     stage: body.stage,
     fields,
     utm,
+    zernioContactId: null,
+    signal: null,
   };
 }
 
 /** `[manychat] calificado vía MOTION (pieza DfC9JvfxG_Q)` */
 export function instagramIntakeActivityContent(agent: string, input: InstagramIntakeInput): string {
+  if (input.signal === "intervenir") return `[${agent}] intervenir: hay que responder a mano`;
+  if (input.signal === "no_agenda") return `[${agent}] no_agenda: rechazó agendar`;
   const via = input.fields.keyword ? ` vía ${input.fields.keyword}` : "";
   const pieza = input.fields.pieza_origen ? ` (pieza ${input.fields.pieza_origen})` : "";
   return `[${agent}] ${input.stage}${via}${pieza}`;
@@ -186,7 +194,14 @@ export async function upsertInstagramLead(
   input: InstagramIntakeInput,
 ): Promise<InstagramIntakeResult> {
   const db = admin;
-  const dedupeKey = input.handle ? `instagram:${input.handle}` : `manychat:${input.manychatId}`;
+  const dedupeKey = input.handle
+    ? `instagram:${input.handle}`
+    : input.manychatId
+      ? `manychat:${input.manychatId}`
+      : input.zernioContactId
+        ? `zernio:${input.zernioContactId}`
+        : null;
+  if (!dedupeKey) return { ok: false, reason: "error", message: "Falta el usuario o el id del contacto." };
 
   // Dos vueltas: si otra llamada crea el mismo lead entre la búsqueda y el
   // insert, el unique (owner_id, dedupe_key) avisa y la segunda lo encuentra.
@@ -228,6 +243,18 @@ async function findLead(db: IntakeClient, ownerId: string, input: InstagramIntak
     if (match) return { ok: true, row: match as FoundLead };
   }
 
+  if (input.zernioContactId) {
+    const { data, error } = await db
+      .from("leads")
+      .select(SELECT_FOUND)
+      .eq("owner_id", ownerId)
+      .eq("intake->>zernio_contact_id", input.zernioContactId)
+      .order("created_at", { ascending: true })
+      .limit(1);
+    if (error) return { ok: false, message: "No se pudo buscar el lead." };
+    if (data?.[0]) return { ok: true, row: data[0] as FoundLead };
+  }
+
   const { data, error } = await db
     .from("leads")
     .select(SELECT_FOUND)
@@ -254,7 +281,7 @@ async function createNew(
     .from("leads")
     .insert({
       owner_id: ownerId,
-      name: input.name ?? (input.handle ? `@${input.handle}` : `Instagram ${input.manychatId}`),
+      name: input.name ?? (input.handle ? `@${input.handle}` : `Instagram ${input.manychatId ?? input.zernioContactId}`),
       instagram_url: input.handle ? instagramUrl(input.handle) : null,
       lead_list_id: list,
       status: STAGE_STATUS[input.stage],
@@ -384,6 +411,8 @@ async function updateExisting(
 function mergeIntake(previous: IntakeObject | null, input: InstagramIntakeInput): IntakeObject {
   const next: IntakeObject = { ...(previous ?? {}) };
   if (input.manychatId) next.manychat_id = input.manychatId;
+  if (input.zernioContactId) next.zernio_contact_id = input.zernioContactId;
+  if (input.signal) next.signal = input.signal;
   if (input.handle) next.ig_username = input.handle;
   for (const [key, value] of Object.entries(input.fields)) next[key] = value;
 

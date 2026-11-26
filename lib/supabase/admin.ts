@@ -7,6 +7,9 @@
 // lib/automation/*: bearer secret + un solo owner, AUTOMATION_OWNER_ID).
 // También el webhook de Zernio y su cron (app/api/zernio/webhook, app/api/jobs/chats-sync,
 // lib/chats/ingest.ts: firma HMAC por cuenta, el owner sale de channel_accounts).
+// Y los webhooks de calificación y de Cal.com (app/api/automation/webhooks/zernio
+// y /cal: firma HMAC con ZERNIO_WEBHOOK_SECRET / CAL_WEBHOOK_SECRET, owner
+// AUTOMATION_OWNER_ID).
 // reconcile y sync se llaman también desde una Server Action luego de
 // verificar con el cliente normal que el recurso es del usuario logueado.
 // Nunca desde un Server Component ni cerca del cliente.

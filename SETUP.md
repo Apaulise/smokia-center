@@ -129,6 +129,7 @@ Antes de probar con una clave real, `npm run test:gemini` verifica localmente qu
 4. Opcional y apagado por defecto: `AUTOMATION_ADMIN_AGENTS` — lista separada por comas de quién puede usar `/api/automation/admin/*` (acceso total al CRM de ese owner). Sin la variable, o vacía, nadie entra aunque el Bearer sea válido. Para el orquestador: `AUTOMATION_ADMIN_AGENTS=mr-pou`. No se suma a `AUTOMATION_WRITE_AGENTS`: el PATCH y el alta históricos siguen igual. Sí entra en el default de `POST .../reply` cuando la variable de respuestas no está
 5. Cargar las variables en `.env.local` y en Vercel (**Settings → Environment Variables**) y redeployar
 6. Toda llamada lleva `Authorization: Bearer $AUTOMATION_API_SECRET`
+7. Webhooks de Zernio (calificación de Instagram) y de Cal.com (reservas): no usan el Bearer. Cada uno firma el body con su secreto, también de 32+ caracteres (`openssl rand -hex 32`): `ZERNIO_WEBHOOK_SECRET` y `CAL_WEBHOOK_SECRET`, en `.env.local` y en Vercel. Siguen atados a `AUTOMATION_OWNER_ID`. Hay que aplicar la migración `20261125120000_crm_inbound_webhooks.sql` antes de apuntar los webhooks. El paso a paso está en [docs/webhooks-crm.md](docs/webhooks-crm.md).
 
 No hay migración nueva para el PATCH ni para el alta: usan columnas y la actividad `NOTA` que ya existen.
 

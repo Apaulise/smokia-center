@@ -670,6 +670,8 @@ export async function createLeadFromConversation(conversationId: string): Promis
     stage: "respondio",
     fields: {},
     utm: {},
+    zernioContactId: null,
+    signal: null,
   });
   if (!result.ok) return { ok: false, message: result.message };
 

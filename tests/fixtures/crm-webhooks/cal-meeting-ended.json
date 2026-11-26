@@ -1,0 +1,15 @@
+{
+  "triggerEvent": "MEETING_ENDED",
+  "id": 100,
+  "uid": "book_200",
+  "idempotencyKey": "ended_book_200",
+  "title": "Diagnóstico SmokIA",
+  "startTime": "2026-11-26T13:00:00.000Z",
+  "endTime": "2026-11-26T13:30:00.000Z",
+  "createdAt": "2026-11-25T12:00:00.000Z",
+  "status": "ACCEPTED",
+  "organizer": { "email": "agustin@smokia.site", "name": "Agustín" },
+  "attendees": [{ "name": "Lucía Gómez", "email": "lucia@taller.com", "phoneNumber": null }],
+  "responses": { "name": { "value": "Lucía Gómez" }, "email": { "value": "lucia@taller.com" } },
+  "metadata": {}
+}
