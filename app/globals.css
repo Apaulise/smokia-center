@@ -386,18 +386,18 @@
 
 /*
  * Navegación fluida (fuera de @layer: los pseudo-elementos de view transition
- * son globales). Tiempos asimétricos: lo viejo se va rápido (110ms), lo nuevo
- * llega con calma (200ms, 70ms de espera). Sin rebote ni escala.
+ * son globales). La pantalla nueva entra de inmediato y el rastro de
+ * la anterior se desvanece en paralelo. Sin rebote ni escala.
  */
 ::view-transition {
   /* Que un clic durante la transición llegue a la página viva. */
   pointer-events: none;
 }
 ::view-transition-old(.lm-page-out) {
-  animation: 110ms cubic-bezier(0.4, 0, 1, 1) both lm-page-out;
+  animation: 90ms var(--lm-ease-mobile) both lm-page-out;
 }
 ::view-transition-new(.lm-page-in) {
-  animation: 200ms cubic-bezier(0, 0, 0.2, 1) 70ms both lm-page-in;
+  animation: 160ms var(--lm-ease-mobile) both lm-page-in;
 }
 @keyframes lm-page-out {
   to {
@@ -407,7 +407,7 @@
 @keyframes lm-page-in {
   from {
     opacity: 0;
-    transform: translate3d(0, 8px, 0);
+    transform: translate3d(0, 4px, 0);
   }
 }
 

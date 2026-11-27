@@ -1,13 +1,15 @@
 "use client";
 
-import { Archive, ArrowLeft, ArrowUpRight, FileText, Inbox, Mail, Pencil, RefreshCw, Search, Send, ShieldAlert, Star, Tag, Trash2 } from "lucide-react";
+import { Archive, ArrowLeft, ArrowUpRight, ChevronDown, FileText, FolderPlus, Folders, Inbox, Mail, Pencil, RefreshCw, Search, Send, ShieldAlert, Star, Tag, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, ButtonExternalLink, ButtonLink } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm";
-import { changeMail, deleteDraft, loadDraft, loadMailbox, loadThread, replyDetails } from "@/lib/mail/actions";
+import { Dialog } from "@/components/ui/dialog";
+import { addMailLabel, changeMail, deleteDraft, loadDraft, loadMailbox, loadThread, moveMail, replyDetails } from "@/lib/mail/actions";
 import { folders, type Folder, type InboxRow, type MailChange, type MailList, type MailMessage, type ReplyMode } from "@/lib/mail/types";
 import { cn } from "@/lib/utils";
 import { emptyCompose, MailComposerDialog, type ComposeData } from "./compose";
+import { NewMailLabel, OrganizeMail } from "./organization";
 import { MailThread } from "./thread";
 
 const icons = { inbox: Inbox, starred: Star, sent: Send, drafts: FileText, all: Mail, archive: Archive, spam: ShieldAlert, trash: Trash2 };
@@ -31,6 +33,9 @@ export function Mailbox({ email, connection }: { email: string; connection: stri
   const [busy, setBusy] = useState(false);
   const [thread, setThread] = useState<{ id: string; title: string; messages?: MailMessage[]; error?: string } | null>(null);
   const [compose, setCompose] = useState<ComposeData | null>(null);
+  const [folderMenuOpen, setFolderMenuOpen] = useState(false);
+  const [newLabelOpen, setNewLabelOpen] = useState(false);
+  const [organizeOpen, setOrganizeOpen] = useState(false);
   const listVersion = useRef(0);
   const threadVersion = useRef(0);
   const lock = useRef(false);
@@ -104,10 +109,12 @@ export function Mailbox({ email, connection }: { email: string; connection: stri
 
   function closeThread() {
     threadVersion.current++;
+    setOrganizeOpen(false);
     setThread(null);
   }
 
   function navigate(next: Folder) {
+    setFolderMenuOpen(false);
     if (next === folder) return;
     closeThread();
     listVersion.current++;
@@ -159,8 +166,36 @@ export function Mailbox({ email, connection }: { email: string; connection: stri
     if (!thread) return;
     const { id, title } = thread;
     void perform(() => changeMail(connection, id, change, label), () => {
+      setOrganizeOpen(false);
       if (["unread", "trash", "restore", "archive", "spam", "not-spam"].includes(change)) closeThread();
       else void readThread(id, title, false);
+      void refresh();
+    });
+  }
+
+  function newLabel() {
+    setActionError("");
+    setFolderMenuOpen(false);
+    setOrganizeOpen(false);
+    setNewLabelOpen(true);
+  }
+
+  function saveLabel(name: string) {
+    void perform(() => addMailLabel(connection, name), (label) => {
+      setList((current) => ({ ...current, labels: [...current.labels.filter(({ id }) => id !== label.id), label]
+        .sort((left, right) => left.name.localeCompare(right.name, "es")) }));
+      setNewLabelOpen(false);
+      setNotice("Carpeta creada en Gmail.");
+      if (thread?.messages) setOrganizeOpen(true);
+    });
+  }
+
+  function moveThread(destination: string) {
+    if (!thread) return;
+    void perform(() => moveMail(connection, thread.id, destination, folder), () => {
+      const name = destination === "INBOX" ? "Recibidos" : list.labels.find(({ id }) => id === destination)?.name;
+      closeThread();
+      setNotice(name ? `Correo movido a ${name}.` : "Correo movido.");
       void refresh();
     });
   }
@@ -178,6 +213,24 @@ export function Mailbox({ email, connection }: { email: string; connection: stri
 
   const title = folders.find(([key]) => key === folder)?.[1]
     ?? list.labels.find(({ id }) => folder === `label:${id}`)?.name ?? "Etiqueta";
+  const activeLabels = new Set(thread?.messages?.flatMap((message) => message.labels));
+  const folderItems = <>
+    {folders.map(([id, label]) => {
+      const Icon = icons[id];
+      return <Button key={id} disabled={busy} aria-current={folder === id ? "page" : undefined} variant="ghost"
+        className={cn("min-h-11 justify-start transition-colors motion-reduce:transition-none", folder === id && "bg-lm-signal/15 text-lm-signal-text")} onClick={() => navigate(id)}>
+        <Icon className="size-4" /> {label}
+      </Button>;
+    })}
+    <div className="mt-2 flex flex-col gap-1 border-t border-lm-line pt-2">
+      <p className="px-2 py-1 text-xs font-medium text-lm-ink-2">Etiquetas</p>
+      {list.labels.map((label) => <Button key={label.id} disabled={busy} variant="ghost"
+        aria-current={folder === `label:${label.id}` ? "page" : undefined}
+        className={cn("min-h-11 min-w-0 justify-start", folder === `label:${label.id}` && "bg-lm-signal/15 text-lm-signal-text")}
+        onClick={() => navigate(`label:${label.id}`)}><Tag className="size-4 shrink-0" /><span className="truncate">{label.name}</span></Button>)}
+      <Button className="min-h-11 justify-start" variant="ghost" disabled={busy} onClick={newLabel}><FolderPlus className="size-4" /> Nueva carpeta</Button>
+    </div>
+  </>;
   return (
     <div className="min-w-0 px-3 pb-5 pt-4 sm:px-6 lg:px-8">
       <header className={cn("mb-4 flex min-w-0 flex-wrap items-center justify-between gap-3", thread && "hidden lg:flex")}>
@@ -190,31 +243,23 @@ export function Mailbox({ email, connection }: { email: string; connection: stri
         </Button>
       </header>
       {notice && <p className="mb-3 text-sm text-lm-success" role="status">{notice}</p>}
-      {actionError && <p className="mb-3 break-words rounded-lm-md border border-lm-danger/25 bg-lm-danger-soft p-3 text-sm text-lm-danger" role="alert">{actionError}</p>}
+      {actionError && !organizeOpen && !newLabelOpen && <p className="mb-3 break-words rounded-lm-md border border-lm-danger/25 bg-lm-danger-soft p-3 text-sm text-lm-danger" role="alert">{actionError}</p>}
       <div className="overflow-hidden rounded-lm-xl border border-lm-line bg-lm-ink/3 lg:grid lg:min-h-[calc(100dvh-10rem)] lg:grid-cols-[11rem_minmax(0,1fr)] xl:grid-cols-[13rem_minmax(0,1fr)]">
-        <nav aria-label="Carpetas de Gmail" className={cn(
-          "flex min-w-0 items-center gap-1 overflow-x-auto overscroll-x-contain border-b border-lm-line p-2 lg:flex-col lg:items-stretch lg:overflow-visible lg:border-b-0 lg:border-r lg:p-3",
-          thread && "hidden lg:flex",
-        )}>
-          {folders.map(([id, label]) => {
-            const Icon = icons[id];
-            return <Button key={id} disabled={busy} aria-current={folder === id ? "page" : undefined} variant="ghost"
-              className={cn("min-h-10 justify-start", folder === id && "bg-lm-signal/15 text-lm-signal-text")} onClick={() => navigate(id)}>
-              <Icon className="size-4" /> {label}
-            </Button>;
-          })}
-          {list.labels.length > 0 && <span className="ml-1 hidden border-t border-lm-line pt-3 text-xs text-lm-ink-3 lg:block">Etiquetas</span>}
-          {list.labels.map((label) => <Button key={label.id} disabled={busy} variant="ghost"
-            aria-current={folder === `label:${label.id}` ? "page" : undefined}
-            className={cn("min-h-10 max-w-52 justify-start lg:max-w-none lg:shrink", folder === `label:${label.id}` && "bg-lm-signal/15 text-lm-signal-text")}
-            onClick={() => navigate(`label:${label.id}`)}><Tag className="size-4 shrink-0" /><span className="truncate">{label.name}</span></Button>)}
+        <nav aria-label="Carpetas de Gmail" className="hidden min-w-0 flex-col gap-1 border-r border-lm-line p-3 lg:flex">
+          {folderItems}
         </nav>
+        {!thread && <div className="border-b border-lm-line px-2 py-1 lg:hidden">
+          <Button className="min-h-11 max-w-full" variant="ghost" aria-label={`Carpetas de Gmail, actual: ${title}`}
+            aria-haspopup="dialog" aria-expanded={folderMenuOpen} onClick={() => setFolderMenuOpen(true)}>
+            <Folders className="size-4 shrink-0" /><span className="truncate">{title}</span><ChevronDown className="size-4 shrink-0" />
+          </Button>
+        </div>}
         <div className="min-w-0">
           <div className={cn("flex min-w-0 items-center gap-1.5 border-b border-lm-line p-2 sm:p-3", thread && "hidden lg:flex")}>
             <form onSubmit={submitSearch} className="flex min-w-0 flex-1 gap-1">
-              <label className="flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-lm-md border border-lm-line bg-lm-ink/4 px-2 sm:px-3">
+              <label className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-lm-md border border-lm-line bg-lm-ink/4 px-2 focus-within:border-lm-signal-text sm:px-3">
                 <Search className="size-4 shrink-0 text-lm-ink-3" />
-                <input maxLength={1000} className="w-full min-w-0 bg-transparent text-base outline-none placeholder:text-lm-ink-3 md:text-sm"
+                <input maxLength={1000} enterKeyHint="search" className="w-full min-w-0 rounded-lm-xs bg-transparent text-base text-lm-ink caret-lm-signal-text focus-visible:lm-focus placeholder:text-lm-ink-3"
                   aria-label="Buscar en el correo" placeholder="Buscar en el correo" value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)} />
               </label>
@@ -228,7 +273,7 @@ export function Mailbox({ email, connection }: { email: string; connection: stri
           </div>
           {thread ? (
             thread.messages ? <MailThread email={email} connection={connection} folder={folder} messages={thread.messages} labels={list.labels} busy={busy}
-              close={closeThread} modify={modify} reply={reply} />
+              close={closeThread} modify={modify} reply={reply} organize={() => { setActionError(""); setOrganizeOpen(true); }} />
               : <div className="space-y-4 p-4 sm:p-6">
                 <Button className="min-h-10" onClick={closeThread} variant="ghost"><ArrowLeft className="size-4" /> Volver a la bandeja</Button>
                 <h2 className="break-words text-lg font-semibold">{thread.title || "(Sin asunto)"}</h2>
@@ -291,6 +336,13 @@ export function Mailbox({ email, connection }: { email: string; connection: stri
         refreshView();
       }} />}
       {confirmDialog}
+      <Dialog open={folderMenuOpen} onClose={() => setFolderMenuOpen(false)} sheet title="Carpetas de Gmail" overlayClassName="lg:hidden">
+        <nav aria-label="Elegir carpeta" className="flex flex-col gap-1 px-3 py-2">{folderItems}</nav>
+      </Dialog>
+      {newLabelOpen && <NewMailLabel busy={busy} error={actionError} close={() => { setNewLabelOpen(false); setActionError(""); }} save={saveLabel} />}
+      {organizeOpen && thread?.messages && <OrganizeMail labels={list.labels} active={activeLabels} folder={folder} busy={busy}
+        error={actionError} close={() => { setOrganizeOpen(false); setActionError(""); }} create={newLabel}
+        apply={(id) => modify(activeLabels.has(id) ? "unlabel" : "label", id)} move={moveThread} />}
     </div>
   );
 }

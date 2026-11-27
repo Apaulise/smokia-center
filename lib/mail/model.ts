@@ -15,6 +15,13 @@ export type GmailMessage = {
 export type GmailThread = { id: string; snippet?: string; messages?: GmailMessage[] };
 export type GmailDraft = { id: string; message: GmailMessage };
 
+export function moveThreadLabels(destination: string, from: Folder) {
+  const source = from.startsWith("label:") ? from.slice(6) : null;
+  const removeLabelIds: string[] = destination === "INBOX" ? [] : ["INBOX"];
+  if (source && source !== destination) removeLabelIds.push(source);
+  return { addLabelIds: [destination], removeLabelIds };
+}
+
 export async function applyToDraftRevision<T>(
   read: () => Promise<GmailDraft>,
   expectedMessageId: string,

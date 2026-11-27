@@ -3,7 +3,7 @@ import "server-only";
 import MailComposer from "nodemailer/lib/mail-composer/index.js";
 import { z } from "zod";
 import { gmail, mailboxSession, MailError } from "@/lib/mail/connection";
-import { applyToDraftRevision, lookupPart, mailboxQuery, readMessage, replyFields, type GmailDraft, type GmailMessage, type GmailPart, type GmailThread } from "@/lib/mail/model";
+import { applyToDraftRevision, lookupPart, mailboxQuery, moveThreadLabels, readMessage, replyFields, type GmailDraft, type GmailMessage, type GmailPart, type GmailThread } from "@/lib/mail/model";
 import { folders, maxNewAttachmentBytes, type ComposeFields, type InboxRow, type MailChange, type MailLabel, type MailMessage, type ReplyMode } from "@/lib/mail/types";
 
 export const mailId = z.string().min(1).max(512).regex(/^[a-zA-Z0-9_-]+$/);
@@ -11,6 +11,7 @@ export const partId = z.string().max(250).regex(/^[a-zA-Z0-9_.-]*$/);
 const folderId = z.custom<(typeof folders)[number][0] | `label:${string}`>((value) =>
   typeof value === "string" && (folders.some(([id]) => id === value) || /^label:Label_[a-zA-Z0-9_]+$/.test(value)));
 const metadata = "?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Date";
+const labelIdSchema = z.string().regex(/^Label_[a-zA-Z0-9_]+$/);
 
 async function attachmentBody(token: string, messageId: string, attachmentId: string) {
   const result = await gmail<{ data?: string }>(token, `/messages/${mailId.parse(messageId)}/attachments/${mailId.parse(attachmentId)}`);
@@ -104,11 +105,29 @@ export async function modifyThread(connection: string, id: unknown, action: unkn
     await gmail(accessToken, `/threads/${thread}/${change === "trash" ? "trash" : "untrash"}`, undefined, "POST");
     return;
   }
-  const labelId = change === "label" || change === "unlabel" ? z.string().regex(/^Label_[a-zA-Z0-9_]+$/).parse(label) : null;
+  const labelId = change === "label" || change === "unlabel" ? labelIdSchema.parse(label) : null;
   const [addLabelIds, removeLabelIds] = labelId
     ? change === "label" ? [[labelId], []] : [[], [labelId]]
     : changes[change]!;
   await gmail(accessToken, `/threads/${thread}/modify`, { addLabelIds, removeLabelIds });
+}
+
+export async function createMailLabel(connection: string, input: unknown): Promise<MailLabel> {
+  const name = z.string().trim().min(1).max(100).refine((value) => !/[\u0000-\u001f\u007f]/.test(value)).safeParse(input);
+  if (!name.success) throw new MailError("Ingresá un nombre de hasta 100 caracteres.");
+  const { accessToken } = await mailboxSession(connection);
+  const result = await gmail<MailLabel>(accessToken, "/labels", {
+    name: name.data, labelListVisibility: "labelShow", messageListVisibility: "show",
+  });
+  return { id: labelIdSchema.parse(result.id), name: result.name };
+}
+
+export async function moveMailThread(connection: string, id: unknown, destination: unknown, source: unknown) {
+  const thread = mailId.parse(id);
+  const label = destination === "INBOX" ? destination : labelIdSchema.parse(destination);
+  const from = folderId.parse(source);
+  const { accessToken } = await mailboxSession(connection);
+  await gmail(accessToken, `/threads/${thread}/modify`, moveThreadLabels(label, from));
 }
 
 export async function getDraft(connection: string, id: unknown) {

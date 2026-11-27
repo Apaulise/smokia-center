@@ -1,16 +1,17 @@
 "use client";
 
-import { Archive, ArrowLeft, ArrowUpRight, Download, Forward, Inbox, Mail, Reply, ReplyAll, ShieldAlert, Star, Trash2 } from "lucide-react";
+import { Archive, ArrowLeft, ArrowUpRight, Download, FolderInput, Forward, Inbox, Mail, Reply, ReplyAll, ShieldAlert, Star, Trash2 } from "lucide-react";
 import { Button, ButtonExternalLink } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Folder, MailChange, MailLabel, MailMessage, ReplyMode } from "@/lib/mail/types";
 
 const timestamp = new Intl.DateTimeFormat("es-AR", { dateStyle: "medium", timeStyle: "short" });
 
-export function MailThread({ email, connection, folder, messages, labels, busy, close, modify, reply }: {
+export function MailThread({ email, connection, folder, messages, labels, busy, close, modify, reply, organize }: {
   email: string; connection: string; folder: Folder; messages: MailMessage[]; labels: MailLabel[]; busy: boolean;
   close: () => void; modify: (change: MailChange, label?: string) => void;
   reply: (message: MailMessage, mode: ReplyMode) => void;
+  organize: () => void;
 }) {
   const current = messages.at(-1);
   if (!current) return <p className="px-5 py-8 text-sm text-lm-ink-2">El hilo está vacío.</p>;
@@ -37,11 +38,9 @@ export function MailThread({ email, connection, folder, messages, labels, busy, 
             <ShieldAlert className="size-4" />
           </Button>
         </>}
-      {labels.length > 0 && <select aria-label="Etiquetas del hilo" disabled={busy} value="" className="min-h-10 max-w-36 rounded-lm-md border border-lm-line bg-lm-bg px-2 text-sm"
-        onChange={(event) => { const id = event.target.value; if (id) modify(active.has(id) ? "unlabel" : "label", id); }}>
-        <option value="">Etiquetas</option>
-        {labels.map(({ id, name }) => <option key={id} value={id}>{active.has(id) ? "Quitar " : "Aplicar "}{name}</option>)}
-      </select>}
+      {!trash && !spam && <Button className="min-h-11" variant="ghost" disabled={busy} onClick={organize}>
+        <FolderInput className="size-4" /> Organizar
+      </Button>}
       <ButtonExternalLink variant="ghost" className="ml-auto min-h-10" aria-label="Abrir hilo en Gmail" title="Abrir hilo en Gmail"
         href={`https://mail.google.com/mail/?authuser=${encodeURIComponent(email)}#all/${encodeURIComponent(current.threadId)}`}><ArrowUpRight className="size-4" /></ButtonExternalLink>
     </div>

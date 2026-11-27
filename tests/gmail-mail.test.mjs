@@ -3,6 +3,19 @@ import test from "node:test";
 
 const load = () => import("../lib/mail/model.ts");
 
+test("mover una conversación quita la carpeta de origen y conserva otras etiquetas", async () => {
+  const { moveThreadLabels } = await load();
+  assert.deepEqual(moveThreadLabels("Label_ventas", "label:Label_propuestas"), {
+    addLabelIds: ["Label_ventas"], removeLabelIds: ["INBOX", "Label_propuestas"],
+  });
+  assert.deepEqual(moveThreadLabels("INBOX", "label:Label_ventas"), {
+    addLabelIds: ["INBOX"], removeLabelIds: ["Label_ventas"],
+  });
+  assert.deepEqual(moveThreadLabels("Label_ventas", "label:Label_ventas"), {
+    addLabelIds: ["Label_ventas"], removeLabelIds: ["INBOX"],
+  });
+});
+
 test("una acción sobre un borrador desactualizado conserva la versión nueva", async () => {
   const { applyToDraftRevision } = await load();
   const draft = { id: "borrador", message: { id: "nueva", threadId: "hilo" } };
