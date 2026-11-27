@@ -14,11 +14,11 @@ import {
   Settings,
   Users,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 
+import { BrandLockup } from "@/components/shell/brand-lockup";
 import { CommandPalette } from "@/components/shell/command-palette";
 import { MODULES, type NavModule } from "@/components/shell/nav";
 import { usePendingPath } from "@/components/shell/navigation-state";
@@ -140,10 +140,8 @@ export function Sidebar({
           )}
         >
           {collapsed ? null : (
-            <Link href="/" className="flex items-center gap-2.5 text-[15px] font-semibold tracking-[-0.02em] text-lm-ink">
-              {/* 230×400 real: declarar el ratio real evita el warning de Next por width/height que no matchean el CSS. */}
-              <Image src="/logo-mark.png" alt="" width={15} height={26} className="h-[26px] w-auto shrink-0" priority />
-              SmokIA
+            <Link href="/" aria-label="ALTAB, inicio" className="inline-flex min-h-11 items-center rounded-lm-sm focus-visible:lm-focus">
+              <BrandLockup />
             </Link>
           )}
           <button
@@ -252,9 +250,8 @@ export function Sidebar({
   return (
     <>
       <header className="lm-mobile-header flex shrink-0 items-center justify-between border-b border-lm-line bg-lm-surface px-4 lg:hidden">
-        <Link href="/" className="flex min-h-11 items-center gap-2 font-lm-sans text-[15px] font-semibold text-lm-ink">
-          <Image src="/logo-mark.png" alt="" width={13} height={22} className="h-[22px] w-auto shrink-0" />
-          SmokIA
+        <Link href="/" aria-label="ALTAB, inicio" className="inline-flex min-h-11 items-center rounded-lm-sm focus-visible:lm-focus">
+          <BrandLockup />
         </Link>
         <div className="flex items-center gap-1.5">
           <button type="button" onClick={() => setPaletteOpen(true)} aria-label="Buscar un lead, una lista o una pantalla"
@@ -337,8 +334,8 @@ function ChildNav({
         const active = index === activeIndex;
 
         if (child.soon) {
-          // Todavía no construida: se ve con su logo, apagada, sin link (CLAUDE.md §2).
-          const SoonIcon = child.brand ?? child.icon;
+          // Todavía no construida: se ve apagada, sin link (CLAUDE.md §2).
+          const SoonIcon = child.icon;
           return (
             <span
               key={child.href}
@@ -346,16 +343,14 @@ function ChildNav({
               title={collapsed ? `${child.label} · próximamente` : "Próximamente"}
               className={cn(RAIL_ROW, "cursor-not-allowed text-lm-ink-3 opacity-60 hover:bg-transparent", collapsed && RAIL_ROW_COLLAPSED)}
             >
-              <SoonIcon className="size-5 shrink-0 grayscale" strokeWidth={1.5} />
+              <SoonIcon className="size-4 shrink-0" strokeWidth={1.5} />
               <span className={cn("min-w-0 flex-1 truncate", collapsed && "lg:hidden")}>{child.label}</span>
               <span className={cn("shrink-0 font-mono text-[10.5px] tracking-wide text-lm-ink-3 uppercase", collapsed && "lg:hidden")}>Pronto</span>
             </span>
           );
         }
 
-        // El logo de la integración (Instagram, Google Calendar…) reemplaza al ícono genérico donde la hay.
-        const Icon = child.brand ?? child.icon;
-        const isBrand = child.brand !== undefined;
+        const Icon = child.icon;
 
         return (
           <Link
@@ -371,13 +366,10 @@ function ChildNav({
               collapsed && RAIL_ROW_COLLAPSED,
             )}
           >
-            {/* El ícono se mueve al pasar el mouse (y al estar activo): la barra responde al cursor sin cambiar de forma. */}
             <Icon
               className={cn(
-                "shrink-0 transition-[transform,color] duration-200 ease-out group-hover:-translate-y-px group-hover:scale-110 motion-reduce:transform-none",
-                isBrand ? "size-5" : "size-4",
-                !isBrand && active && "text-lm-signal-text",
-                active && "scale-110",
+                "size-4 shrink-0 transition-colors duration-150",
+                active && "text-lm-signal-text",
               )}
               strokeWidth={1.5}
             />

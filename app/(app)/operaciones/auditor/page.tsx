@@ -6,7 +6,7 @@ import { Section } from "@/components/ui/section";
 import { formatUpdatedAt } from "@/lib/ops/format";
 import { getOpsRecords } from "@/lib/ops/queries";
 
-export const metadata = { title: "Auditor · Operaciones · SmokIA" };
+export const metadata = { title: "Auditor · Operaciones" };
 
 export default async function AuditorPage() {
   const records = await getOpsRecords();

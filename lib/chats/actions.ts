@@ -134,7 +134,7 @@ export async function connectZernio(_prev: ChatActionState, formData: FormData):
     try {
       webhookId = (
         await createWebhook(apiKey, {
-          name: "SmokIA inbox",
+          name: "ALTAB inbox",
           url: `${appUrl!.replace(/\/$/, "")}/api/zernio/webhook`,
           secret: webhookSecret,
           accountIds: accounts.map((account) => account.id),
@@ -366,7 +366,7 @@ export async function disconnectChannelAccount(accountId: string): Promise<ChatA
   const { error } = await chats.from("channel_accounts").delete().eq("id", account.id).eq("owner_id", user.id);
   if (error) return { ok: false, message: "No se pudo desconectar la cuenta." };
   revalidateChats();
-  return { ok: true, message: "Cuenta desconectada. Los mensajes guardados en SmokIA se borraron; en Zernio siguen." };
+  return { ok: true, message: "Cuenta desconectada. Los mensajes guardados en ALTAB se borraron; en Zernio siguen." };
 }
 
 // ── Enviar ───────────────────────────────────────────────────────────────────

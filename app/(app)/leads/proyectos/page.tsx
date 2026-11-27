@@ -10,7 +10,7 @@ import { projectStatuses, projectStatusLabels } from "@/lib/crm/projects/model";
 import { listProjects } from "@/lib/crm/projects/queries";
 import { getTaskPeople, listClients } from "@/lib/crm/queries";
 
-export const metadata = { title: "Proyectos · SmokIA" };
+export const metadata = { title: "Proyectos" };
 const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] : value;
 
 export default async function ProjectsPage({ searchParams }: PageProps<"/leads/proyectos">) {

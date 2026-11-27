@@ -31,7 +31,7 @@ import { getStyleStats } from "@/lib/leads/ai/style/queries";
 import { buildProspectingStages, toPipelineStages, totalResponseRate } from "@/lib/leads/prospecting-rates";
 import { getTodayTile } from "@/lib/leads/team/summary";
 
-export const metadata = { title: "Gestor de Leads · SmokIA" };
+export const metadata = { title: "Gestor de Leads" };
 
 const STALE_DAYS = 7;
 const CHANNEL_LABEL = { WHATSAPP: "WhatsApp", INSTAGRAM: "Instagram", EMAIL: "Mail" } as const;

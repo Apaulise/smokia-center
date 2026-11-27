@@ -9,7 +9,7 @@ import { AREA_LABEL, ESTADO_LABEL } from "@/lib/ops/schema";
 import { getOpsRecords } from "@/lib/ops/queries";
 import { AREA_FILTERS, ESTADO_FILTERS, type OpsAreaFilter, type OpsEstado, type OpsEstadoFilter } from "@/lib/ops/types";
 
-export const metadata = { title: "Áreas · Operaciones · SmokIA" };
+export const metadata = { title: "Áreas · Operaciones" };
 
 function parseArea(value: string | undefined): OpsAreaFilter {
   return AREA_FILTERS.find((area) => area === value) ?? "todas";

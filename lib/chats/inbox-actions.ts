@@ -390,7 +390,7 @@ export async function changeConversationTags(input: { conversationId: string; ad
     .from("conversations")
     .update({ zernio_contact_id: contactId, tags, tags_synced_at: new Date().toISOString() })
     .eq("id", conversation.id);
-  if (error) return { ok: false, message: "Se guardó en Zernio, pero no en SmokIA. Sincronizá para verla." };
+  if (error) return { ok: false, message: "Se guardó en Zernio, pero no en ALTAB. Sincronizá para verla." };
   return { ok: true, message: "Etiquetas actualizadas.", tags };
 }
 

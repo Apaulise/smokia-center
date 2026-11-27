@@ -1,14 +1,7 @@
 @import "tailwindcss";
 
-/*
- * Tokens de la app. El sistema vigente es "Señal y humo" (prefijo `lm-`, ver
- * más abajo): tema oscuro por default y tema claro con `data-theme="light"` en
- * <html> (components/shell/theme-toggle.tsx). Los tokens de abajo (base, ink,
- * cyan…) son del manual viejo: se conservan sólo como alias de `lm-` para las
- * pantallas que todavía los usan, así cambian de tema y de acento con el resto.
- */
+/* Paleta ALTAB AI Consulting. Los alias apuntan a los mismos tokens de ambos temas. */
 @theme {
-  /* Alias de "Señal y humo": nada de cian ni violeta, y siguen el tema claro/oscuro. */
   --color-base: var(--color-lm-bg);
   --color-elevated: var(--color-lm-surface);
   --color-surface: var(--color-lm-raised);
@@ -26,44 +19,33 @@
   --color-warning: var(--color-lm-signal-text);
   --color-danger: var(--color-lm-danger);
 
-  /* `font-display` y `font-sans` quedan como alias de la tipografía de la UI: sólo hay dos familias (Host Grotesk y JetBrains Mono). */
-  --font-display: var(--font-host-grotesk), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-host-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-hanken-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-hanken-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 
   /* §6: radios 16–24px en contenedores */
   --radius-card: 20px;
   --radius-control: 12px;
 
-  /*
-   * Sistema "Señal y humo" — Gestor de Leads (Design System artifact
-   * "SmokIA — Señal y Humo", 2026-09-26). Namespace `lm-` a propósito:
-   * el Gestor de Marca Personal sigue con los tokens de arriba mientras no se
-   * rediseñe (CLAUDE.md §2, un gestor por vez); nombres nuevos evitan pisar
-   * --color-surface/--color-line/--color-ink existentes. Valores de oscuro
-   * acá; los de claro están en `:root[data-theme="light"]` (más abajo), sacados
-   * de tokens.json del Design System. Nunca un hex suelto en un componente:
-   * siempre un token `lm-`, así el tema claro funciona solo.
-   */
-  --color-lm-bg: #131315;
-  --color-lm-surface: #1b1b1e;
-  --color-lm-raised: #242428;
-  --color-lm-overlay: #2d2d32;
+  --color-lm-bg: #202124;
+  --color-lm-surface: #292a2c;
+  --color-lm-raised: #313235;
+  --color-lm-overlay: #3a3b3e;
   --color-lm-line: #ffffff14;
   --color-lm-line-strong: #ffffff29;
 
-  --color-lm-ink: #eceae5;
-  --color-lm-ink-2: #a3a19c;
-  --color-lm-ink-3: #908e89;
+  --color-lm-ink: #fff0ce;
+  --color-lm-ink-2: #c5c3bc;
+  --color-lm-ink-3: #aaa9a3;
 
-  --color-lm-signal: #f2c14e;
-  --color-lm-signal-hover: #f6cf6e;
-  --color-lm-signal-soft: #f2c14e1f;
-  --color-lm-signal-text: #f2c14e;
-  --color-lm-on-signal: #151515;
-  --color-lm-focus-ring: #f2c14e;
+  --color-lm-signal: #f3d38c;
+  --color-lm-signal-hover: #ffe2a5;
+  --color-lm-signal-soft: #f3d38c1f;
+  --color-lm-signal-text: #f3d38c;
+  --color-lm-on-signal: #202124;
+  --color-lm-focus-ring: #f3d38c;
   /* Velo detrás de modales y ⌘K */
-  --color-lm-scrim: #131315a8;
+  --color-lm-scrim: #202124a8;
 
   --color-lm-success: #8fb39a;
   --color-lm-success-soft: #8fb39a1f;
@@ -77,8 +59,7 @@
   --color-lm-smoke-4: #8a8d92;
   --color-lm-smoke-5: #b9bbbe;
 
-  /* Host Grotesk para UI, JetBrains Mono para datos (ya existe --font-mono) */
-  --font-lm-sans: var(--font-host-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-lm-sans: var(--font-hanken-grotesk), ui-sans-serif, system-ui, sans-serif;
 
   /*
    * Colores de las cuatro etiquetas predefinidas del inbox (verde, azul, rojo;
@@ -102,27 +83,26 @@
   --radius-lm-2xl: 27px;
 }
 
-/* Tema claro de "Señal y humo" (tokens.json del Design System). Especificidad
-   mayor que `:root`, donde Tailwind emite los tokens: gana sin importar el orden. */
+/* Tema claro con superficies marfil y texto grafito. */
 :root[data-theme="light"] {
-  --color-lm-bg: #f5f4f1;
-  --color-lm-surface: #ffffff;
-  --color-lm-raised: #ecebe7;
-  --color-lm-overlay: #e3e2dd;
-  --color-lm-line: #1414161a;
-  --color-lm-line-strong: #1414163d;
+  --color-lm-bg: #f8f3e9;
+  --color-lm-surface: #fffcf5;
+  --color-lm-raised: #eee7d9;
+  --color-lm-overlay: #e4dbca;
+  --color-lm-line: #2021241a;
+  --color-lm-line-strong: #2021243d;
 
-  --color-lm-ink: #17171a;
-  --color-lm-ink-2: #55544f;
-  --color-lm-ink-3: #6b6964;
+  --color-lm-ink: #202124;
+  --color-lm-ink-2: #524b3b;
+  --color-lm-ink-3: #645b4a;
 
-  --color-lm-signal: #e9b63c;
-  --color-lm-signal-hover: #dca82c;
-  --color-lm-signal-soft: #e9b63c2e;
-  --color-lm-signal-text: #7d5c06;
-  --color-lm-on-signal: #17171a;
-  --color-lm-focus-ring: #7d5c06;
-  --color-lm-scrim: #17171a66;
+  --color-lm-signal: #f3d38c;
+  --color-lm-signal-hover: #e8c078;
+  --color-lm-signal-soft: #a4844826;
+  --color-lm-signal-text: #73521c;
+  --color-lm-on-signal: #202124;
+  --color-lm-focus-ring: #73521c;
+  --color-lm-scrim: #20212466;
 
   --color-lm-success: #3f6e4e;
   --color-lm-success-soft: #3f6e4e1a;
@@ -157,7 +137,7 @@
   }
 
   /*
-   * Titulares: heredan la tipografía de la UI (Host Grotesk). Antes tomaban
+   * Titulares: heredan la tipografía de la UI. Antes tomaban
    * Sora (manual viejo) y cualquier h1–h3 sin `font-lm-sans` explícito —el
    * título de un diálogo, por ejemplo— salía en otra fuente que el resto.
    */
@@ -294,7 +274,7 @@
    * Preview de un gestor en la pantalla global. Ease-in-out simétrico a propósito:
    * una curva expo-out concentra casi todo el movimiento en los primeros
    * milisegundos y se siente brusca aunque dure mucho. Acá arranca y frena
-   * despacio. El brillo del borde (amarillo `signal`, #f2c14e) es un ::after para animar sólo opacidad.
+   * despacio. El brillo dorado del borde es un ::after para animar sólo opacidad.
    */
   .hub-preview {
     --hub-ease: cubic-bezier(0.4, 0, 0.2, 1);
@@ -314,9 +294,9 @@
     pointer-events: none;
     opacity: 0;
     box-shadow:
-      inset 0 0 0 1px rgb(242 193 78 / 0.7),
-      inset 0 0 22px rgb(242 193 78 / 0.14),
-      0 0 32px rgb(242 193 78 / 0.2),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-lm-signal) 70%, transparent),
+      inset 0 0 22px color-mix(in srgb, var(--color-lm-signal) 14%, transparent),
+      0 0 32px color-mix(in srgb, var(--color-lm-signal) 20%, transparent),
       0 28px 60px -24px rgb(0 0 0 / 0.85);
     transition: opacity 450ms var(--hub-ease);
   }
@@ -368,10 +348,9 @@
     position: absolute;
     inset: -25%;
     background:
-      radial-gradient(ellipse 46% 38% at 18% 28%, rgb(242 193 78 / 0.16), transparent 70%),
-      radial-gradient(ellipse 42% 34% at 82% 18%, rgb(69 71 76 / 0.42), transparent 70%),
-      radial-gradient(ellipse 58% 40% at 62% 92%, rgb(242 193 78 / 0.15), transparent 70%),
-      radial-gradient(ellipse 36% 30% at 8% 86%, rgb(214 160 52 / 0.12), transparent 70%);
+      radial-gradient(ellipse 46% 38% at 18% 28%, var(--lm-ambient-a), transparent 70%),
+      radial-gradient(ellipse 42% 34% at 82% 18%, var(--lm-ambient-b), transparent 70%),
+      radial-gradient(ellipse 58% 40% at 62% 92%, var(--lm-ambient-c), transparent 70%);
     animation: hub-smoke 60s ease-in-out infinite alternate;
     will-change: transform;
   }
@@ -381,20 +360,14 @@
     inset: 0;
     background:
       url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
-      radial-gradient(ellipse 70% 48% at 50% -8%, rgb(242 193 78 / 0.2), transparent 70%),
-      radial-gradient(ellipse 120% 90% at 50% 40%, transparent 55%, rgb(19 19 21 / 0.75) 100%);
+      radial-gradient(ellipse 70% 48% at 50% -8%, var(--lm-ambient-c), transparent 70%),
+      radial-gradient(ellipse 120% 90% at 50% 40%, transparent 55%, color-mix(in srgb, var(--color-lm-bg) 75%, transparent) 100%);
   }
   /* Claro: mismo humo, sobre papel cálido y sin viñeta oscura. */
-  :root[data-theme="light"] .hub-backdrop::before {
-    background:
-      radial-gradient(ellipse 46% 38% at 18% 28%, rgb(233 182 60 / 0.22), transparent 70%),
-      radial-gradient(ellipse 42% 34% at 82% 18%, rgb(127 126 122 / 0.16), transparent 70%),
-      radial-gradient(ellipse 58% 40% at 62% 92%, rgb(233 182 60 / 0.18), transparent 70%);
-  }
   :root[data-theme="light"] .hub-backdrop::after {
     background:
       url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
-      radial-gradient(ellipse 70% 48% at 50% -8%, rgb(233 182 60 / 0.16), transparent 70%);
+      radial-gradient(ellipse 70% 48% at 50% -8%, var(--lm-ambient-c), transparent 70%);
   }
   @keyframes hub-smoke {
     from {
@@ -548,9 +521,9 @@ html.lm-theme-fade *::after {
  * fijo (Chats) lo restan de 100dvh.
  */
 :root {
-  --lm-ambient-a: rgb(242 193 78 / 0.2);
-  --lm-ambient-b: rgb(138 141 146 / 0.2);
-  --lm-ambient-c: rgb(214 160 52 / 0.1);
+  --lm-ambient-a: rgb(243 211 140 / 0.16);
+  --lm-ambient-b: rgb(179 178 173 / 0.14);
+  --lm-ambient-c: rgb(218 185 119 / 0.12);
   --lm-glass-fill: 56%;
   --lm-stage-fill: 46%;
   --lm-panel-color: var(--color-lm-raised);
@@ -560,9 +533,9 @@ html.lm-theme-fade *::after {
   --lm-glass-ring: rgb(255 255 255 / 0.045);
   --lm-glass-shadow: rgb(0 0 0 / 0.6);
   --lm-panel-shadow: rgb(0 0 0 / 0.5);
-  --lm-pill-bg: #eceae5;
-  --lm-pill-ink: #17171a;
-  --lm-signal-light: #f8dd9a;
+  --lm-pill-bg: #fff0ce;
+  --lm-pill-ink: #202124;
+  --lm-signal-light: #ffe2a5;
   --lm-shell-gap: 0px;
   --lm-shell-y: calc(56px + env(safe-area-inset-top, 0px));
   --lm-ease-mobile: cubic-bezier(0.23, 1, 0.32, 1);
@@ -601,9 +574,9 @@ html.lm-theme-fade *::after {
   }
 }
 :root[data-theme="light"] {
-  --lm-ambient-a: rgb(233 182 60 / 0.3);
-  --lm-ambient-b: rgb(127 126 122 / 0.2);
-  --lm-ambient-c: rgb(233 182 60 / 0.14);
+  --lm-ambient-a: rgb(218 185 119 / 0.26);
+  --lm-ambient-b: rgb(127 126 122 / 0.16);
+  --lm-ambient-c: rgb(218 185 119 / 0.15);
   --lm-glass-fill: 62%;
   --lm-stage-fill: 52%;
   --lm-panel-color: var(--color-lm-surface);
@@ -613,9 +586,9 @@ html.lm-theme-fade *::after {
   --lm-glass-ring: rgb(255 255 255 / 0.4);
   --lm-glass-shadow: rgb(20 20 22 / 0.24);
   --lm-panel-shadow: rgb(20 20 22 / 0.2);
-  --lm-pill-bg: #ffffff;
-  --lm-pill-ink: #17171a;
-  --lm-signal-light: #f6d78a;
+  --lm-pill-bg: #fffcf5;
+  --lm-pill-ink: #202124;
+  --lm-signal-light: #ffe2a5;
 }
 
 .lm-ambient {

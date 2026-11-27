@@ -17,7 +17,7 @@ import { getExecutionSummary } from "@/lib/leads/execution/summary";
 import { getTeamSummary } from "@/lib/leads/team/summary";
 import { cn } from "@/lib/utils";
 
-export const metadata = { title: "Objetivo · Gestor de Leads · SmokIA" };
+export const metadata = { title: "Objetivo · Gestor de Leads" };
 
 const PERIODS = { "7d": 7, "30d": 30, "90d": 90 } as const;
 type Period = keyof typeof PERIODS;

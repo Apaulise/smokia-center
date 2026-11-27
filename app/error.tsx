@@ -18,7 +18,7 @@ export default function RootError({ error, retry }: { error: unknown; retry: () 
     <ErrorScreen
       frame="page"
       kind="error"
-      title="Algo falló al cargar SmokIA"
+      title="Algo falló al cargar ALTAB"
       description="Probá de nuevo en unos segundos. Si sigue igual, pasá el código de abajo a quien mantiene la app."
       code={code}
       detail={detail}

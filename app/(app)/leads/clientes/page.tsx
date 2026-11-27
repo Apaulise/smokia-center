@@ -10,7 +10,7 @@ import { HeaderBar, PageHeading } from "@/components/ui/page-header";
 import { clientStatuses, clientStatusLabels, matchesAssignee, type Contact } from "@/lib/crm/model";
 import { getTaskPeople, listClients } from "@/lib/crm/queries";
 
-export const metadata = { title: "Clientes · SmokIA" };
+export const metadata = { title: "Clientes" };
 
 const normalize = (value: string) => value.trim().normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] : value;

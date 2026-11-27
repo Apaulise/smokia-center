@@ -274,8 +274,8 @@ export async function createContentAutomation(input: {
       profileId,
       accountId: found.account.zernio_account_id,
       platform: "instagram",
-      name: `SmokIA · ${stage} · ${keyword} · ${new Date().toISOString().slice(0, 10)}`,
-      description: `Clonado del molde ${stage} para la pieza ${platformPostId} (palabra "${keyword}"). Creado desde SmokIA, §1.26 sub-paso 4.`,
+      name: `ALTAB · ${stage} · ${keyword} · ${new Date().toISOString().slice(0, 10)}`,
+      description: `Clonado del molde ${stage} para la pieza ${platformPostId} (palabra "${keyword}"). Creado desde ALTAB, §1.26 sub-paso 4.`,
       nodes: cloned.nodes,
       edges: cloned.edges,
       entryNodeId: cloned.entryNodeId,
@@ -291,7 +291,7 @@ export async function createContentAutomation(input: {
     const body = buildCommentAutomationBody({
       profileId,
       accountId: found.account.zernio_account_id,
-      name: `SmokIA · ${stage} · ${keyword}`,
+      name: `ALTAB · ${stage} · ${keyword}`,
       platformPostId,
       postTitle: postCaption ? postCaption.slice(0, 120) : null,
       keywords: keywordVariants(keyword),
@@ -326,7 +326,7 @@ export async function createContentAutomation(input: {
   if (insertError) {
     // Ya quedó funcionando en Zernio; sólo falló guardar el registro acá. Se avisa en vez de desarmar lo que ya anda.
     revalidatePath(PATH);
-    return { ok: true, message: "Se creó y activó en Zernio, pero no se pudo guardar en SmokIA. Avisá para revisarlo a mano." };
+    return { ok: true, message: "Se creó y activó en Zernio, pero no se pudo guardar en ALTAB. Avisá para revisarlo a mano." };
   }
 
   revalidatePath(PATH);
@@ -411,5 +411,5 @@ export async function deleteContentAutomation(id: string): Promise<AutomationAct
   if (found.row.zernio_workflow_id) await deleteWorkflow(found.apiKey, found.row.zernio_workflow_id).catch(() => {});
   await chats.from("content_automations").delete().eq("id", id).eq("owner_id", user.id);
   revalidatePath(PATH);
-  return { ok: true, message: "Borrada en Zernio y en SmokIA." };
+  return { ok: true, message: "Borrada en Zernio y en ALTAB." };
 }

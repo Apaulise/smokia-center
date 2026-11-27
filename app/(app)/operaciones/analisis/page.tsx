@@ -1,7 +1,7 @@
 import { WeeklyAnalysis } from "@/components/weekly/analysis-view";
 import { loadWeeklyPage } from "@/lib/weekly/queries";
 
-export const metadata = { title: "Análisis semanal · Operaciones · SmokIA" };
+export const metadata = { title: "Análisis semanal · Operaciones" };
 
 export default async function AnalisisSemanalPage({
   searchParams,

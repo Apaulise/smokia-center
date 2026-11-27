@@ -21,7 +21,7 @@ export function GmailConnection({ status, notice }: {
       confirmLabel: "Compartir casilla",
     } : {
       title: "¿Desconectar la casilla?",
-      description: "El equipo pierde el acceso desde SmokIA. Los mensajes siguen en Gmail.",
+      description: "El equipo pierde el acceso desde ALTAB. Los mensajes siguen en Gmail.",
       confirmLabel: "Desconectar", tone: "danger",
     })) return;
     start(async () => {
@@ -36,7 +36,7 @@ export function GmailConnection({ status, notice }: {
       {notice === "error" && <p className="text-sm text-lm-danger" role="alert">No se completó la autorización. Revisá que el equipo tenga una sola casilla y volvé a intentar con la cuenta correcta.</p>}
       {error && <p className="text-sm text-lm-danger" role="alert">{error}</p>}
       {!status.ready ? <p className="text-sm text-lm-ink-2">Correo requiere la migración de Gmail en la base de este entorno.</p>
-        : !status.hasTeam ? <p className="text-sm text-lm-ink-2">La casilla se conecta desde una cuenta que pertenece a un equipo de SmokIA.</p>
+        : !status.hasTeam ? <p className="text-sm text-lm-ink-2">La casilla se conecta desde una cuenta que pertenece a un equipo de ALTAB.</p>
         : <>
           {status.email && <div className="space-y-1">
             <p className="break-all text-sm font-semibold">{status.email}</p>

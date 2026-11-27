@@ -2,6 +2,7 @@ import { Activity, LayoutGrid, Megaphone, Receipt, Settings, Users } from "lucid
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { BrandLockup } from "@/components/shell/brand-lockup";
 import { HubCard } from "@/components/shell/hub-card";
 import { ScreenPreview } from "@/components/shell/screen-preview";
 import { ProfileEditor } from "@/components/shell/profile-editor";
@@ -10,7 +11,7 @@ import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { displayName, getProfile } from "@/lib/profile/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 
-export const metadata = { title: "Inicio · SmokIA" };
+export const metadata = { title: "Inicio · ALTAB" };
 
 /**
  * Pantalla global: elegir a qué gestor entrar. Cada gestor es un espacio
@@ -30,19 +31,22 @@ export default async function HubPage() {
       <div className="hub-backdrop" aria-hidden="true" />
       <div className="mx-auto flex min-h-dvh max-w-6xl flex-col gap-6 px-4 pb-[max(2rem,env(safe-area-inset-bottom,0px))] pt-[max(1.5rem,env(safe-area-inset-top,0px))] sm:gap-10 sm:px-6 sm:py-8 lg:py-12">
         <header className="flex flex-wrap items-center gap-x-3 gap-y-4 sm:gap-4">
-          <ProfileEditor
-            userId={user.id}
-            name={name}
-            alias={profile.alias}
-            avatarUrl={profile.avatarUrl}
-          />
-          <div className="min-w-0 flex-1">
-            <p className="font-lm-sans text-[11px] font-semibold tracking-[0.1em] text-lm-ink-3 uppercase">
-              Cuenta
-            </p>
-            <p className="truncate font-lm-sans text-lg font-medium text-lm-ink">
-              {name}
-            </p>
+          <BrandLockup />
+          <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-2.5">
+            <ProfileEditor
+              userId={user.id}
+              name={name}
+              alias={profile.alias}
+              avatarUrl={profile.avatarUrl}
+            />
+            <div className="min-w-0 max-w-56">
+              <p className="font-lm-sans text-[11px] font-semibold tracking-[0.1em] text-lm-ink-3 uppercase">
+                Cuenta
+              </p>
+              <p className="truncate font-lm-sans text-lg font-medium text-lm-ink">
+                {name}
+              </p>
+            </div>
           </div>
           <nav aria-label="Cuenta" className="flex basis-full flex-wrap items-center gap-1 rounded-lm-lg border border-lm-line px-2 py-1 sm:basis-auto sm:border-0 sm:p-0">
             <ThemeToggle className="mr-auto min-w-0 sm:mr-2 sm:w-[168px]" />

@@ -22,7 +22,7 @@ export async function signUpWithEmail(email: string, password: string): Promise<
   }
 
   if (!isAllowedEmail(parsed.data.email)) {
-    return { ok: false, message: "Este mail no tiene acceso a SmokIA." };
+    return { ok: false, message: "Este mail no tiene acceso a ALTAB." };
   }
 
   const supabase = await createClient();

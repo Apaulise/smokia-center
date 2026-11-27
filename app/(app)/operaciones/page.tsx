@@ -15,7 +15,7 @@ import { getOpsKpis, getOpsRecords } from "@/lib/ops/queries";
 import { summarizeAreas } from "@/lib/ops/summary";
 import { OPS_PERIODS, type OpsPeriod } from "@/lib/ops/types";
 
-export const metadata = { title: "Operaciones · SmokIA" };
+export const metadata = { title: "Operaciones" };
 
 function parsePeriod(value: string | undefined): OpsPeriod {
   return value === "30d" ? "30d" : "7d";

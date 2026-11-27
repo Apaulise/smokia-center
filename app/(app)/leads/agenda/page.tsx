@@ -28,7 +28,7 @@ import {
 import { getTeamDirectory, isTeamAgendaAvailable, listTeamAppointmentsInRange, listTeamUpcomingAppointments } from "@/lib/leads/team/queries";
 import { getCurrentUser } from "@/lib/supabase/server";
 
-export const metadata = { title: "Agenda · SmokIA" };
+export const metadata = { title: "Agenda" };
 
 type View = CalendarView;
 

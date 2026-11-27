@@ -11,7 +11,7 @@ import { clientStatusLabels, contextHref } from "@/lib/crm/model";
 import { getClient, getTaskPeople, listClients, taskContexts } from "@/lib/crm/queries";
 import { listProjects } from "@/lib/crm/projects/queries";
 
-export const metadata = { title: "Ficha de cliente · SmokIA" };
+export const metadata = { title: "Ficha de cliente" };
 
 export default async function ClientPage({ params }: PageProps<"/leads/clientes/[id]">) {
   const { id } = await params;

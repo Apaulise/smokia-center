@@ -1,6 +1,6 @@
 import { ComingSoon } from "@/components/shell/coming-soon";
 
-export const metadata = { title: "Facturación · SmokIA" };
+export const metadata = { title: "Facturación" };
 
 export default function FacturacionPage() {
   return (

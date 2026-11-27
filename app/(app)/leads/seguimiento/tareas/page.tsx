@@ -6,7 +6,7 @@ import { argentinaDay } from "@/lib/crm/model";
 import { getAvailableTaskContexts, getBoardSettings, getTaskPeople, listTasks } from "@/lib/crm/queries";
 import { listProjectOptions } from "@/lib/crm/projects/queries";
 
-export const metadata = { title: "Tareas · SmokIA" };
+export const metadata = { title: "Tareas" };
 
 export default async function TasksPage({ searchParams }: PageProps<"/leads/seguimiento/tareas">) {
   const { conversacion } = await searchParams;

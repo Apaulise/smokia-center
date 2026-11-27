@@ -10,7 +10,7 @@ import { projectStatusLabels } from "@/lib/crm/projects/model";
 import { getProject, listProjectOptions } from "@/lib/crm/projects/queries";
 import { getAvailableTaskContexts, getTaskPeople, listTasks } from "@/lib/crm/queries";
 
-export const metadata = { title: "Detalle del proyecto · SmokIA" };
+export const metadata = { title: "Detalle del proyecto" };
 
 export default async function ProjectPage({ params }: PageProps<"/leads/proyectos/[id]">) {
   const { id } = await params;

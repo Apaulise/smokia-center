@@ -1,6 +1,6 @@
 import { LoginScreen } from "./login-screen";
 
-export const metadata = { title: "Ingresar · SmokIA" };
+export const metadata = { title: "Ingresar" };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const params = await searchParams;

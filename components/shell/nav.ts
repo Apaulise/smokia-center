@@ -25,13 +25,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import type { ComponentType } from "react";
-
-import { GmailIcon, GoogleCalendarIcon, InstagramIcon } from "@/components/shell/brand-icons";
-
-/** Logo de marca: un componente SVG que acepta `className` (ver brand-icons.tsx). */
-type BrandIcon = ComponentType<{ className?: string; strokeWidth?: number }>;
-
 /**
  * Las patas del negocio, Operaciones (el estado de los agentes) y el panel que las agrega.
  *
@@ -44,8 +37,6 @@ export interface NavChild {
   label: string;
   /** Con la barra colapsada es lo único que se ve de la pantalla: tiene que distinguirse de las demás del módulo. */
   icon: LucideIcon;
-  /** Logo de la integración que alimenta la pantalla (Instagram, Gmail, Google Calendar). Reemplaza al `icon` donde se muestra. */
-  brand?: BrandIcon;
   /** Sólo marca activo con match exacto. Para el índice de un módulo. */
   exact?: boolean;
   /** Pantalla todavía no construida: se ve en el menú, deshabilitada, sin link ni entrada en ⌘K (CLAUDE.md §2). */
@@ -79,11 +70,11 @@ export const MODULES: NavModule[] = [
       { href: "/leads/lista", label: "Listas", icon: ListChecks },
       { href: "/leads/generar", label: "Generar lista", icon: ListPlus },
       { href: "/leads/seguimiento", label: "Seguimiento", icon: AlarmClock },
-      { href: "/leads/chats", label: "Chats", icon: MessageSquare, brand: InstagramIcon },
-      { href: "/leads/correo", label: "Correo", icon: Mail, brand: GmailIcon },
+      { href: "/leads/chats", label: "Chats", icon: MessageSquare },
+      { href: "/leads/correo", label: "Correo", icon: Mail },
       { href: "/leads/clientes", label: "Clientes", icon: Building2 },
       { href: "/leads/proyectos", label: "Proyectos", icon: FolderKanban },
-      { href: "/leads/agenda", label: "Agenda", icon: CalendarDays, brand: GoogleCalendarIcon },
+      { href: "/leads/agenda", label: "Agenda", icon: CalendarDays },
       { href: "/leads/conocimiento", label: "Memoria de ventas", icon: BookOpen },
     ],
   },

@@ -23,7 +23,7 @@ import {
   listIndustries,
 } from "@/lib/settings/queries";
 
-export const metadata = { title: "Configuración · SmokIA" };
+export const metadata = { title: "Configuración" };
 
 export default async function ConfiguracionPage({ searchParams }: { searchParams: Promise<{ gmail?: string }> }) {
   const [apifyStatus, geminiStatus, huaweiMaasStatus, salesProfile, industries, actorOverrides, instagramStatus, chatsStatus, gmailStatus, query] =
@@ -94,7 +94,7 @@ export default async function ConfiguracionPage({ searchParams }: { searchParams
                 Inbox de Instagram (Zernio)
               </span>
             }
-            description="Los mensajes directos de Instagram entran por Zernio y aparecen en Chats, para vos y, si lo activás, para tu socio. La API key se guarda cifrada y SmokIA registra su propio webhook firmado."
+            description="Los mensajes directos de Instagram entran por Zernio y aparecen en Chats, para vos y, si lo activás, para tu socio. La API key se guarda cifrada y ALTAB registra su propio webhook firmado."
           >
             <Panel className="p-4">
               <ZernioConnection

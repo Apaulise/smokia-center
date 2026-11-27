@@ -4,7 +4,7 @@ import { HeaderBar, PageHeading } from "@/components/ui/page-header";
 import { getListPerformance } from "@/lib/leads/queries";
 import { getApifyCredit, listIndustries } from "@/lib/settings/queries";
 
-export const metadata = { title: "Generar leads · SmokIA" };
+export const metadata = { title: "Generar leads" };
 
 export default async function GenerarLeadsPage({
   searchParams,

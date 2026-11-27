@@ -1,6 +1,6 @@
 import { ComingSoon } from "@/components/shell/coming-soon";
 
-export const metadata = { title: "Panel principal · SmokIA" };
+export const metadata = { title: "Panel principal" };
 
 export default function PanelPage() {
   return (

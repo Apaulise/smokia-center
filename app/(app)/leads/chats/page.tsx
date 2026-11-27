@@ -11,7 +11,7 @@ import { listQuickReplies } from "@/lib/chats/inbox-actions";
 import { getConversationDetail, listChannelAccounts, listConversations, listTagLabels, type ConversationFilter } from "@/lib/chats/queries";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
-export const metadata = { title: "Chats · SmokIA" };
+export const metadata = { title: "Chats" };
 
 const FILTERS: ConversationFilter[] = ["todas", "sin_leer", "por_responder", "ventana", "seguimiento", "archivadas"];
 

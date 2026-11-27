@@ -33,11 +33,11 @@ export default function GlobalError({ error, retry }: { error: unknown; retry: (
   return (
     <html lang="es" data-theme={theme} suppressHydrationWarning>
       <body className="min-h-full">
-        <title>Error · SmokIA</title>
+        <title>Error · ALTAB</title>
         <ErrorScreen
           frame="page"
           kind="error"
-          title="SmokIA no pudo arrancar"
+          title="ALTAB no pudo arrancar"
           description="Falló algo antes de que se pudiera dibujar la app. Recargá la página; si sigue igual, pasá el código de abajo a quien mantiene la app."
           code={code}
           detail={detail}

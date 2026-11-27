@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Host_Grotesk, JetBrains_Mono } from "next/font/google";
+import { Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
 
 import { NavigationProgress } from "@/components/shell/navigation-progress";
 import { THEME_INIT_SCRIPT, ThemeSync } from "@/components/shell/theme-toggle";
@@ -12,21 +12,16 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500"],
 });
 
-/*
- * Dos familias y nada más: Host Grotesk para toda la interfaz y JetBrains Mono
- * para números, fechas y datos (CLAUDE.md §6). Sora e Inter, del manual viejo,
- * se sacaron el 2026-11-17: ya no las usaba ninguna pantalla y eran dos
- * descargas más en cada carga.
- */
-const hostGrotesk = Host_Grotesk({
-  variable: "--font-host-grotesk",
+const hankenGrotesk = Hanken_Grotesk({
+  variable: "--font-hanken-grotesk",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "SmokIA",
-  description: "Panel de gestión de SmokIA",
+  title: { default: "ALTAB", template: "%s · ALTAB" },
+  description: "Panel de gestión de ALTAB AI Consulting",
+  applicationName: "ALTAB",
 };
 
 export const viewport: Viewport = {
@@ -40,7 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="es"
       suppressHydrationWarning
-      className={`${jetbrainsMono.variable} ${hostGrotesk.variable} h-full`}
+      className={`${jetbrainsMono.variable} ${hankenGrotesk.variable} h-full`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />

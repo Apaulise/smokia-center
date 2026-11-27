@@ -16,7 +16,7 @@ import { getTeamSummary } from "@/lib/leads/team/summary";
 import { sliceContacts } from "@/lib/leads/execution/derive";
 import { todayIso } from "@/lib/leads/calendar";
 
-export const metadata = { title: "Equipo · Gestor de Leads · SmokIA" };
+export const metadata = { title: "Equipo · Gestor de Leads" };
 
 /**
  * Dashboard de equipo (Plan §1.23): las métricas globales de los dos socios y

@@ -4,7 +4,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { HeaderBar } from "@/components/ui/page-header";
 import { mailboxStatus } from "@/lib/mail/connection";
 
-export const metadata = { title: "Correo · SmokIA" };
+export const metadata = { title: "Correo" };
 
 export default async function MailPage() {
   const status = await mailboxStatus();
@@ -14,7 +14,7 @@ export default async function MailPage() {
       <section className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-8">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Correo</h1>
-          <p className="mt-2 text-sm text-lm-ink-2">La casilla de tu empresa, dentro de SmokIA.</p>
+          <p className="mt-2 text-sm text-lm-ink-2">La casilla de tu empresa, dentro de ALTAB.</p>
         </div>
         <div className="rounded-lm-xl border border-lm-line bg-lm-ink/4 p-6 sm:p-8">
           <Mail className="mb-4 size-6 text-lm-signal-text" />

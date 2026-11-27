@@ -5,7 +5,7 @@ import { AutomationsClient } from "@/components/leads/chats/automations-client";
 import { HeaderBar } from "@/components/ui/page-header";
 import { listContentAutomations, loadAutomationSetup } from "@/lib/chats/automation-actions";
 
-export const metadata = { title: "Automatizaciones · SmokIA" };
+export const metadata = { title: "Automatizaciones" };
 
 /**
  * §1.26 sub-paso 4: elegir los moldes TOFU/MOFU y clonarlos por pieza

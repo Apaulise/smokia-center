@@ -13,21 +13,18 @@ import { requestPasswordReset, updatePassword, verifyResetCode } from "./actions
 
 type Step = "email" | "code" | "password";
 
-const COPY: Record<Step, { title: string; description: string; quote: string }> = {
+const COPY: Record<Step, { title: string; description: string }> = {
   email: {
     title: "Recuperá tu contraseña",
     description: "Te mandamos un código de 6 dígitos a tu mail.",
-    quote: "Un código y volvés a estar adentro.",
   },
   code: {
     title: "Ingresá el código",
     description: "",
-    quote: "Un código y volvés a estar adentro.",
   },
   password: {
     title: "Elegí una contraseña nueva",
     description: "Al guardarla entrás directo a la app.",
-    quote: "Cada conversación, un paso más cerca del cierre.",
   },
 };
 
@@ -105,7 +102,7 @@ export function ResetFlow() {
   const description = step === "code" ? `Lo mandamos a ${email}. Vence en una hora.` : copy.description;
 
   return (
-    <AuthShell title={copy.title} description={description} quote={copy.quote}>
+    <AuthShell title={copy.title} description={description}>
       {/* method="post" en los dos formularios: si el JS no se enganchó todavía, que el navegador no
           mande esto por GET (la contraseña nueva, sobre todo, no puede terminar en la URL). */}
       {step === "email" ? (

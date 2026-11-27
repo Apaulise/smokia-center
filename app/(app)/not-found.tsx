@@ -1,7 +1,7 @@
 import { ButtonLink } from "@/components/ui/button";
 import { ErrorScreen } from "@/components/ui/error-screen";
 
-export const metadata = { title: "No encontrado · SmokIA" };
+export const metadata = { title: "No encontrado" };
 
 /** Un lead, una lista o un reel que no existe (o que no es tuyo): `notFound()` dentro de un gestor. */
 export default function AppNotFound() {

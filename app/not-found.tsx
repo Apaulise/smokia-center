@@ -1,7 +1,7 @@
 import { ButtonLink } from "@/components/ui/button";
 import { ErrorScreen } from "@/components/ui/error-screen";
 
-export const metadata = { title: "Página no encontrada · SmokIA" };
+export const metadata = { title: "Página no encontrada · ALTAB" };
 
 /** Una dirección que no existe. Va sin barra lateral: no se está dentro de ningún gestor. */
 export default function NotFound() {

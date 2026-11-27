@@ -34,7 +34,7 @@ export function presetOf(tag: string): PresetTag | null {
   return PRESET_BY_TAG.get(tag.toLowerCase()) ?? null;
 }
 
-/** Prefijo de las etiquetas que SmokIA pone por pieza: `kw-manos` = llegó comentando "manos". */
+/** Prefijo de las etiquetas que ALTAB pone por pieza: `kw-manos` = llegó comentando "manos". */
 export const KEYWORD_TAG_PREFIX = "kw-";
 
 const STAGE_RANK: Record<FunnelStage, number> = { TOFU: 1, MOFU: 2, BOFU: 3 };

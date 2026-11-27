@@ -5,7 +5,7 @@ import { PageHeading } from "@/components/ui/page-header";
 import { formatUpdatedAt } from "@/lib/ops/format";
 import { getOpsRecords } from "@/lib/ops/queries";
 
-export const metadata = { title: "Aprobaciones · Operaciones · SmokIA" };
+export const metadata = { title: "Aprobaciones · Operaciones" };
 
 export default async function AprobacionesPage() {
   const records = await getOpsRecords();

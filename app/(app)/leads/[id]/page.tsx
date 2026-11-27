@@ -49,7 +49,7 @@ function listBackHref(listId: string, navQuery: string) {
 export async function generateMetadata({ params }: PageProps<"/leads/[id]">) {
   const { id } = await params;
   const lead = await getLeadCached(id);
-  return { title: lead ? `${lead.name} · SmokIA` : "Lead · SmokIA" };
+  return { title: lead ? `${lead.name}` : "Lead" };
 }
 
 /**

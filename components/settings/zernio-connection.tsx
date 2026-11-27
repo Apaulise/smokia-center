@@ -78,7 +78,7 @@ function AccountRow({ account, hasTeam }: { account: ChannelAccountView; hasTeam
                       !account.shared &&
                       !(await confirm({
                         title: "¿Compartir el inbox con tu socio?",
-                        description: "Va a poder leer todos los mensajes de esta cuenta y responder desde SmokIA. Lo podés dejar de compartir cuando quieras.",
+                        description: "Va a poder leer todos los mensajes de esta cuenta y responder desde ALTAB. Lo podés dejar de compartir cuando quieras.",
                         confirmLabel: "Compartir",
                       }))
                     )
@@ -97,7 +97,7 @@ function AccountRow({ account, hasTeam }: { account: ChannelAccountView; hasTeam
                 onClick={async () => {
                   const ok = await confirm({
                     title: "¿Desconectar esta cuenta?",
-                    description: "Se borran de SmokIA sus conversaciones y mensajes (en Zernio siguen) y se quita el webhook.",
+                    description: "Se borran de ALTAB sus conversaciones y mensajes (en Zernio siguen) y se quita el webhook.",
                     confirmLabel: "Desconectar",
                     tone: "danger",
                   });

@@ -57,7 +57,7 @@ export function buildIcsCalendar(appointments: IcsAppointment[]): string {
   const lines: string[] = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//SmokIA//Gestor de Leads//ES",
+    "PRODID:-//ALTAB//Gestor de Leads//ES",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
   ];

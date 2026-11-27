@@ -89,11 +89,11 @@ El SMTP por defecto de Supabase sólo le manda a miembros de la organización y 
 1. **En Resend:** verificar un dominio propio (DNS) y crear una API key. Sin dominio verificado, Resend sólo le manda al mail dueño de la cuenta de Resend — el socio no recibiría nada
 2. **En Supabase** → Authentication → Emails → SMTP Settings → *Enable custom SMTP*:
    - Host `smtp.resend.com`, puerto `465`, usuario `resend`, password = la API key de Resend
-   - Sender: `no-reply@<tu-dominio>`, nombre `SmokIA`
+   - Sender: `no-reply@<tu-dominio>`, nombre `ALTAB`
 3. **En Supabase** → Authentication → Emails → Templates → **Reset Password**: el cuerpo tiene que mostrar el código, no el link. Por ejemplo:
    ```html
    <h2>Recuperá tu contraseña</h2>
-   <p>Tu código para SmokIA es:</p>
+   <p>Tu código para ALTAB es:</p>
    <p style="font-size:28px;font-family:monospace;letter-spacing:6px"><strong>{{ .Token }}</strong></p>
    <p>Vence en una hora. Si no lo pediste, ignorá este mail.</p>
    ```
@@ -354,11 +354,11 @@ Los mensajes directos de Instagram entran por Zernio y se leen en **Gestor de Le
 - **Apify cobra por resultado.** Al probar, usar `maxResults` chico (5): cada corrida cuesta plata real
 ## Correo de la empresa (Gmail)
 
-1. Aplicá la migración `20261124120000_gmail_mailbox.sql` en la base local y asegurate de que las dos cuentas de SmokIA pertenezcan al mismo equipo.
+1. Aplicá la migración `20261124120000_gmail_mailbox.sql` en la base local y asegurate de que las dos cuentas de ALTAB pertenezcan al mismo equipo.
 2. En un proyecto de Google Cloud para desarrollo, habilitá Gmail API. Configurá la audiencia Externa, dejá la aplicación en Pruebas y agregá como usuaria de prueba la casilla Gmail que vas a conectar.
 3. Registrá un cliente OAuth de tipo Aplicación web. Agregá el permiso `https://www.googleapis.com/auth/gmail.modify` y la URL de retorno exacta. Para la app local en el puerto 3002 es `http://127.0.0.1:3002/leads/correo/oauth/callback`. Abrí el CRM con ese mismo host y puerto para conservar la sesión durante la autorización.
 4. En `.env.local` configurá `GMAIL_OAUTH_CLIENT_ID`, `GMAIL_OAUTH_CLIENT_SECRET`, `GMAIL_OAUTH_REDIRECT_URI` y la clave de cifrado existente `APP_ENCRYPTION_KEY`. Reiniciá el servidor.
 5. Desde Configuración → Correo de la empresa, elegí Conectar Gmail y autorizá la cuenta de prueba en Google. Abrí Gestor de Leads → Correo y verificá bandeja, búsqueda y adjuntos. Mandá una respuesta a una dirección de prueba y comprobá que quede en el mismo hilo.
-6. Elegí Compartir con mi socio y confirmá sólo si querés darle acceso de lectura y envío a la casilla completa. Probá con su sesión de SmokIA y después comprobá que Dejar de compartir le retire el acceso.
+6. Elegí Compartir con mi socio y confirmá sólo si querés darle acceso de lectura y envío a la casilla completa. Probá con su sesión de ALTAB y después comprobá que Dejar de compartir le retire el acceso.
 
 En modo Pruebas, Google emite credenciales de renovación por siete días con este permiso. Para conectar la casilla real, usá un proyecto OAuth de producción separado, una URL de retorno HTTPS apuntando al CRM desplegado y el modo de publicación que corresponda a la audiencia. [Autorización de Google](https://developers.google.com/identity/protocols/oauth2#expiration) · [Excepciones de verificación](https://support.google.com/cloud/answer/13464323)
