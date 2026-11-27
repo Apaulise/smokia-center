@@ -47,10 +47,10 @@ const components: Components = {
 };
 
 /** Texto en markdown (GFM: tablas, listas, tachado) con el estilo de la app. Sirve en servidor y en cliente. */
-export function Markdown({ children, className }: { children: string; className?: string }) {
+export function Markdown({ children, className, allowImages = true }: { children: string; className?: string; allowImages?: boolean }) {
   return (
     <div className={cn("text-[13px] leading-relaxed break-words text-lm-ink", className)}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components} disallowedElements={allowImages ? undefined : ["img"]}>
         {children}
       </ReactMarkdown>
     </div>

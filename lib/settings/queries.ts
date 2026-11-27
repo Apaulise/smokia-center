@@ -6,6 +6,7 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
 import {
   APIFY_KEY_SETTING,
+  FATHOM_KEY_SETTING,
   GEMINI_KEY_SETTING,
   HUAWEI_MAAS_KEY_SETTING,
   SALES_PROFILE_SETTING,
@@ -38,6 +39,10 @@ async function getKeyStatus(key: string) {
 
 export async function getApifyKeyStatus() {
   return getKeyStatus(APIFY_KEY_SETTING);
+}
+
+export async function getFathomKeyStatus() {
+  return getKeyStatus(FATHOM_KEY_SETTING);
 }
 
 /** Crédito Apify restante del mes (Design System §04) — null sin key configurada o si Apify no responde con el shape esperado. */

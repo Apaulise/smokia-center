@@ -5,6 +5,7 @@ import { cache, type ReactNode } from "react";
 
 import { LeadChatCard } from "@/components/leads/chats/lead-chat-card";
 import { ClientEditor } from "@/components/leads/crm/client-editor";
+import { MeetingNotes } from "@/components/leads/crm/meeting-notes";
 import { ContextTasks } from "@/components/leads/crm/sections";
 import { getClientForLead, getTaskPeople } from "@/lib/crm/queries";
 import { ContactActions } from "@/components/leads/contact-actions";
@@ -265,6 +266,7 @@ export default async function LeadFichaPage({ params, searchParams }: PageProps<
             nextBestActionReason={intel?.next_best_action_reason ?? null}
             preferFollowUp={modo === "seguimiento"}
           />
+          <MeetingNotes context={{ kind: "lead", id }} />
           <div id="actividad" className="scroll-mt-16"><MessageThread messages={messages} activities={activities} /></div>
         </div>
 

@@ -362,3 +362,10 @@ Los mensajes directos de Instagram entran por Zernio y se leen en **Gestor de Le
 6. Elegí Compartir con mi socio y confirmá sólo si querés darle acceso de lectura y envío a la casilla completa. Probá con su sesión de ALTAB y después comprobá que Dejar de compartir le retire el acceso.
 
 En modo Pruebas, Google emite credenciales de renovación por siete días con este permiso. Para conectar la casilla real, usá un proyecto OAuth de producción separado, una URL de retorno HTTPS apuntando al CRM desplegado y el modo de publicación que corresponda a la audiencia. [Autorización de Google](https://developers.google.com/identity/protocols/oauth2#expiration) · [Excepciones de verificación](https://support.google.com/cloud/answer/13464323)
+
+## Minutas de Fathom
+
+1. Aplicá `20261126120000_crm_fathom_meeting_notes.sql` en la base del entorno donde quieras usar Minutas.
+2. Generá una API key en Fathom y guardala en Configuración → Minutas de Fathom. Probá la conexión con el botón de esa sección. La clave se cifra con `APP_ENCRYPTION_KEY` y cada usuario conecta la suya. [Guía de Fathom](https://developers.fathom.ai/quickstart)
+3. Abrí un lead o un cliente, elegí **Importar de Fathom** y seleccioná la reunión y el tipo de llamada. Se guarda el resumen y, cuando están disponibles, los próximos pasos.
+4. Al convertir un lead ganado, sus minutas quedan visibles en la ficha del cliente para quienes tengan acceso a esa ficha. Las minutas guardadas se siguen leyendo en el CRM aunque desconectes Fathom.

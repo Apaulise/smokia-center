@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { ClientEditor, ContactEditor } from "@/components/leads/crm/client-editor";
+import { MeetingNotes } from "@/components/leads/crm/meeting-notes";
 import { ProjectEditor } from "@/components/leads/crm/project-editor";
 import { ProjectList } from "@/components/leads/crm/project-list";
 import { ContextTasks, CrmUnavailable } from "@/components/leads/crm/sections";
@@ -46,6 +47,7 @@ export default async function ClientPage({ params }: PageProps<"/leads/clientes/
             <ProjectList projects={projectResult.projects} people={people} showClient={false} empty="Todavía no hay proyectos asociados a este cliente." />
           </section>
         ) : null}
+        <MeetingNotes context={{ kind: "client", id }} />
         <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
           <div className="grid min-w-0 content-start gap-5">
             <section className="rounded-lm-lg border border-lm-line p-4">

@@ -3,6 +3,8 @@ import type { LeadSource } from "@/lib/providers/types";
 /** Clave en `settings` para el token de Apify. Compartida por queries y actions. */
 export const APIFY_KEY_SETTING = "apify_api_key";
 
+export const FATHOM_KEY_SETTING = "fathom_api_key";
+
 /**
  * Clave en `settings` para la API key de Google AI Studio (Gemini), Plans/03
  * §3.14. Es el modelo barato del módulo: clasifica qué publicación ajena sirve

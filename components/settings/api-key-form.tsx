@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, KeyRound, Loader2, XCircle } from "lucide-react";
-import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import { useActionState, useEffect, useId, useRef, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm";
@@ -46,6 +46,7 @@ export function ApiKeyForm({
   const [saveDismissed, setSaveDismissed] = useState(false);
   const [testDismissed, setTestDismissed] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const keyInputId = useId();
 
   useEffect(() => {
     if (saveState?.ok) formRef.current?.reset();
@@ -108,11 +109,11 @@ export function ApiKeyForm({
           onSubmit={() => setSaveDismissed(false)}
           className="flex flex-wrap items-end gap-3"
         >
-          <div className="min-w-[260px] flex-1">
-            <label htmlFor="apiKey" className="mb-1.5 block font-lm-sans text-[13px] font-medium text-lm-ink-2">
+          <div className="min-w-0 flex-[1_1_260px]">
+            <label htmlFor={keyInputId} className="mb-1.5 block font-lm-sans text-[13px] font-medium text-lm-ink-2">
               {configured ? "Reemplazar API key" : label}
             </label>
-            <Input id="apiKey" name="apiKey" type="password" autoComplete="off" placeholder={placeholder} required />
+            <Input id={keyInputId} name="apiKey" type="password" autoComplete="off" placeholder={placeholder} required />
           </div>
           <Button type="submit" variant="primary" disabled={savePending}>
             {savePending ? <Loader2 className="size-3.5 animate-spin" /> : null}

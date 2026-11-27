@@ -1697,6 +1697,39 @@ export type Database = {
           },
         ]
       }
+      crm_meeting_notes: {
+        Row: {
+          id: string
+          lead_id: string | null
+          client_id: string | null
+          imported_by: string | null
+          recording_id: string
+          stage: string
+          title: string
+          meeting_at: string
+          fathom_url: string | null
+          summary: string
+          action_items: Json
+        }
+        Insert: {
+          id?: string
+          lead_id?: string | null
+          client_id?: string | null
+          imported_by?: string | null
+          recording_id: string
+          stage: string
+          title: string
+          meeting_at: string
+          fathom_url?: string | null
+          summary: string
+          action_items?: Json
+        }
+        Update: Partial<Database["public"]["Tables"]["crm_meeting_notes"]["Insert"]>
+        Relationships: [
+          { foreignKeyName: "crm_meeting_notes_lead_id_fkey"; columns: ["lead_id"]; referencedRelation: "leads"; referencedColumns: ["id"] },
+          { foreignKeyName: "crm_meeting_notes_client_id_fkey"; columns: ["client_id"]; referencedRelation: "crm_clients"; referencedColumns: ["id"] },
+        ]
+      }
       crm_board_colors: {
         Row: { team_id: string; status: Database["public"]["Enums"]["crm_task_status"]; color: string }
         Insert: { team_id: string; status: Database["public"]["Enums"]["crm_task_status"]; color: string }

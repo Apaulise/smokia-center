@@ -1,7 +1,8 @@
-import { Bot, KeyRound, Mail, MessageSquare, Sparkles, Tags, UserRound } from "lucide-react";
+import { Bot, CalendarDays, KeyRound, Mail, MessageSquare, Sparkles, Tags, UserRound } from "lucide-react";
 
 import { ActorOverridesForm } from "@/components/settings/actor-overrides-form";
 import { ApifyKeyForm } from "@/components/settings/apify-key-form";
+import { ApiKeyForm } from "@/components/settings/api-key-form";
 import { GeminiKeyForm } from "@/components/settings/gemini-key-form";
 import { HuaweiMaasKeyForm } from "@/components/settings/huawei-maas-key-form";
 import { IndustriesManager } from "@/components/settings/industries-manager";
@@ -13,10 +14,12 @@ import { mailboxStatus } from "@/lib/mail/connection";
 import { listChannelAccounts } from "@/lib/chats/queries";
 import { HeaderBar, PageHeading } from "@/components/ui/page-header";
 import { Panel, Section } from "@/components/ui/section";
+import { deleteFathomKey, saveFathomKey, testFathomKey } from "@/lib/fathom/actions";
 import {
   getActorOverrides,
   getApifyKeyStatus,
   getGeminiKeyStatus,
+  getFathomKeyStatus,
   getHuaweiMaasKeyStatus,
   getSalesProfile,
   getInstagramConnectionStatus,
@@ -26,7 +29,7 @@ import {
 export const metadata = { title: "Configuración" };
 
 export default async function ConfiguracionPage({ searchParams }: { searchParams: Promise<{ gmail?: string }> }) {
-  const [apifyStatus, geminiStatus, huaweiMaasStatus, salesProfile, industries, actorOverrides, instagramStatus, chatsStatus, gmailStatus, query] =
+  const [apifyStatus, geminiStatus, huaweiMaasStatus, salesProfile, industries, actorOverrides, instagramStatus, chatsStatus, gmailStatus, fathomStatus, query] =
     await Promise.all([
       getApifyKeyStatus(),
       getGeminiKeyStatus(),
@@ -37,6 +40,7 @@ export default async function ConfiguracionPage({ searchParams }: { searchParams
       getInstagramConnectionStatus(),
       listChannelAccounts(),
       mailboxStatus(),
+      getFathomKeyStatus(),
       searchParams,
     ]);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
@@ -112,6 +116,20 @@ export default async function ConfiguracionPage({ searchParams }: { searchParams
               description="Conectá la cuenta de Gmail que querés usar en Correo. Podés compartirla con tu socio desde acá."
             >
               <Panel className="p-4"><GmailConnection status={gmailStatus} notice={query.gmail} /></Panel>
+            </Section>
+          </div>
+
+          <div id="fathom" className="scroll-mt-16">
+            <Section
+              title={<span className="flex items-center gap-2"><CalendarDays className="size-4 text-lm-ink-2" /> Minutas de Fathom</span>}
+              description="Importá resúmenes de reuniones desde un lead o un cliente. Cada usuario conecta su propia cuenta."
+            >
+              <Panel className="p-4">
+                <ApiKeyForm configured={fathomStatus.configured} masked={fathomStatus.masked}
+                  label="API key de Fathom" placeholder="Pegá tu clave de Fathom"
+                  confirmDeleteMessage="¿Eliminar la API key de Fathom guardada?"
+                  saveAction={saveFathomKey} testAction={testFathomKey} deleteAction={deleteFathomKey} />
+              </Panel>
             </Section>
           </div>
 
